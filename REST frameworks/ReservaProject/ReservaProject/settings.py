@@ -34,7 +34,9 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 # Frontend React - configuración para producción
-FRONTEND_DIR = BASE_DIR.parent.parent / "Reservas" / "dist"
+# BASE_DIR = /app/ReservaProject (donde está manage.py)
+# BASE_DIR.parent = /app (donde está Reservas/)
+FRONTEND_DIR = BASE_DIR.parent / "Reservas" / "dist"
 FRONTEND_INDEX = FRONTEND_DIR / "index.html"
 
 # Quick-start development settings - unsuitable for production
