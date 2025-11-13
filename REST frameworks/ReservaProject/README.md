@@ -277,24 +277,6 @@ deactivate
 .\venv\Scripts\activate
 ```
 
-#### Problemas Comunes en Windows
-
-**1. "python no se reconoce como comando"**
-- Solución: Reinstala Python y asegúrate de marcar "Add Python to PATH"
-
-**2. "psql no se reconoce como comando"**
-- Solución: Agrega PostgreSQL al PATH (ver Paso 2, punto 4)
-
-**3. Error al instalar psycopg2-binary**
-- Solución: Instala Visual C++ Build Tools desde [visualstudio.microsoft.com](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-
-**4. No puedo conectarme a PostgreSQL**
-- Verifica que el servicio de PostgreSQL esté corriendo (busca "Servicios" en Windows)
-- Verifica que la contraseña en `.env` sea correcta
-
-**5. Puerto 8000 o 5173 ya está en uso**
-- Usa los comandos de arriba para encontrar y matar el proceso
-
 ---
 
 ### Instalación en macOS/Linux
@@ -594,7 +576,6 @@ Este proyecto fue desarrollado como parte del Sprint 3 del módulo de reservas.
 ## 👨‍💻 Desarrolladores
 
 - Equipo de desarrollo Sprint 3
-- Implementación de encriptación y validaciones: Claude Code
 
 ---
 
