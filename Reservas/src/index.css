@@ -1,0 +1,25 @@
+body {
+    background-color: #f5f7fb;
+}
+
+/* Estilos de badges de estado */
+.estado-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+}
+
+.estado-ACTIVA {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.estado-PENDIENTE {
+    background-color: #fff3cd;
+    color: #664d03;
+}
+
+.estado-CANCELADA {
+    background-color: #f8d7da;
+    color: #842029;
+}
