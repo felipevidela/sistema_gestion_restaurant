@@ -1,21 +1,21 @@
-# 🔧 Solución Rápida para Railway Deployment
+# 🔧 Solución Definitiva para Railway Deployment
 
-## ⚠️ Problema
+## ⚠️ Problema Original
 
-Railway no puede detectar cómo construir la aplicación porque el proyecto tiene una estructura de carpetas compleja.
+Railway no puede construir la aplicación por la estructura de carpetas compleja (`REST frameworks/ReservaProject`) y espacios en los nombres.
 
-## ✅ Solución Implementada
+## ✅ Solución Implementada: Dockerfile
 
-He agregado los siguientes archivos en la **raíz del repositorio** para que Railway pueda detectar y construir correctamente:
+He creado un **Dockerfile** multi-etapa que construye correctamente el frontend y backend:
 
 ### Archivos Creados
 
-1. **`nixpacks.toml`** - Configuración de Nixpacks para Railway
-2. **`railway.json`** - Configuración específica de Railway
-3. **`Procfile`** - Define los procesos web y release
-4. **`requirements.txt`** - Dependencias de Python (copiado desde subfolder)
-5. **`runtime.txt`** - Versión de Python
-6. **`build.sh`** - Script que construye el frontend React
+1. **`Dockerfile`** - Construye frontend React y backend Django en una imagen
+2. **`.dockerignore`** - Excluye archivos innecesarios del build
+3. **`requirements.txt`** - Dependencias de Python (en la raíz)
+4. **`runtime.txt`** - Versión de Python (en la raíz)
+5. **`Procfile`** - Respaldo (Railway usará Dockerfile si está presente)
+6. **`build.sh`** - Script auxiliar (opcional)
 
 ---
 
@@ -27,10 +27,21 @@ En tu servicio de Railway:
 
 1. Ve a **"Settings"**
 2. Busca **"Root Directory"**
-3. Si dice `REST frameworks/ReservaProject`, **bórralo** (déjalo vacío)
+3. Si dice `REST frameworks/ReservaProject`, **bórralo completamente** (déjalo vacío)
 4. Guarda los cambios
 
-### Paso 2: Verificar Variables de Entorno
+### Paso 2: Cambiar Builder a Dockerfile
+
+⚠️ **Este es el paso CRÍTICO**:
+
+1. Ve a **"Settings"**
+2. Busca **"Builder"**
+3. Selecciona **"Dockerfile"** (NO Nixpacks, NO Railpack)
+4. Guarda los cambios
+
+Railway ahora usará el Dockerfile que creamos, que maneja correctamente las rutas con espacios.
+
+### Paso 3: Verificar Variables de Entorno
 
 Asegúrate de que tienes estas variables configuradas:
 
@@ -42,12 +53,6 @@ ALLOWED_HOSTS=tu-dominio.up.railway.app
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 ```
 
-### Paso 3: Verificar Builder
-
-1. Ve a **"Settings"**
-2. En **"Builder"**, asegúrate de que está seleccionado **"Nixpacks"**
-3. Si dice "Dockerfile", cámbialo a "Nixpacks"
-
 ### Paso 4: Redesplegar
 
 1. Ve a **"Deployments"**
@@ -56,46 +61,72 @@ DATABASE_URL=${{Postgres.DATABASE_URL}}
 
 ---
 
-## 📝 Lo que Hace el Build
+## 📝 Lo que Hace el Dockerfile
 
-El archivo `nixpacks.toml` ejecuta estos pasos:
+El Dockerfile multi-etapa ejecuta estos pasos:
 
-1. **Setup**: Instala Node.js 18 y Python 3.13
-2. **Install**:
-   - Instala dependencias de React (`npm install`)
-   - Instala dependencias de Django (`pip install`)
-3. **Build**:
-   - Construye el frontend React (`npm run build`)
-   - Recolecta archivos estáticos de Django (`collectstatic`)
-4. **Start**:
-   - Ejecuta migraciones de Django
-   - Inicia Gunicorn con el WSGI de Django
+**Etapa 1 - Frontend Builder:**
+1. Usa imagen Node.js 18
+2. Copia archivos de `Reservas/`
+3. Ejecuta `npm install` y `npm run build`
+4. Genera carpeta `dist/` con el frontend compilado
+
+**Etapa 2 - Aplicación Final:**
+1. Usa imagen Python 3.13
+2. Instala PostgreSQL client y dependencias
+3. Copia `requirements.txt` e instala dependencias Python
+4. Copia código Django desde `REST frameworks/ReservaProject/`
+5. Copia frontend compilado desde etapa 1
+6. Ejecuta `collectstatic` para archivos estáticos
+7. **Al iniciar**: Ejecuta migraciones y arranca Gunicorn
+
+**Ventajas:**
+- ✅ Maneja correctamente carpetas con espacios
+- ✅ Build más confiable y reproducible
+- ✅ Imagen optimizada (multi-etapa)
+- ✅ No depende de detección automática de Railway
 
 ---
 
 ## 🔍 Verificar el Build
 
-### Durante el Build
+### Durante el Build con Dockerfile
 
 En los logs deberías ver:
 
 ```
-✓ Detected providers: python, nodejs
-✓ Installing Node.js 18.x
-✓ Installing Python 3.13
-✓ Building frontend React...
-✓ Collecting static files...
+#1 [internal] load build definition from Dockerfile
+#2 [internal] load .dockerignore
+#3 [stage-0  1/6] FROM docker.io/library/node:18-alpine
+#4 [frontend-builder 2/6] WORKDIR /app/frontend
+#5 [frontend-builder 3/6] COPY Reservas/package*.json
+#6 [frontend-builder 4/6] RUN npm install
+#7 [frontend-builder 5/6] COPY Reservas/
+#8 [frontend-builder 6/6] RUN npm run build
+  ✓ Building frontend React...
+#9 [stage-1  2/10] FROM docker.io/library/python:3.13-slim
+#10 [stage-1  4/10] COPY requirements.txt
+#11 [stage-1  5/10] RUN pip install --no-cache-dir -r requirements.txt
+#12 [stage-1  6/10] COPY REST frameworks/ReservaProject/
+#13 [stage-1  7/10] COPY --from=frontend-builder /app/frontend/dist
+#14 [stage-1  9/10] RUN python manage.py collectstatic --noinput
+  ✓ Collecting static files...
+#15 exporting to image
+✓ Build complete
 ✓ Running migrations...
 ✓ Starting gunicorn...
 ```
 
-### Errores Comunes
+### Errores Comunes con Dockerfile
 
-#### Error: "npm: command not found"
+#### Error: "pip: command not found"
 
-**Causa**: Nixpacks no detectó que necesitas Node.js
+**Causa**: Railway está usando Nixpacks en lugar de Dockerfile
 
-**Solución**: El `nixpacks.toml` debería solucionarlo. Si persiste, verifica que el archivo esté en la raíz.
+**Solución**:
+1. Ve a **Settings** → **Builder**
+2. Selecciona **"Dockerfile"**
+3. Redespliega
 
 #### Error: "No module named 'gunicorn'"
 
