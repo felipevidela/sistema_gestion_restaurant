@@ -40,6 +40,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Invalidar cache para forzar rebuild con código actualizado
+ARG CACHEBUST=1
+
 # Copiar código de Django (sin comillas, Docker maneja los espacios)
 COPY ["REST frameworks/ReservaProject/", "./ReservaProject/"]
 
