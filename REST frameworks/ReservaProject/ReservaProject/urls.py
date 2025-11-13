@@ -16,8 +16,10 @@ urlpatterns = [
 
     # Endpoints de autenticación
     path('api/register/', views.register_user, name='register'),
+    path('api/register-and-reserve/', views.register_and_reserve, name='register-and-reserve'),
     path('api/login/', views.login_user, name='login'),
     path('api/perfil/', views.get_perfil, name='perfil'),
+    path('api/perfil/actualizar/', views.update_perfil, name='actualizar-perfil'),
     path('api/get-token/', authtoken_views.obtain_auth_token, name='get-token'),
 
     # Endpoints de gestión de usuarios (Admin)

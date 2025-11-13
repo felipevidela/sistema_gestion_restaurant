@@ -1,32 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import PanelReservas from "./components/PanelReservas";
 import LoginForm from "./components/LoginForm";
 import FormularioReserva from "./components/FormularioReserva";
 import MisReservas from "./components/MisReservas";
+import MiPerfil from "./components/MiPerfil";
 import GestionMesas from "./components/GestionMesas";
 import GestionUsuarios from "./components/GestionUsuarios";
+import ReservaPublica from "./components/ReservaPublica";
 import { getCurrentUser, isAuthenticated, logout } from './services/reservasApi';
 
+const getDefaultTab = (rol) => {
+  if (rol === 'cliente') return 'mis-reservas';
+  return 'reservas-dia';
+};
+
 function App() {
-  const [user, setUser] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeTab, setActiveTab] = useState('reservas-dia');
-
-  // Verificar si hay una sesión activa al cargar
-  useEffect(() => {
-    if (isAuthenticated()) {
-      const currentUser = getCurrentUser();
-      setUser(currentUser);
-      setIsLoggedIn(true);
-      // Establecer tab inicial según el rol
-      setActiveTab(getDefaultTab(currentUser.rol));
-    }
-  }, []);
-
-  const getDefaultTab = (rol) => {
-    if (rol === 'cliente') return 'mis-reservas';
-    return 'reservas-dia';
-  };
+  const initialUser = isAuthenticated() ? getCurrentUser() : null;
+  const [user, setUser] = useState(initialUser);
+  const [isLoggedIn, setIsLoggedIn] = useState(Boolean(initialUser));
+  const [showLogin, setShowLogin] = useState(false);
+  const [activeTab, setActiveTab] = useState(() =>
+    initialUser ? getDefaultTab(initialUser.rol) : 'reservas-dia'
+  );
 
   const handleLoginSuccess = (userData) => {
     const newUser = {
@@ -39,6 +34,7 @@ function App() {
     };
     setUser(newUser);
     setIsLoggedIn(true);
+    setShowLogin(false);
     setActiveTab(getDefaultTab(userData.rol));
   };
 
@@ -46,7 +42,13 @@ function App() {
     logout();
     setUser(null);
     setIsLoggedIn(false);
+    setShowLogin(false);
     setActiveTab('reservas-dia');
+  };
+
+  const handleReservaExitosa = (result) => {
+    // La reserva pública ya hace auto-login
+    handleLoginSuccess(result);
   };
 
   // Configuración de tabs según rol
@@ -56,7 +58,8 @@ function App() {
     const tabs = {
       cliente: [
         { id: 'mis-reservas', label: 'Mis Reservas', icon: 'bi-list-ul' },
-        { id: 'nueva-reserva', label: 'Nueva Reserva', icon: 'bi-plus-circle' }
+        { id: 'nueva-reserva', label: 'Nueva Reserva', icon: 'bi-plus-circle' },
+        { id: 'mi-perfil', label: 'Mi Perfil', icon: 'bi-person-circle' }
       ],
       mesero: [
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
@@ -83,6 +86,8 @@ function App() {
         return <MisReservas />;
       case 'nueva-reserva':
         return <FormularioReserva onReservaCreada={() => setActiveTab('mis-reservas')} />;
+      case 'mi-perfil':
+        return <MiPerfil />;
       case 'reservas-dia':
         return <PanelReservas user={user} onLogout={handleLogout} />;
       case 'todas-reservas':
@@ -96,14 +101,44 @@ function App() {
     }
   };
 
+  // Vista pública (no logueado)
   if (!isLoggedIn) {
+    // Mostrar LoginForm si el usuario hizo clic en "Login"
+    if (showLogin) {
+      return (
+        <div className="bg-light min-vh-100">
+          <LoginForm onLoginSuccess={handleLoginSuccess} />
+        </div>
+      );
+    }
+
+    // Mostrar ReservaPublica con botón Login en la esquina
     return (
       <div className="bg-light min-vh-100">
-        <LoginForm onLoginSuccess={handleLoginSuccess} />
+        {/* Header con botón de Login */}
+        <nav className="navbar navbar-light bg-white shadow-sm">
+          <div className="container-fluid">
+            <span className="navbar-brand mb-0 h1">
+              <i className="bi bi-calendar-check me-2 text-primary"></i>
+              Sistema de Reservas
+            </span>
+            <button
+              className="btn btn-outline-primary btn-sm"
+              onClick={() => setShowLogin(true)}
+            >
+              <i className="bi bi-box-arrow-in-right me-1"></i>
+              Iniciar Sesión
+            </button>
+          </div>
+        </nav>
+
+        {/* Formulario de Reserva Pública */}
+        <ReservaPublica onReservaExitosa={handleReservaExitosa} />
       </div>
     );
   }
 
+  // Vista logueada (staff o cliente)
   const tabs = getTabs();
 
   return (

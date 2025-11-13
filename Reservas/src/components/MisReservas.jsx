@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { getReservas, updateEstadoReserva, cancelarReserva } from '../services/reservasApi';
+import { useState, useEffect, useCallback } from 'react';
+import { getReservas, updateEstadoReserva } from '../services/reservasApi';
 
 export default function MisReservas() {
   const [reservas, setReservas] = useState([]);
@@ -7,14 +7,7 @@ export default function MisReservas() {
   const [error, setError] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
 
-  useEffect(() => {
-    cargarReservas();
-    // Auto-actualizar cada 30 segundos
-    const interval = setInterval(cargarReservas, 30000);
-    return () => clearInterval(interval);
-  }, [filtroEstado]);
-
-  const cargarReservas = async () => {
+  const cargarReservas = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getReservas({
@@ -28,7 +21,14 @@ export default function MisReservas() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filtroEstado]);
+
+  useEffect(() => {
+    cargarReservas();
+    // Auto-actualizar cada 30 segundos
+    const interval = setInterval(cargarReservas, 30000);
+    return () => clearInterval(interval);
+  }, [cargarReservas]);
 
   const handleCancelarReserva = async (reservaId) => {
     if (!confirm('¿Está seguro que desea cancelar esta reserva?')) {
@@ -57,6 +57,12 @@ export default function MisReservas() {
   const formatearFecha = (fecha) => {
     const [year, month, day] = fecha.split('-');
     return `${day}/${month}/${year}`;
+  };
+
+  const formatearHora = (hora) => {
+    // Asegurar formato 24 horas HH:MM (quitar segundos si los hay)
+    if (!hora) return '';
+    return hora.substring(0, 5);
   };
 
   if (loading && reservas.length === 0) {
@@ -140,7 +146,7 @@ export default function MisReservas() {
                   </div>
                   <div className="mb-2">
                     <i className="bi bi-clock me-2 text-primary"></i>
-                    <strong>Hora:</strong> {reserva.hora}
+                    <strong>Hora:</strong> {formatearHora(reserva.hora)} hrs
                   </div>
                   <div className="mb-2">
                     <i className="bi bi-people me-2 text-primary"></i>

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from datetime import timedelta
 from encrypted_model_fields.fields import EncryptedCharField
 
 
@@ -74,8 +75,21 @@ class Reserva(models.Model):
 
     def clean(self):
         """Validar que la mesa esté disponible en la fecha y hora solicitada"""
-        if self.hora_fin <= self.hora_inicio:
-            raise ValidationError("La hora de fin debe ser posterior a la hora de inicio")
+        # Validar que la fecha no sea en el pasado
+        from datetime import date
+        if self.fecha_reserva < date.today():
+            raise ValidationError("No se pueden crear reservas para fechas pasadas")
+
+        # Validar capacidad de la mesa
+        if self.num_personas > self.mesa.capacidad:
+            raise ValidationError(
+                f"La mesa {self.mesa.numero} tiene capacidad para {self.mesa.capacidad} personas. "
+                f"No puede reservar para {self.num_personas} personas."
+            )
+
+        # Validar número mínimo de personas
+        if self.num_personas < 1:
+            raise ValidationError("Debe reservar para al menos 1 persona")
 
         # Validar que la mesa no esté reservada en el mismo horario
         reservas_conflicto = Reserva.objects.filter(
@@ -93,6 +107,14 @@ class Reserva(models.Model):
                 )
 
     def save(self, *args, **kwargs):
+        # Auto-calcular hora_fin como hora_inicio + 2 horas
+        if self.hora_inicio:
+            from datetime import datetime
+            # Convertir hora_inicio a datetime para sumar timedelta
+            dt_inicio = datetime.combine(datetime.today(), self.hora_inicio)
+            dt_fin = dt_inicio + timedelta(hours=2)
+            self.hora_fin = dt_fin.time()
+
         self.full_clean()  # Ejecutar validaciones antes de guardar
         super().save(*args, **kwargs)
 

@@ -66,6 +66,13 @@ function PanelReservas({ user, onLogout }) {
         return { activas, pendientes, canceladas };
     }, [reservasFiltradas]);
 
+    // Formatear hora a formato militar 24 horas (HH:MM)
+    function formatearHora(hora) {
+        if (!hora) return '';
+        // Quitar segundos si los hay (HH:MM:SS -> HH:MM)
+        return hora.substring(0, 5);
+    }
+
     async function handleCambiarEstado(id, nuevoEstado) {
         try {
             setLoading(true);
@@ -288,7 +295,7 @@ function PanelReservas({ user, onLogout }) {
                                         <td>{index + 1}</td>
                                         <td>{reserva.cliente}</td>
                                         <td>{reserva.mesa}</td>
-                                        <td>{reserva.hora}</td>
+                                        <td>{formatearHora(reserva.hora)} hrs</td>
                                         <td>{reserva.personas}</td>
                                         <td>
                                             <span

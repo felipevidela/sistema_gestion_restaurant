@@ -2,6 +2,17 @@
 const API_BASE_URL = "http://localhost:8000/api";
 
 /**
+ * Formatear hora a formato militar de 24 horas (HH:MM)
+ * @param {string} time - Hora en formato HH:MM:SS o HH:MM
+ * @returns {string} - Hora en formato HH:MM
+ */
+function formatearHora24(time) {
+  if (!time) return '';
+  // Si viene con segundos (HH:MM:SS), quitarlos
+  return time.substring(0, 5);
+}
+
+/**
  * Obtener el token de autenticación del localStorage
  */
 function getAuthToken() {
@@ -17,6 +28,90 @@ function getAuthHeaders() {
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Token ${token}` })
   };
+}
+
+/**
+ * Registrar nuevo usuario
+ * @param {Object} userData - {username, email, password, password_confirm, nombre_completo, rut, telefono, email_perfil}
+ * @returns {Object} - {token, user_id, username, email, rol, rol_display, nombre_completo, message}
+ */
+export async function register(userData) {
+  const response = await fetch(`${API_BASE_URL}/register/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(userData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    // Formatear errores del backend
+    if (typeof error === 'object' && !error.error) {
+      const errorMessages = Object.entries(error)
+        .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+        .join('\n');
+      throw new Error(errorMessages);
+    }
+    throw new Error(error.error || error.message || 'Error al registrar usuario');
+  }
+
+  const data = await response.json();
+
+  // Guardar token y datos de usuario en localStorage (auto-login)
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('user', JSON.stringify({
+    id: data.user_id,
+    username: data.username,
+    email: data.email,
+    rol: data.rol,
+    rol_display: data.rol_display,
+    nombre_completo: data.nombre_completo
+  }));
+
+  return data;
+}
+
+/**
+ * Registrar usuario y crear reserva en una sola operación
+ * @param {Object} data - Datos de usuario y reserva combinados
+ * @returns {Object} - {token, user_id, username, email, rol, nombre_completo, reserva, message}
+ */
+export async function registerAndReserve(data) {
+  const response = await fetch(`${API_BASE_URL}/register-and-reserve/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    // Formatear errores del backend
+    if (error.details) {
+      const errorMessages = Object.entries(error.details)
+        .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+        .join('\n');
+      throw new Error(errorMessages || error.error);
+    }
+    throw new Error(error.error || 'Error al crear la reserva');
+  }
+
+  const responseData = await response.json();
+
+  // Guardar token y datos de usuario en localStorage (auto-login)
+  localStorage.setItem('token', responseData.token);
+  localStorage.setItem('user', JSON.stringify({
+    id: responseData.user_id,
+    username: responseData.username,
+    email: responseData.email,
+    rol: responseData.rol,
+    rol_display: responseData.rol_display,
+    nombre_completo: responseData.nombre_completo
+  }));
+
+  return responseData;
 }
 
 /**
@@ -114,7 +209,7 @@ export async function getReservas({ fecha, estado } = {}) {
     cliente: reserva.cliente_nombre || reserva.cliente_username,
     mesa: `M${String(reserva.mesa_numero).padStart(2, '0')}`,
     fecha: reserva.fecha_reserva,
-    hora: reserva.hora_inicio,
+    hora: formatearHora24(reserva.hora_inicio),
     personas: reserva.num_personas,
     estado: reserva.estado.toUpperCase(),
   }));
@@ -157,7 +252,9 @@ export async function createReserva(reservaData) {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || 'Error al crear reserva');
+    console.error('Error del backend:', error);
+    const errorMsg = error.detail || JSON.stringify(error) || 'Error al crear reserva';
+    throw new Error(errorMsg);
   }
 
   return response.json();
@@ -270,4 +367,53 @@ export async function cancelarReserva(reservaId) {
   }
 
   return true;
+}
+
+/**
+ * Obtener el perfil del usuario autenticado
+ * @returns {Object} - Datos del perfil (nombre_completo, telefono, rut, email, rol, etc.)
+ */
+export async function getPerfil() {
+  const response = await fetch(`${API_BASE_URL}/perfil/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al obtener perfil');
+  }
+
+  return response.json();
+}
+
+/**
+ * Actualizar el perfil del usuario autenticado
+ * @param {Object} perfilData - {nombre, apellido, telefono, rut}
+ * @returns {Object} - {success: true, message: string, perfil: Object}
+ */
+export async function updatePerfil(perfilData) {
+  const response = await fetch(`${API_BASE_URL}/perfil/actualizar/`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(perfilData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al actualizar perfil');
+  }
+
+  const data = await response.json();
+
+  // Actualizar localStorage con el nuevo nombre_completo
+  if (data.success && data.perfil) {
+    const user = getCurrentUser();
+    if (user) {
+      user.nombre_completo = data.perfil.nombre_completo;
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+  }
+
+  return data;
 }

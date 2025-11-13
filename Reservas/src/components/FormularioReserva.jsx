@@ -11,7 +11,6 @@ export default function FormularioReserva({ onReservaCreada }) {
     mesa: '',
     fecha_reserva: '',
     hora_inicio: '',
-    hora_fin: '',
     num_personas: 1,
     notas: ''
   });
@@ -31,7 +30,8 @@ export default function FormularioReserva({ onReservaCreada }) {
       try {
         const todasMesas = await getMesas();
         setMesas(todasMesas);
-      } catch (e) {
+      } catch (fallbackError) {
+        console.error('Error al cargar todas las mesas:', fallbackError);
         setError('Error al cargar mesas');
       }
     }
@@ -48,6 +48,13 @@ export default function FormularioReserva({ onReservaCreada }) {
     setSuccess('');
   };
 
+  // Obtener la capacidad de la mesa seleccionada
+  const getMesaCapacidad = () => {
+    if (!formData.mesa) return 20; // default max
+    const mesaSeleccionada = mesas.find(m => m.id === parseInt(formData.mesa));
+    return mesaSeleccionada ? mesaSeleccionada.capacidad : 20;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -56,28 +63,39 @@ export default function FormularioReserva({ onReservaCreada }) {
 
     try {
       // Validar campos requeridos
-      if (!formData.mesa || !formData.fecha_reserva || !formData.hora_inicio || !formData.hora_fin) {
+      if (!formData.mesa || !formData.fecha_reserva || !formData.hora_inicio) {
         setError('Por favor complete todos los campos obligatorios');
         setLoading(false);
         return;
       }
 
-      // Validar que hora_fin sea mayor que hora_inicio
-      if (formData.hora_fin <= formData.hora_inicio) {
-        setError('La hora de fin debe ser posterior a la hora de inicio');
+      // Validar que la fecha no sea en el pasado
+      const fechaHoy = new Date().toISOString().split('T')[0];
+      if (formData.fecha_reserva < fechaHoy) {
+        setError('No se pueden crear reservas para fechas pasadas');
+        setLoading(false);
+        return;
+      }
+
+      // Validar capacidad de la mesa
+      const mesaSeleccionada = mesas.find(m => m.id === parseInt(formData.mesa));
+      if (mesaSeleccionada && parseInt(formData.num_personas) > mesaSeleccionada.capacidad) {
+        setError(`La mesa ${mesaSeleccionada.numero} tiene capacidad para ${mesaSeleccionada.capacidad} personas. No puede reservar para ${formData.num_personas} personas.`);
         setLoading(false);
         return;
       }
 
       // Crear la reserva
-      await createReserva({
+      const reservaData = {
         mesa: parseInt(formData.mesa),
         fecha_reserva: formData.fecha_reserva,
         hora_inicio: formData.hora_inicio,
-        hora_fin: formData.hora_fin,
         num_personas: parseInt(formData.num_personas),
         notas: formData.notas
-      });
+      };
+
+      console.log('Enviando reserva:', reservaData);
+      await createReserva(reservaData);
 
       setSuccess('¡Reserva creada exitosamente!');
 
@@ -86,7 +104,6 @@ export default function FormularioReserva({ onReservaCreada }) {
         mesa: '',
         fecha_reserva: '',
         hora_inicio: '',
-        hora_fin: '',
         num_personas: 1,
         notas: ''
       });
@@ -100,6 +117,7 @@ export default function FormularioReserva({ onReservaCreada }) {
       }
 
     } catch (err) {
+      console.error('Error completo:', err);
       setError(err.message || 'Error al crear la reserva');
     } finally {
       setLoading(false);
@@ -110,6 +128,22 @@ export default function FormularioReserva({ onReservaCreada }) {
   const getMinDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
+  };
+
+  // Generar opciones de hora con intervalos de 30 minutos (formato 24 horas)
+  // Horario de atención: 12:00 a 23:00
+  // Última reserva: 21:00 (termina a las 23:00 con duración de 2 horas)
+  const generarOpcionesHora = () => {
+    const opciones = [];
+    for (let hora = 12; hora <= 21; hora++) {
+      for (let minuto = 0; minuto < 60; minuto += 30) {
+        const horaStr = String(hora).padStart(2, '0');
+        const minutoStr = String(minuto).padStart(2, '0');
+        const tiempo = `${horaStr}:${minutoStr}`;
+        opciones.push(tiempo);
+      }
+    }
+    return opciones;
   };
 
   return (
@@ -165,13 +199,18 @@ export default function FormularioReserva({ onReservaCreada }) {
                 value={formData.num_personas}
                 onChange={handleChange}
                 min="1"
-                max="20"
+                max={getMesaCapacidad()}
                 required
               />
+              {formData.mesa && (
+                <small className="text-muted">
+                  Capacidad máxima de la mesa: {getMesaCapacidad()} personas
+                </small>
+              )}
             </div>
 
             {/* Fecha de Reserva */}
-            <div className="col-md-4 mb-3">
+            <div className="col-md-6 mb-3">
               <label htmlFor="fecha_reserva" className="form-label">Fecha *</label>
               <input
                 type="date"
@@ -185,32 +224,28 @@ export default function FormularioReserva({ onReservaCreada }) {
               />
             </div>
 
-            {/* Hora de Inicio */}
-            <div className="col-md-4 mb-3">
-              <label htmlFor="hora_inicio" className="form-label">Hora de Inicio *</label>
-              <input
-                type="time"
+            {/* Hora de la Reserva */}
+            <div className="col-md-6 mb-3">
+              <label htmlFor="hora_inicio" className="form-label">Hora de la Reserva *</label>
+              <select
                 id="hora_inicio"
                 name="hora_inicio"
-                className="form-control"
+                className="form-select"
                 value={formData.hora_inicio}
                 onChange={handleChange}
                 required
-              />
-            </div>
-
-            {/* Hora de Fin */}
-            <div className="col-md-4 mb-3">
-              <label htmlFor="hora_fin" className="form-label">Hora de Fin *</label>
-              <input
-                type="time"
-                id="hora_fin"
-                name="hora_fin"
-                className="form-control"
-                value={formData.hora_fin}
-                onChange={handleChange}
-                required
-              />
+              >
+                <option value="">Seleccione una hora</option>
+                {generarOpcionesHora().map(hora => (
+                  <option key={hora} value={hora}>
+                    {hora} hrs
+                  </option>
+                ))}
+              </select>
+              <small className="text-info d-block mt-1">
+                <i className="bi bi-info-circle me-1"></i>
+                La reserva tendrá una duración de 2 horas
+              </small>
             </div>
 
             {/* Notas */}

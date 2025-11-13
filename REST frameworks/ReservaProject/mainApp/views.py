@@ -16,7 +16,8 @@ from .serializers import (
     PerfilSerializer,
     ReservaSerializer,
     ReservaListSerializer,
-    UserSerializer
+    UserSerializer,
+    RegisterSerializer
 )
 from .permissions import (
     IsAdministrador,
@@ -34,25 +35,28 @@ from .permissions import (
 @permission_classes([AllowAny])
 def register_user(request):
     """
-    Endpoint para registrar un nuevo usuario (Cliente).
+    Endpoint para registrar un nuevo usuario (Cliente) con datos completos del perfil.
     POST /api/register/
-    Body: {username, email, password, first_name, last_name}
+    Body: {
+        username, email, password, password_confirm,
+        nombre, apellido, rut, telefono, email_perfil (opcional)
+    }
     """
-    serializer = UserSerializer(data=request.data)
+    serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
 
-        # Asegurar que el perfil se creó (debería hacerlo el signal)
-        if not hasattr(user, 'perfil'):
-            Perfil.objects.create(user=user, rol='cliente')
-
-        # Generar token
+        # Generar token para auto-login después del registro
         token, created = Token.objects.get_or_create(user=user)
 
         return Response({
-            'user': serializer.data,
             'token': token.key,
+            'user_id': user.id,
+            'username': user.username,
+            'email': user.email,
             'rol': user.perfil.rol,
+            'rol_display': user.perfil.get_rol_display(),
+            'nombre_completo': user.perfil.nombre_completo,
             'message': 'Usuario registrado exitosamente'
         }, status=status.HTTP_201_CREATED)
 
@@ -61,24 +65,128 @@ def register_user(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def register_and_reserve(request):
+    """
+    Endpoint combinado: registrar usuario y crear reserva en una sola transacción.
+    Pensado para el flujo de reserva pública.
+    POST /api/register-and-reserve/
+    Body: {
+        # Datos del usuario
+        email, password, password_confirm, nombre, apellido, rut, telefono,
+        # Datos de la reserva
+        mesa, fecha_reserva, hora_inicio, num_personas, notas (opcional)
+    }
+    """
+    from django.db import transaction
+
+    # Separar datos de usuario y reserva
+    user_data = {
+        'username': request.data.get('email'),  # Usar email como username
+        'email': request.data.get('email'),
+        'password': request.data.get('password'),
+        'password_confirm': request.data.get('password_confirm'),
+        'nombre': request.data.get('nombre'),
+        'apellido': request.data.get('apellido'),
+        'rut': request.data.get('rut'),
+        'telefono': request.data.get('telefono'),
+    }
+
+    reserva_data = {
+        'mesa': request.data.get('mesa'),
+        'fecha_reserva': request.data.get('fecha_reserva'),
+        'hora_inicio': request.data.get('hora_inicio'),
+        'hora_fin': request.data.get('hora_fin'),
+        'num_personas': request.data.get('num_personas'),
+        'notas': request.data.get('notas', ''),
+    }
+
+    try:
+        with transaction.atomic():
+            # 1. Registrar usuario
+            user_serializer = RegisterSerializer(data=user_data)
+            if not user_serializer.is_valid():
+                return Response({
+                    'error': 'Datos de usuario inválidos',
+                    'details': user_serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            user = user_serializer.save()
+
+            # 2. Crear reserva
+            reserva_serializer = ReservaSerializer(data=reserva_data)
+            if not reserva_serializer.is_valid():
+                return Response({
+                    'error': 'Datos de reserva inválidos',
+                    'details': reserva_serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            reserva = reserva_serializer.save(cliente=user)
+
+            # 3. Actualizar estado de la mesa
+            mesa = reserva.mesa
+            if mesa.estado == 'disponible':
+                mesa.estado = 'reservada'
+                mesa.save()
+
+            # 4. Generar token para auto-login
+            token, created = Token.objects.get_or_create(user=user)
+
+            return Response({
+                'token': token.key,
+                'user_id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'rol': user.perfil.rol,
+                'nombre_completo': user.perfil.nombre_completo,
+                'reserva': {
+                    'id': reserva.id,
+                    'mesa_numero': reserva.mesa.numero,
+                    'fecha_reserva': reserva.fecha_reserva,
+                    'hora_inicio': reserva.hora_inicio,
+                    'hora_fin': reserva.hora_fin,
+                    'num_personas': reserva.num_personas,
+                    'estado': reserva.estado,
+                },
+                'message': '¡Reserva creada exitosamente! Tu cuenta ha sido registrada.'
+            }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({
+            'error': 'Error al procesar la reserva',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def login_user(request):
     """
     Endpoint para login de usuario.
+    Acepta username o email como identificador.
     POST /api/login/
-    Body: {username, password}
+    Body: {username (o email), password}
     """
     from django.contrib.auth import authenticate
 
-    username = request.data.get('username')
+    identifier = request.data.get('username') or request.data.get('email')
     password = request.data.get('password')
 
-    if not username or not password:
+    if not identifier or not password:
         return Response(
-            {'error': 'Por favor proporcione username y password'},
+            {'error': 'Por favor proporcione email/usuario y contraseña'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    user = authenticate(username=username, password=password)
+    # Intentar autenticar por username
+    user = authenticate(username=identifier, password=password)
+
+    # Si falla, intentar buscar por email y autenticar
+    if not user:
+        try:
+            user_by_email = User.objects.get(email=identifier)
+            user = authenticate(username=user_by_email.username, password=password)
+        except User.DoesNotExist:
+            pass
 
     if user:
         token, created = Token.objects.get_or_create(user=user)
@@ -119,6 +227,55 @@ def get_perfil(request):
             {'error': 'El usuario no tiene perfil asociado'},
             status=status.HTTP_404_NOT_FOUND
         )
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_perfil(request):
+    """
+    Endpoint para actualizar el perfil del usuario autenticado.
+    PATCH /api/perfil/actualizar/
+    Body: {nombre, apellido, telefono (opcional), rut (opcional)}
+    """
+    try:
+        perfil = request.user.perfil
+    except AttributeError:
+        # Si no existe perfil, crearlo
+        perfil = Perfil.objects.create(user=request.user, rol='cliente')
+
+    # Extraer datos del request
+    nombre = request.data.get('nombre')
+    apellido = request.data.get('apellido')
+    telefono = request.data.get('telefono')
+    rut = request.data.get('rut')
+
+    # Validar campos requeridos
+    if not nombre or not apellido:
+        return Response(
+            {'error': 'Nombre y apellido son requeridos'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Actualizar nombre_completo
+    perfil.nombre_completo = f"{nombre.strip()} {apellido.strip()}"
+
+    # Actualizar teléfono si se proporciona
+    if telefono:
+        perfil.telefono = telefono
+
+    # Actualizar RUT si se proporciona
+    if rut:
+        perfil.rut = rut
+
+    perfil.save()
+
+    # Retornar perfil actualizado
+    serializer = PerfilSerializer(perfil, context={'request': request})
+    return Response({
+        'success': True,
+        'message': 'Perfil actualizado exitosamente',
+        'perfil': serializer.data
+    })
 
 
 # ============ ENDPOINTS DE GESTIÓN DE USUARIOS (ADMIN) ============
@@ -239,9 +396,9 @@ class MesaViewSet(viewsets.ModelViewSet):
 class ConsultaMesasView(views.APIView):
     """
     Endpoint de consulta de mesas (HU-08)
-    Protegido por: Admin, Cajero o Mesero
+    Accesible por: Todos (incluyendo usuarios no autenticados para reserva pública)
     """
-    permission_classes = [IsAdminOrCajeroOrMesero]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         estado = request.query_params.get('estado', None)

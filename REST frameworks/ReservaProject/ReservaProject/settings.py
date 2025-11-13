@@ -3,6 +3,33 @@ from pathlib import Path
 import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def load_env_file(env_path):
+    """Cargar variables desde un archivo .env simple si existe."""
+    if not env_path.exists():
+        return
+
+    with env_path.open() as env_file:
+        for line in env_file:
+            stripped = line.strip()
+
+            # Ignorar comentarios o líneas vacías
+            if not stripped or stripped.startswith('#'):
+                continue
+
+            key, sep, value = stripped.partition('=')
+            if not sep:
+                continue
+
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+
+            # No sobrescribir variables ya definidas en el entorno
+            os.environ.setdefault(key, value)
+
+
+load_env_file(BASE_DIR / '.env')
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
@@ -10,7 +37,7 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-4b7h&rl3zyl^*k*hxx=3t_wcj-+!w-vr4ka*0h#(vbc%nsb3-r'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-this-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -71,11 +98,11 @@ WSGI_APPLICATION = 'ReservaProject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'reservas_db',
-        'USER': 'felipevidela',  # Usuario actual del sistema
-        'PASSWORD': '',  # Sin password en instalación local
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'reservas_db'),
+        'USER': os.environ.get('DB_USER', 'felipevidela'),  # Usuario actual del sistema
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),  # Sin password en instalación local
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -145,6 +172,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:5174",  # Puerto alternativo de Vite
     "http://127.0.0.1:5174",
+    "http://localhost:5175",  # Puerto alternativo de Vite
+    "http://127.0.0.1:5175",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -152,5 +181,4 @@ CORS_ALLOW_CREDENTIALS = True
 # Configuración de django-encrypted-model-fields para encriptación
 # IMPORTANTE: Esta clave debe ser secreta en producción y guardarse en variables de entorno
 # Generar clave: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
-import os
 FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY', '4GmvO9dDiZCcJ-B1PglnW5nwn5pkQK3E5jYU-F517W0=')

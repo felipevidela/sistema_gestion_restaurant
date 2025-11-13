@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Mesa, Perfil, Reserva
+import re
 
 
 # Serializer para el modelo Usuario (para registro)
@@ -25,16 +26,148 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
+# Serializer extendido para registro de clientes con datos completos
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, min_length=8, style={'input_type': 'password'})
+    password_confirm = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+
+    # Campos adicionales del Perfil
+    nombre = serializers.CharField(required=True, max_length=100, write_only=True)
+    apellido = serializers.CharField(required=True, max_length=100, write_only=True)
+    rut = serializers.CharField(required=True, max_length=12)
+    telefono = serializers.CharField(required=True, max_length=15)
+    email_perfil = serializers.EmailField(required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password', 'password_confirm',
+                  'nombre', 'apellido', 'rut', 'telefono', 'email_perfil')
+
+    def validate_rut(self, value):
+        """
+        Validar formato y dígito verificador del RUT chileno.
+        Formato esperado: 12.345.678-9 o 12345678-9
+        """
+        # Limpiar RUT (quitar puntos y guiones)
+        rut_limpio = value.replace('.', '').replace('-', '').upper()
+
+        if len(rut_limpio) < 2:
+            raise serializers.ValidationError('RUT inválido: demasiado corto')
+
+        # Separar número y dígito verificador
+        numero = rut_limpio[:-1]
+        dv_ingresado = rut_limpio[-1]
+
+        # Validar que el número sea numérico
+        if not numero.isdigit():
+            raise serializers.ValidationError('RUT inválido: debe contener solo números antes del dígito verificador')
+
+        # Calcular dígito verificador
+        suma = 0
+        multiplicador = 2
+        for digit in reversed(numero):
+            suma += int(digit) * multiplicador
+            multiplicador = multiplicador + 1 if multiplicador < 7 else 2
+
+        resto = suma % 11
+        dv_calculado = str(11 - resto) if resto != 0 else '0'
+        if dv_calculado == '10':
+            dv_calculado = 'K'
+
+        # Comparar dígitos verificadores
+        if dv_ingresado != dv_calculado:
+            raise serializers.ValidationError(
+                f'RUT inválido: dígito verificador incorrecto. Debería ser {dv_calculado}'
+            )
+
+        # Retornar formato normalizado (con guión, sin puntos)
+        return f'{numero}-{dv_ingresado}'
+
+    def validate_telefono(self, value):
+        """
+        Validar formato de teléfono chileno.
+        Formatos aceptados: +56912345678, 912345678, +56 9 1234 5678
+        """
+        # Limpiar espacios y guiones
+        telefono_limpio = value.replace(' ', '').replace('-', '')
+
+        # Patrón para teléfono chileno (móvil)
+        # +569XXXXXXXX o 9XXXXXXXX
+        patron_movil = r'^(\+?56)?9\d{8}$'
+
+        if not re.match(patron_movil, telefono_limpio):
+            raise serializers.ValidationError(
+                'Formato de teléfono inválido. Use formato chileno: +56912345678 o 912345678'
+            )
+
+        # Normalizar a formato +56912345678
+        if telefono_limpio.startswith('+56'):
+            return telefono_limpio
+        elif telefono_limpio.startswith('56'):
+            return f'+{telefono_limpio}'
+        else:
+            return f'+56{telefono_limpio}'
+
+    def validate(self, data):
+        """Validaciones cruzadas"""
+        # Validar que las contraseñas coincidan
+        if data['password'] != data['password_confirm']:
+            raise serializers.ValidationError({
+                'password_confirm': 'Las contraseñas no coinciden'
+            })
+
+        # Validar longitud mínima de contraseña
+        if len(data['password']) < 8:
+            raise serializers.ValidationError({
+                'password': 'La contraseña debe tener al menos 8 caracteres'
+            })
+
+        return data
+
+    def create(self, validated_data):
+        """Crear usuario y perfil con todos los datos"""
+        # Extraer campos que no pertenecen al modelo User
+        nombre = validated_data.pop('nombre')
+        apellido = validated_data.pop('apellido')
+        nombre_completo = f"{nombre} {apellido}"
+        rut = validated_data.pop('rut')
+        telefono = validated_data.pop('telefono')
+        email_perfil = validated_data.pop('email_perfil', '')
+        validated_data.pop('password_confirm')
+
+        # Crear usuario
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data.get('email', ''),
+            password=validated_data['password']
+        )
+
+        # Crear o actualizar perfil con datos completos
+        Perfil.objects.update_or_create(
+            user=user,
+            defaults={
+                'rol': 'cliente',
+                'nombre_completo': nombre_completo,
+                'rut': rut,  # Se encriptará automáticamente
+                'telefono': telefono,  # Se encriptará automáticamente
+                'email': email_perfil
+            }
+        )
+
+        return user
+
+
 # Serializer para el modelo Perfil
 class PerfilSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
-    email_user = serializers.CharField(source='user.email', read_only=True)
+    email = serializers.CharField(source='user.email', read_only=True)
     rol_display = serializers.CharField(source='get_rol_display', read_only=True)
+    email_perfil = serializers.EmailField(source='email', read_only=True)
 
     class Meta:
         model = Perfil
-        fields = ('id', 'username', 'email_user', 'rol', 'rol_display',
-                  'nombre_completo', 'rut', 'telefono', 'email')
+        fields = ('id', 'username', 'email', 'rol', 'rol_display',
+                  'nombre_completo', 'rut', 'telefono', 'email_perfil')
 
     def to_representation(self, instance):
         """
@@ -76,15 +209,30 @@ class ReservaSerializer(serializers.ModelSerializer):
                   'fecha_reserva', 'hora_inicio', 'hora_fin',
                   'num_personas', 'estado', 'estado_display', 'notas',
                   'created_at', 'updated_at')
-        read_only_fields = ('created_at', 'updated_at')
+        read_only_fields = ('cliente', 'hora_fin', 'created_at', 'updated_at')
 
     def validate(self, data):
         """Validaciones adicionales a nivel de serializer"""
-        if data.get('hora_fin') and data.get('hora_inicio'):
-            if data['hora_fin'] <= data['hora_inicio']:
+        from datetime import date
+
+        # Validar fecha no sea en el pasado
+        if data.get('fecha_reserva') and data['fecha_reserva'] < date.today():
+            raise serializers.ValidationError({
+                'fecha_reserva': 'No se pueden crear reservas para fechas pasadas'
+            })
+
+        # Validar capacidad de la mesa
+        if data.get('mesa') and data.get('num_personas'):
+            if data['num_personas'] > data['mesa'].capacidad:
                 raise serializers.ValidationError({
-                    'hora_fin': 'La hora de fin debe ser posterior a la hora de inicio'
+                    'num_personas': f'La mesa {data["mesa"].numero} tiene capacidad para {data["mesa"].capacidad} personas. No puede reservar para {data["num_personas"]} personas.'
                 })
+
+            if data['num_personas'] < 1:
+                raise serializers.ValidationError({
+                    'num_personas': 'Debe reservar para al menos 1 persona'
+                })
+
         return data
 
 
