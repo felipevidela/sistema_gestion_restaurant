@@ -47,7 +47,8 @@ RUN echo "Cache bust: $CACHEBUST"
 # Copiar código de Django (sin comillas, Docker maneja los espacios)
 COPY ["REST frameworks/ReservaProject/", "./ReservaProject/"]
 
-# Copiar frontend compilado desde la etapa anterior
+# Crear directorio para frontend y copiar archivos compilados
+RUN mkdir -p ./Reservas
 COPY --from=frontend-builder /app/frontend/dist ./Reservas/dist/
 
 # Cambiar al directorio de Django
@@ -60,8 +61,15 @@ RUN mkdir -p staticfiles
 EXPOSE 8000
 
 # Script de inicio
-CMD python manage.py migrate --noinput && \
+CMD echo "=== Running migrations ===" && \
+    python manage.py migrate --noinput && \
+    echo "=== Collecting static files ===" && \
     python manage.py collectstatic --noinput && \
+    echo "=== Listing /app structure ===" && \
+    ls -la /app/ && \
+    echo "=== Listing /app/Reservas ===" && \
+    ls -la /app/Reservas/ 2>&1 || echo "Reservas directory not found!" && \
+    echo "=== Starting gunicorn ===" && \
     gunicorn ReservaProject.wsgi:application \
     --bind 0.0.0.0:${PORT:-8000} \
     --workers 4 \
