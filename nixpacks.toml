@@ -1,0 +1,17 @@
+[phases.setup]
+nixPkgs = ["nodejs-18_x", "python313"]
+
+[phases.install]
+cmds = [
+  "cd Reservas && npm install",
+  "cd 'REST frameworks/ReservaProject' && pip install -r requirements.txt"
+]
+
+[phases.build]
+cmds = [
+  "cd Reservas && npm run build",
+  "cd 'REST frameworks/ReservaProject' && python manage.py collectstatic --noinput"
+]
+
+[start]
+cmd = "cd 'REST frameworks/ReservaProject' && python manage.py migrate && gunicorn ReservaProject.wsgi --bind 0.0.0.0:$PORT --log-file -"
