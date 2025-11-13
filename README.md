@@ -264,74 +264,6 @@ python manage.py migrate
 python manage.py poblar_datos
 ```
 
-## Próximos Pasos / Mejoras Futuras
-
-- [ ] Implementar sistema de notificaciones por email
-- [ ] Agregar vista de calendario para visualizar reservas
-- [ ] Sistema de pagos integrado
-- [ ] Políticas de cancelación con penalización
-- [ ] Reportes y estadísticas
-- [ ] Aplicación móvil
-- [ ] Integración con sistemas de punto de venta (POS)
-
-## Problemas Comunes y Soluciones
-
-### Error: `psycopg2.OperationalError: could not connect to server`
-
-**Solución**: Asegúrate de que PostgreSQL esté corriendo:
-```bash
-brew services start postgresql
-# o
-sudo systemctl start postgresql
-```
-
-### Error: `relation "mainApp_perfil" does not exist`
-
-**Solución**: Ejecuta las migraciones:
-```bash
-python manage.py migrate
-```
-
-### Error de CORS en el frontend
-
-**Solución**: Verifica que el backend esté corriendo en `localhost:8000` y que CORS esté configurado correctamente en `settings.py`.
-
-### Frontend no se conecta al backend
-
-**Solución**:
-1. Verifica que el backend esté corriendo en `http://localhost:8000`
-2. Revisa la consola del navegador para errores
-3. Verifica que `API_BASE_URL` en `reservasApi.js` sea correcta
-
-### Verificar que la encriptación funciona
-
-Para comprobar que los datos están encriptados en la base de datos:
-
-```bash
-# Conectarse a PostgreSQL
-psql -d reservas_db
-
-# Ver datos encriptados en la base de datos
-SELECT user_id, rol, rut, telefono FROM "mainApp_perfil" WHERE rol = 'admin' LIMIT 1;
-
-# Deberías ver valores como: gAAAAAB... (encriptados)
-```
-
-Para verificar que la API desencripta correctamente:
-
-```bash
-# Hacer login
-curl -X POST http://localhost:8000/api/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}'
-
-# Copiar el token y consultar el perfil
-curl http://localhost:8000/api/perfil/ \
-  -H "Authorization: Token TU_TOKEN_AQUI"
-
-# Deberías ver el RUT y teléfono en texto plano
-```
-
 ## Autores
 
 **Sprint 3 - Equipo de Desarrollo**
@@ -347,3 +279,4 @@ Este proyecto es parte de un trabajo académico.
 ---
 
 **¿Necesitas ayuda?** Revisa la documentación de Django REST Framework y React, o contacta al equipo de desarrollo.
+
