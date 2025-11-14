@@ -65,21 +65,5 @@ RUN mkdir -p staticfiles static
 # Exponer puerto (Railway usa variable PORT)
 EXPOSE 8000
 
-# Script de inicio
-CMD echo "=== Running migrations ===" && \
-    python manage.py migrate --noinput && \
-    echo "=== Collecting static files ===" && \
-    python manage.py collectstatic --noinput && \
-    echo "=== Listing /app structure ===" && \
-    ls -la /app/ && \
-    echo "=== Listing /app/Reservas ===" && \
-    ls -la /app/Reservas/ 2>&1 || echo "Reservas directory not found!" && \
-    echo "=== Starting gunicorn ===" && \
-    gunicorn ReservaProject.wsgi:application \
-    --bind 0.0.0.0:${PORT:-8000} \
-    --workers 4 \
-    --worker-class sync \
-    --log-file - \
-    --access-logfile - \
-    --error-logfile - \
-    --log-level info
+# Script de inicio (comentado porque Railway usa Custom Start Command)
+# CMD será definido en Railway Settings > Deploy > Custom Start Command
