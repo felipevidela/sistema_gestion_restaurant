@@ -167,8 +167,8 @@ STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Para producción (WhiteNoise)
 
 # Incluir archivos estáticos del frontend React
-# En producción, incluir los assets compilados por Vite
-STATICFILES_DIRS = [STATIC_DIR, FRONTEND_DIR / "assets"]
+# En producción, incluir todo el directorio dist para mantener la estructura /assets/
+STATICFILES_DIRS = [STATIC_DIR, FRONTEND_DIR]
 
 # Configuración de WhiteNoise para archivos estáticos en producción
 STORAGES = {

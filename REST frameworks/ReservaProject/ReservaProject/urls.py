@@ -35,6 +35,7 @@ urlpatterns = [
     path('api/', include(router.urls)),
 
     # Servir el frontend React (catch-all - debe ir al FINAL)
-    # Captura todas las rutas que no sean API, admin, static o assets
-    re_path(r'^(?!api/|admin/|static/|assets/).*$', TemplateView.as_view(template_name='index.html'), name='frontend'),
+    # Captura todas las rutas que no sean API, admin o static
+    # WhiteNoise intercepta /static/ antes de que llegue aquí
+    re_path(r'^(?!api/|admin/|static/).*$', TemplateView.as_view(template_name='index.html'), name='frontend'),
 ]
