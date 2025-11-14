@@ -59,8 +59,8 @@ COPY --from=frontend-builder /app/frontend/dist ./Reservas/dist/
 # Cambiar al directorio de Django
 WORKDIR /app/ReservaProject
 
-# Crear directorio para archivos estáticos
-RUN mkdir -p staticfiles
+# Crear directorios para archivos estáticos
+RUN mkdir -p staticfiles static
 
 # Exponer puerto (Railway usa variable PORT)
 EXPOSE 8000
