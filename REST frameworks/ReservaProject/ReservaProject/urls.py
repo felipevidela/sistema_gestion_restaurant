@@ -32,11 +32,9 @@ urlpatterns = [
     path('api/consultar-mesas/', views.ConsultaMesasView.as_view(), name='consultar-mesas'),
 
     # Incluir las rutas generadas por el router (mesas y reservas)
-    path('', include(router.urls)),
-]
+    path('api/', include(router.urls)),
 
-# Servir el frontend React (todas las rutas no-API)
-# En producción, el frontend siempre debe estar disponible
-urlpatterns += [
+    # Servir el frontend React (catch-all - debe ir al FINAL)
+    # Captura todas las rutas que no sean API, admin o static
     re_path(r'^(?!api/|admin/|static/).*$', TemplateView.as_view(template_name='index.html'), name='frontend'),
 ]
