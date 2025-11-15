@@ -120,10 +120,13 @@ def register_and_reserve(request):
                     'details': reserva_serializer.errors
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+            # 2.5. Bloquear la mesa para evitar race conditions
+            mesa_id = reserva_data.get('mesa')
+            mesa = Mesa.objects.select_for_update().get(id=mesa_id)
+
             reserva = reserva_serializer.save(cliente=user)
 
             # 3. Actualizar estado de la mesa
-            mesa = reserva.mesa
             if mesa.estado == 'disponible':
                 mesa.estado = 'reservada'
                 mesa.save()
@@ -515,14 +518,23 @@ class ReservaViewSet(viewsets.ModelViewSet):
         """
         Al crear una reserva, asignar el usuario autenticado como cliente
         y actualizar el estado de la mesa a 'reservada'.
-        """
-        reserva = serializer.save(cliente=self.request.user)
 
-        # Actualizar estado de la mesa
-        mesa = reserva.mesa
-        if mesa.estado == 'disponible':
-            mesa.estado = 'reservada'
-            mesa.save()
+        IMPORTANTE: Usa transacción atómica y select_for_update() para evitar race conditions
+        """
+        from django.db import transaction
+
+        with transaction.atomic():
+            # Bloquear la mesa para evitar dobles reservas simultáneas
+            mesa_id = serializer.validated_data['mesa'].id
+            mesa = Mesa.objects.select_for_update().get(id=mesa_id)
+
+            # Guardar la reserva
+            reserva = serializer.save(cliente=self.request.user)
+
+            # Actualizar estado de la mesa
+            if mesa.estado == 'disponible':
+                mesa.estado = 'reservada'
+                mesa.save()
 
     @action(detail=True, methods=['patch'], permission_classes=[IsAdminOrCajero])
     def cambiar_estado(self, request, pk=None):
@@ -530,6 +542,8 @@ class ReservaViewSet(viewsets.ModelViewSet):
         Endpoint personalizado para cambiar el estado de una reserva.
         PATCH /api/reservas/{id}/cambiar_estado/
         Body: {estado: 'activa'|'completada'|'cancelada'|'pendiente'}
+
+        IMPORTANTE: Verifica otras reservas antes de cambiar estado de mesa
         """
         reserva = self.get_object()
         nuevo_estado = request.data.get('estado')
@@ -547,7 +561,15 @@ class ReservaViewSet(viewsets.ModelViewSet):
         if nuevo_estado == 'activa':
             reserva.mesa.estado = 'ocupada'
         elif nuevo_estado in ['completada', 'cancelada']:
-            reserva.mesa.estado = 'disponible'
+            # IMPORTANTE: Solo marcar como disponible si no hay otras reservas activas/pendientes
+            otras_reservas_activas = Reserva.objects.filter(
+                mesa=reserva.mesa,
+                estado__in=['pendiente', 'activa']
+            ).exclude(id=reserva.id).exists()
+
+            if not otras_reservas_activas:
+                reserva.mesa.estado = 'disponible'
+            # Si hay otras reservas, mantener el estado actual de la mesa
         elif nuevo_estado == 'pendiente':
             reserva.mesa.estado = 'reservada'
 

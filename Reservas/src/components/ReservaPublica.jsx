@@ -41,22 +41,30 @@ export default function ReservaPublica({ onReservaExitosa }) {
 
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Cargar mesas cuando se selecciona fecha y personas
+  // Cargar mesas cuando se selecciona fecha, hora y personas
   useEffect(() => {
-    if (formData.fecha_reserva && formData.num_personas) {
+    if (formData.fecha_reserva && formData.hora_inicio && formData.num_personas) {
       cargarMesasDisponibles();
     }
-  }, [formData.fecha_reserva, formData.num_personas]);
+  }, [formData.fecha_reserva, formData.hora_inicio, formData.num_personas]);
 
   const cargarMesasDisponibles = async () => {
     try {
       setLoadingMesas(true);
-      // Por ahora, simplemente cargamos todas las mesas disponibles
-      // En el futuro, esto podría filtrarse por fecha/hora en el backend
-      const data = await getMesas({ estado: 'disponible' });
+      // Cargar mesas disponibles para la fecha y hora específicas
+      const data = await getMesas({
+        fecha: formData.fecha_reserva,
+        hora: formData.hora_inicio
+      });
       // Filtrar mesas por capacidad
       const mesasFiltradas = data.filter(m => m.capacidad >= formData.num_personas);
       setMesas(mesasFiltradas);
+
+      // Si la mesa seleccionada ya no está disponible, limpiar selección
+      if (formData.mesa && !mesasFiltradas.find(m => m.id === parseInt(formData.mesa))) {
+        setFormData(prev => ({ ...prev, mesa: '' }));
+        setError('La mesa seleccionada ya no está disponible para esta fecha y hora. Por favor seleccione otra.');
+      }
     } catch (err) {
       console.error('Error al cargar mesas:', err);
     } finally {
