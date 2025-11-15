@@ -283,13 +283,13 @@ export default function LoginForm({ onLoginSuccess }) {
                         value={loginData.password}
                         onChange={handleLoginChange}
                         required
-                        style={{ paddingRight: '40px' }}
+                        style={{ paddingRight: '70px' }}
                       />
                       <span
                         onClick={() => setShowPassword(!showPassword)}
                         style={{
                           position: 'absolute',
-                          right: '12px',
+                          right: '40px',
                           top: '10px',
                           cursor: 'pointer',
                           display: 'flex',
@@ -480,13 +480,13 @@ export default function LoginForm({ onLoginSuccess }) {
                           value={registerData.password}
                           onChange={handleRegisterChange}
                           required
-                          style={{ paddingRight: '40px' }}
+                          style={{ paddingRight: '70px' }}
                         />
                         <span
                           onClick={() => setShowPassword(!showPassword)}
                           style={{
                             position: 'absolute',
-                            right: '12px',
+                            right: '40px',
                             top: '10px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -531,13 +531,13 @@ export default function LoginForm({ onLoginSuccess }) {
                           value={registerData.password_confirm}
                           onChange={handleRegisterChange}
                           required
-                          style={{ paddingRight: '40px' }}
+                          style={{ paddingRight: '70px' }}
                         />
                         <span
                           onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
                           style={{
                             position: 'absolute',
-                            right: '12px',
+                            right: '40px',
                             top: '10px',
                             cursor: 'pointer',
                             display: 'flex',
