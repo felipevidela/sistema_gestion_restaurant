@@ -237,6 +237,9 @@ class MesaSerializer(serializers.ModelSerializer):
 class ReservaSerializer(serializers.ModelSerializer):
     cliente_username = serializers.CharField(source='cliente.username', read_only=True)
     cliente_nombre = serializers.CharField(source='cliente.perfil.nombre_completo', read_only=True)
+    cliente_telefono = serializers.CharField(source='cliente.perfil.telefono', read_only=True)
+    cliente_email = serializers.EmailField(source='cliente.email', read_only=True)
+    cliente_rut = serializers.CharField(source='cliente.perfil.rut', read_only=True)
     mesa_numero = serializers.IntegerField(source='mesa.numero', read_only=True)
     mesa_info = MesaSerializer(source='mesa', read_only=True)
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
@@ -244,6 +247,7 @@ class ReservaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reserva
         fields = ('id', 'cliente', 'cliente_username', 'cliente_nombre',
+                  'cliente_telefono', 'cliente_email', 'cliente_rut',
                   'mesa', 'mesa_numero', 'mesa_info',
                   'fecha_reserva', 'hora_inicio', 'hora_fin',
                   'num_personas', 'estado', 'estado_display', 'notas',

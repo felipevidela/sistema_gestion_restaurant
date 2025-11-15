@@ -215,6 +215,9 @@ export async function getReservas({ fecha, estado } = {}) {
   return reservas.map(reserva => ({
     id: reserva.id,
     cliente: reserva.cliente_nombre || reserva.cliente_username,
+    cliente_telefono: reserva.cliente_telefono,
+    cliente_email: reserva.cliente_email,
+    cliente_rut: reserva.cliente_rut,
     mesa: `M${String(reserva.mesa_numero).padStart(2, '0')}`,
     fecha: reserva.fecha_reserva,
     hora: formatearHora24(reserva.hora_inicio),
