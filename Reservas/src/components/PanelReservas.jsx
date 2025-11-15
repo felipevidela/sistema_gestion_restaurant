@@ -9,7 +9,6 @@ import {
 import Modal, { ConfirmModal } from "./ui/Modal";
 import { useToast } from "../contexts/ToastContext";
 import { formatErrorMessage } from "../utils/errorMessages";
-import CalendarioMensual from "./CalendarioMensual";
 
 function PanelReservas({ user, onLogout, showAllReservations = false }) {
     // Usar el rol real del usuario autenticado
@@ -86,9 +85,6 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
 
     // Mobile view state
     const [isMobileView, setIsMobileView] = useState(false);
-
-    // Calendar view state
-    const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
 
     // Edit modal state
     const [editModal, setEditModal] = useState({ isOpen: false, reserva: null });
@@ -298,12 +294,6 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
         const lunes = new Date(hoy);
         lunes.setDate(hoy.getDate() + diff);
         setFecha(lunes.toISOString().split('T')[0]);
-    };
-
-    // Handle calendar day click
-    const handleDiaClick = (fechaStr) => {
-        setFecha(fechaStr);
-        setViewMode('list'); // Switch to list view to show details
     };
 
     // resumen por estado
@@ -677,26 +667,6 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                 </span>
                             )}
                         </div>
-
-                        {/* View Mode Toggle */}
-                        <div className="btn-group btn-group-sm" role="group">
-                            <button
-                                type="button"
-                                className={`btn ${viewMode === 'list' ? 'btn-primary' : 'btn-outline-primary'}`}
-                                onClick={() => setViewMode('list')}
-                            >
-                                <i className="bi bi-list-ul me-1"></i>
-                                Lista
-                            </button>
-                            <button
-                                type="button"
-                                className={`btn ${viewMode === 'calendar' ? 'btn-primary' : 'btn-outline-primary'}`}
-                                onClick={() => setViewMode('calendar')}
-                            >
-                                <i className="bi bi-calendar3 me-1"></i>
-                                Calendario
-                            </button>
-                        </div>
                     </div>
 
                     <div className="row g-3 mb-3">
@@ -965,15 +935,8 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                         <div className="alert alert-danger py-2 small">{error}</div>
                     )}
 
-                    {/* Calendar View */}
-                    {viewMode === 'calendar' ? (
-                        <CalendarioMensual
-                            fechaSeleccionada={fecha}
-                            onDiaClick={handleDiaClick}
-                        />
-                    ) : (
-                        /* List View */
-                        <>
+                    {/* List View */}
+                    <>
                             {/* Mobile card view */}
                             {isMobileView ? (
                         <div className="d-block d-md-none">
@@ -1160,8 +1123,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                             </nav>
                         </div>
                     )}
-                        </>
-                    )}
+                    </>
                 </div>
             </div>
 

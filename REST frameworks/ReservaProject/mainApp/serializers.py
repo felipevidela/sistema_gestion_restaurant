@@ -254,6 +254,53 @@ class ReservaSerializer(serializers.ModelSerializer):
                   'created_at', 'updated_at')
         read_only_fields = ('cliente', 'hora_fin', 'created_at', 'updated_at')
 
+    def to_representation(self, instance):
+        """
+        Controla la visibilidad de datos sensibles del cliente (teléfono, RUT).
+
+        - Personal del restaurante (admin, cajero, mesero): puede ver todos los datos
+          desencriptados para contactar al cliente
+        - Cliente dueño de la reserva: puede ver sus propios datos
+        - Otros clientes: NO pueden ver datos sensibles por privacidad
+
+        Los campos encriptados se desencriptan automáticamente al accederlos desde el modelo.
+        """
+        representation = super().to_representation(instance)
+        request = self.context.get('request')
+
+        # Verificar si el usuario tiene permiso para ver datos sensibles
+        tiene_permiso = False
+
+        if request and hasattr(request, 'user'):
+            user = request.user
+
+            # El dueño de la reserva puede ver sus propios datos
+            if user == instance.cliente:
+                tiene_permiso = True
+
+            # Personal del restaurante puede ver datos de contacto del cliente
+            elif hasattr(user, 'perfil') and user.perfil.rol in ['admin', 'cajero', 'mesero']:
+                tiene_permiso = True
+
+        # Acceder directamente al modelo para obtener los campos encriptados desencriptados
+        if tiene_permiso:
+            try:
+                # Acceder directamente al perfil del cliente para obtener datos desencriptados
+                perfil = instance.cliente.perfil
+                representation['cliente_telefono'] = perfil.telefono if perfil.telefono else None
+                representation['cliente_rut'] = perfil.rut if perfil.rut else None
+                representation['cliente_email'] = instance.cliente.email if instance.cliente.email else None
+            except AttributeError:
+                # Si no hay perfil, dejar los valores por defecto
+                pass
+        else:
+            # Si no tiene permiso, ocultar datos sensibles
+            representation['cliente_telefono'] = None
+            representation['cliente_rut'] = None
+            representation['cliente_email'] = None
+
+        return representation
+
     def validate(self, data):
         """
         Validaciones adicionales a nivel de serializer.
