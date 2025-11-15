@@ -7,7 +7,8 @@ import {
   validarRUT,
   validarTelefono,
   formatearRUT,
-  formatearTelefono
+  formatearTelefono,
+  validarSeleccionMesa
 } from '../utils/validaciones';
 
 export default function ReservaPublica({ onReservaExitosa }) {
@@ -133,8 +134,11 @@ export default function ReservaPublica({ onReservaExitosa }) {
     // Validar datos de reserva
     if (!formData.fecha_reserva) errors.fecha_reserva = 'La fecha es requerida';
     if (!formData.hora_inicio) errors.hora_inicio = 'La hora de inicio es requerida';
-    if (!formData.mesa) errors.mesa = 'Debe seleccionar una mesa';
     if (!formData.num_personas || formData.num_personas < 1) errors.num_personas = 'Debe indicar al menos 1 persona';
+
+    // FIX #31 (MENOR): Validación de selección de mesa
+    const validacionMesa = validarSeleccionMesa(formData.mesa, mesas);
+    if (!validacionMesa.valido) errors.mesa = validacionMesa.mensaje;
 
     // Validar datos personales
     if (!formData.nombre || formData.nombre.trim() === '') {
@@ -177,17 +181,49 @@ export default function ReservaPublica({ onReservaExitosa }) {
       return;
     }
 
+    // FIX #25 (MODERADO): Revalidar disponibilidad antes de submit
+    // Verificar que la mesa aún esté disponible justo antes de crear la reserva
     try {
+      const mesasDisponiblesActuales = await getMesas({
+        fecha: formData.fecha_reserva,
+        hora: formData.hora_inicio
+      });
+      const mesasFiltradas = mesasDisponiblesActuales.filter(m => m.capacidad >= formData.num_personas);
+      const mesaAunDisponible = mesasFiltradas.find(m => m.id === parseInt(formData.mesa));
+
+      if (!mesaAunDisponible) {
+        setError('Lo sentimos, la mesa seleccionada ya no está disponible para esta fecha y hora. Por favor seleccione otra mesa.');
+        // Recargar mesas para mostrar las disponibles actualmente
+        await cargarMesasDisponibles();
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.error('Error al revalidar disponibilidad:', err);
+      // Continuar con la creación - el backend hará la validación final
+    }
+
+    // FIX #34 (MENOR): Transacciones atómicas en frontend
+    try {
+      // Paso 1: Registro y reserva (operación crítica)
       const result = await registerAndReserve(formData);
+
+      // Paso 2: Solo si fue exitoso, mostrar mensaje de éxito
       setSuccess(`¡Reserva confirmada! Mesa ${result.reserva.mesa_numero} para el ${result.reserva.fecha_reserva}`);
 
-      // Esperar 2 segundos y redirigir
+      // Paso 3: Esperar 2 segundos y redirigir solo si la operación fue exitosa
       setTimeout(() => {
         if (onReservaExitosa) {
-          onReservaExitosa(result);
+          try {
+            onReservaExitosa(result);
+          } catch (redirectErr) {
+            console.error('Error al redirigir, pero reserva creada exitosamente:', redirectErr);
+            // Reserva fue creada exitosamente, solo falló la redirección
+          }
         }
       }, 2000);
     } catch (err) {
+      // Si falla la operación principal, no ejecutar pasos posteriores
       setError(err.message || 'Error al crear la reserva');
       console.error('Error en reserva:', err);
     } finally {

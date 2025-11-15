@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getMesas, updateEstadoMesa } from '../services/reservasApi';
+import { handleError } from '../utils/errorHandler';
 
 export default function GestionMesas() {
   const [mesas, setMesas] = useState([]);
@@ -7,6 +8,7 @@ export default function GestionMesas() {
   const [error, setError] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [mesaEditando, setMesaEditando] = useState(null);
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     cargarMesas();
@@ -30,13 +32,41 @@ export default function GestionMesas() {
   };
 
   const handleCambiarEstado = async (mesaId, nuevoEstado) => {
+    // FIX #34 (MENOR): Transacciones atómicas en frontend
+    // Guardar estado anterior en caso de fallo
+    const estadoAnteriorMesas = [...mesas];
+    const mesaAnterior = mesas.find(m => m.id === mesaId);
+
     try {
+      // Paso 1: Actualizar estado en el backend (operación crítica)
       await updateEstadoMesa({ id: mesaId, nuevoEstado });
-      await cargarMesas();
+
+      // Paso 2: Solo si el paso 1 fue exitoso, recargar mesas
+      try {
+        await cargarMesas();
+      } catch (reloadErr) {
+        // Si falla la recarga, restaurar estado anterior visualmente
+        console.error('Error al recargar mesas, restaurando vista anterior:', reloadErr);
+        setMesas(estadoAnteriorMesas);
+        // Mostrar warning pero considerar la operación exitosa
+        setSuccess('Estado actualizado, pero hubo un error al recargar. Actualice la página manualmente.');
+        setTimeout(() => setSuccess(''), 5000);
+      }
+
+      // Paso 3: Solo si todo fue exitoso, limpiar UI
       setMesaEditando(null);
-      alert('Estado de la mesa actualizado correctamente');
+
+      // FIX #26 (MODERADO): Manejo de errores consistente - usar setSuccess en lugar de alert
+      if (!success) { // Solo mostrar si no se mostró el warning anterior
+        setSuccess('Estado de la mesa actualizado correctamente');
+        // Limpiar mensaje después de 3 segundos
+        setTimeout(() => setSuccess(''), 3000);
+      }
     } catch (err) {
-      alert('Error al actualizar estado: ' + err.message);
+      // Si falla la actualización principal, restaurar estado visual anterior
+      setMesas(estadoAnteriorMesas);
+      // FIX #26 (MODERADO): Manejo de errores consistente
+      await handleError(err, 'actualizar estado de la mesa', setError);
     }
   };
 
@@ -102,6 +132,13 @@ export default function GestionMesas() {
         <div className="alert alert-danger alert-dismissible fade show" role="alert">
           {error}
           <button type="button" className="btn-close" onClick={() => setError('')}></button>
+        </div>
+      )}
+
+      {success && (
+        <div className="alert alert-success alert-dismissible fade show" role="alert">
+          {success}
+          <button type="button" className="btn-close" onClick={() => setSuccess('')}></button>
         </div>
       )}
 

@@ -208,3 +208,60 @@ export function validarUsername(username) {
 
   return { valido: true, mensaje: '' };
 }
+
+/**
+ * FIX #31 (MENOR): Validación de número de mesa
+ * Validar número de mesa
+ * @param {number|string} numeroMesa - Número de mesa a validar
+ * @returns {Object} - {valido: boolean, mensaje: string}
+ */
+export function validarNumeroMesa(numeroMesa) {
+  if (numeroMesa === null || numeroMesa === undefined || numeroMesa === '') {
+    return { valido: false, mensaje: 'El número de mesa es requerido' };
+  }
+
+  const numero = parseInt(numeroMesa);
+
+  if (isNaN(numero)) {
+    return { valido: false, mensaje: 'El número de mesa debe ser un número válido' };
+  }
+
+  if (numero < 1) {
+    return { valido: false, mensaje: 'El número de mesa debe ser mayor a 0' };
+  }
+
+  if (numero > 999) {
+    return { valido: false, mensaje: 'El número de mesa debe ser menor a 1000' };
+  }
+
+  return { valido: true, mensaje: '' };
+}
+
+/**
+ * FIX #31 (MENOR): Validación de selección de mesa
+ * Validar que se haya seleccionado una mesa válida
+ * @param {number|string} mesaId - ID de la mesa seleccionada
+ * @param {Array} mesasDisponibles - Lista de mesas disponibles
+ * @returns {Object} - {valido: boolean, mensaje: string}
+ */
+export function validarSeleccionMesa(mesaId, mesasDisponibles = []) {
+  if (!mesaId || mesaId === '') {
+    return { valido: false, mensaje: 'Debe seleccionar una mesa' };
+  }
+
+  const id = parseInt(mesaId);
+
+  if (isNaN(id)) {
+    return { valido: false, mensaje: 'ID de mesa inválido' };
+  }
+
+  // Si se proporciona lista de mesas disponibles, verificar que la mesa exista
+  if (mesasDisponibles.length > 0) {
+    const mesaExiste = mesasDisponibles.some(mesa => mesa.id === id);
+    if (!mesaExiste) {
+      return { valido: false, mensaje: 'La mesa seleccionada no está disponible' };
+    }
+  }
+
+  return { valido: true, mensaje: '' };
+}

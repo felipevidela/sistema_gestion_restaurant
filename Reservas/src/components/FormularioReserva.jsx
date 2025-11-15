@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createReserva, getMesas } from '../services/reservasApi';
+import { validarSeleccionMesa } from '../utils/validaciones';
 
 export default function FormularioReserva({ onReservaCreada }) {
   const [mesas, setMesas] = useState([]);
@@ -97,6 +98,14 @@ export default function FormularioReserva({ onReservaCreada }) {
         return;
       }
 
+      // FIX #31 (MENOR): Validación de selección de mesa
+      const validacionMesa = validarSeleccionMesa(formData.mesa, mesas);
+      if (!validacionMesa.valido) {
+        setError(validacionMesa.mensaje);
+        setLoading(false);
+        return;
+      }
+
       // Validar capacidad de la mesa
       const mesaSeleccionada = mesas.find(m => m.id === parseInt(formData.mesa));
       if (mesaSeleccionada && parseInt(formData.num_personas) > mesaSeleccionada.capacidad) {
@@ -105,35 +114,76 @@ export default function FormularioReserva({ onReservaCreada }) {
         return;
       }
 
-      // Crear la reserva
-      const reservaData = {
-        mesa: parseInt(formData.mesa),
-        fecha_reserva: formData.fecha_reserva,
-        hora_inicio: formData.hora_inicio,
-        num_personas: parseInt(formData.num_personas),
-        notas: formData.notas
-      };
+      // FIX #25 (MODERADO): Revalidar disponibilidad antes de submit
+      // Verificar que la mesa aún esté disponible justo antes de crear la reserva
+      try {
+        const mesasDisponiblesActuales = await getMesas({
+          fecha: formData.fecha_reserva,
+          hora: formData.hora_inicio
+        });
+        const mesaAunDisponible = mesasDisponiblesActuales.find(m => m.id === parseInt(formData.mesa));
 
-      console.log('Enviando reserva:', reservaData);
-      await createReserva(reservaData);
+        if (!mesaAunDisponible) {
+          setError('Lo sentimos, la mesa seleccionada ya no está disponible para esta fecha y hora. Por favor seleccione otra mesa.');
+          // Recargar mesas para mostrar las disponibles actualmente
+          await cargarMesasDisponibles();
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Error al revalidar disponibilidad:', err);
+        // Continuar con la creación - el backend hará la validación final
+      }
 
-      setSuccess('¡Reserva creada exitosamente!');
+      // FIX #34 (MENOR): Transacciones atómicas en frontend
+      // Guardar datos del formulario por si necesitamos restaurar
+      const formDataBackup = { ...formData };
 
-      // Limpiar formulario
-      setFormData({
-        mesa: '',
-        fecha_reserva: '',
-        hora_inicio: '',
-        num_personas: 1,
-        notas: ''
-      });
+      try {
+        // Paso 1: Crear la reserva (operación crítica)
+        const reservaData = {
+          mesa: parseInt(formData.mesa),
+          fecha_reserva: formData.fecha_reserva,
+          hora_inicio: formData.hora_inicio,
+          num_personas: parseInt(formData.num_personas),
+          notas: formData.notas
+        };
 
-      // Recargar mesas
-      cargarMesas();
+        console.log('Enviando reserva:', reservaData);
+        const nuevaReserva = await createReserva(reservaData);
 
-      // Notificar al componente padre
-      if (onReservaCreada) {
-        onReservaCreada();
+        // Paso 2: Solo si la creación fue exitosa, ejecutar operaciones post-creación
+        setSuccess('¡Reserva creada exitosamente!');
+
+        // Paso 3: Limpiar formulario solo después de éxito
+        setFormData({
+          mesa: '',
+          fecha_reserva: '',
+          hora_inicio: '',
+          num_personas: 1,
+          notas: ''
+        });
+
+        // Paso 4: Recargar mesas (no crítico, puede fallar)
+        try {
+          await cargarMesas();
+        } catch (reloadErr) {
+          console.error('Error al recargar mesas, pero reserva creada exitosamente:', reloadErr);
+          // No afecta el éxito de la operación principal
+        }
+
+        // Paso 5: Notificar al componente padre (solo si todo fue exitoso)
+        if (onReservaCreada) {
+          try {
+            onReservaCreada(nuevaReserva);
+          } catch (notifyErr) {
+            console.error('Error al notificar componente padre:', notifyErr);
+            // No afecta el éxito de la operación principal
+          }
+        }
+      } catch (createErr) {
+        // Si falla la creación, re-lanzar el error para que sea capturado por el catch externo
+        throw createErr;
       }
 
     } catch (err) {
