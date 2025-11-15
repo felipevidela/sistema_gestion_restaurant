@@ -18,6 +18,10 @@ export default function ReservaPublica({ onReservaExitosa }) {
   const [success, setSuccess] = useState('');
   const [mostrarDatosPersonales, setMostrarDatosPersonales] = useState(false);
 
+  // Estados para mostrar/ocultar contraseñas
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+
   const [formData, setFormData] = useState({
     // Datos de reserva
     fecha_reserva: '',
@@ -469,18 +473,28 @@ export default function ReservaPublica({ onReservaExitosa }) {
                         <label htmlFor="password" className="form-label">
                           Contraseña <span className="text-danger">*</span>
                         </label>
-                        <input
-                          type="password"
-                          className={`form-control ${validationErrors.password ? 'is-invalid' : ''}`}
-                          id="password"
-                          name="password"
-                          value={formData.password}
-                          onChange={handleChange}
-                          required
-                        />
-                        {validationErrors.password && (
-                          <div className="invalid-feedback">{validationErrors.password}</div>
-                        )}
+                        <div className="input-group">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            className={`form-control ${validationErrors.password ? 'is-invalid' : ''}`}
+                            id="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            required
+                          />
+                          <button
+                            className="btn btn-outline-secondary"
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            tabIndex="-1"
+                          >
+                            <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                          </button>
+                          {validationErrors.password && (
+                            <div className="invalid-feedback">{validationErrors.password}</div>
+                          )}
+                        </div>
                         <small className="text-muted">Mínimo 8 caracteres</small>
                       </div>
 
@@ -488,18 +502,28 @@ export default function ReservaPublica({ onReservaExitosa }) {
                         <label htmlFor="password_confirm" className="form-label">
                           Confirmar Contraseña <span className="text-danger">*</span>
                         </label>
-                        <input
-                          type="password"
-                          className={`form-control ${validationErrors.password_confirm ? 'is-invalid' : ''}`}
-                          id="password_confirm"
-                          name="password_confirm"
-                          value={formData.password_confirm}
-                          onChange={handleChange}
-                          required
-                        />
-                        {validationErrors.password_confirm && (
-                          <div className="invalid-feedback">{validationErrors.password_confirm}</div>
-                        )}
+                        <div className="input-group">
+                          <input
+                            type={showPasswordConfirm ? "text" : "password"}
+                            className={`form-control ${validationErrors.password_confirm ? 'is-invalid' : ''}`}
+                            id="password_confirm"
+                            name="password_confirm"
+                            value={formData.password_confirm}
+                            onChange={handleChange}
+                            required
+                          />
+                          <button
+                            className="btn btn-outline-secondary"
+                            type="button"
+                            onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                            tabIndex="-1"
+                          >
+                            <i className={`bi ${showPasswordConfirm ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                          </button>
+                          {validationErrors.password_confirm && (
+                            <div className="invalid-feedback">{validationErrors.password_confirm}</div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

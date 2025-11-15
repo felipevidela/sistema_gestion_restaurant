@@ -17,6 +17,10 @@ export default function LoginForm({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Estados para mostrar/ocultar contraseñas
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+
   // Estados para login
   const [loginData, setLoginData] = useState({
     username: '',
@@ -270,15 +274,25 @@ export default function LoginForm({ onLoginSuccess }) {
                     <label htmlFor="password" className="form-label">
                       Contraseña
                     </label>
-                    <input
-                      type="password"
-                      className="form-control"
-                      id="password"
-                      name="password"
-                      value={loginData.password}
-                      onChange={handleLoginChange}
-                      required
-                    />
+                    <div className="input-group">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        className="form-control"
+                        id="password"
+                        name="password"
+                        value={loginData.password}
+                        onChange={handleLoginChange}
+                        required
+                      />
+                      <button
+                        className="btn btn-outline-secondary"
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex="-1"
+                      >
+                        <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="d-grid mb-3">
@@ -435,18 +449,28 @@ export default function LoginForm({ onLoginSuccess }) {
                       <label htmlFor="register-password" className="form-label">
                         Contraseña <span className="text-danger">*</span>
                       </label>
-                      <input
-                        type="password"
-                        className={`form-control ${validationErrors.password ? 'is-invalid' : ''}`}
-                        id="register-password"
-                        name="password"
-                        value={registerData.password}
-                        onChange={handleRegisterChange}
-                        required
-                      />
-                      {validationErrors.password && (
-                        <div className="invalid-feedback">{validationErrors.password}</div>
-                      )}
+                      <div className="input-group">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          className={`form-control ${validationErrors.password ? 'is-invalid' : ''}`}
+                          id="register-password"
+                          name="password"
+                          value={registerData.password}
+                          onChange={handleRegisterChange}
+                          required
+                        />
+                        <button
+                          className="btn btn-outline-secondary"
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          tabIndex="-1"
+                        >
+                          <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                        </button>
+                        {validationErrors.password && (
+                          <div className="invalid-feedback">{validationErrors.password}</div>
+                        )}
+                      </div>
                       <small className="text-muted">Mínimo 8 caracteres</small>
                     </div>
 
@@ -454,18 +478,28 @@ export default function LoginForm({ onLoginSuccess }) {
                       <label htmlFor="password_confirm" className="form-label">
                         Confirmar Contraseña <span className="text-danger">*</span>
                       </label>
-                      <input
-                        type="password"
-                        className={`form-control ${validationErrors.password_confirm ? 'is-invalid' : ''}`}
-                        id="password_confirm"
-                        name="password_confirm"
-                        value={registerData.password_confirm}
-                        onChange={handleRegisterChange}
-                        required
-                      />
-                      {validationErrors.password_confirm && (
-                        <div className="invalid-feedback">{validationErrors.password_confirm}</div>
-                      )}
+                      <div className="input-group">
+                        <input
+                          type={showPasswordConfirm ? "text" : "password"}
+                          className={`form-control ${validationErrors.password_confirm ? 'is-invalid' : ''}`}
+                          id="password_confirm"
+                          name="password_confirm"
+                          value={registerData.password_confirm}
+                          onChange={handleRegisterChange}
+                          required
+                        />
+                        <button
+                          className="btn btn-outline-secondary"
+                          type="button"
+                          onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                          tabIndex="-1"
+                        >
+                          <i className={`bi ${showPasswordConfirm ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                        </button>
+                        {validationErrors.password_confirm && (
+                          <div className="invalid-feedback">{validationErrors.password_confirm}</div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
