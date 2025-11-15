@@ -15,7 +15,7 @@ const getDefaultTab = (rol) => {
 };
 
 function App() {
-  const { user, isAuthenticated, logout: authLogout, registerAndLogin } = useAuth();
+  const { user, isAuthenticated, isLoading, logout: authLogout, registerAndLogin } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [activeTab, setActiveTab] = useState(() =>
     isAuthenticated ? getDefaultTab(user?.rol) : 'reservas-dia'
@@ -88,6 +88,20 @@ function App() {
         return <div className="alert alert-warning">Sección no encontrada</div>;
     }
   };
+
+  // Mostrar spinner mientras se verifica la autenticación desde localStorage
+  if (isLoading) {
+    return (
+      <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+          <p className="mt-3 text-muted">Verificando sesión...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Vista pública (no logueado)
   if (!isAuthenticated) {
