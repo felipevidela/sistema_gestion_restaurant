@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { login, register } from '../services/reservasApi';
+import { register } from '../services/reservasApi';
+import { useAuth } from '../contexts/AuthContext';
 import {
   validarUsername,
   validarPassword,
@@ -12,6 +13,7 @@ import {
 } from '../utils/validaciones';
 
 export default function LoginForm({ onLoginSuccess }) {
+  const { login: authLogin } = useAuth();
   const [modo, setModo] = useState('login'); // 'login' o 'register'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -165,7 +167,8 @@ export default function LoginForm({ onLoginSuccess }) {
     }
 
     try {
-      const userData = await login(loginData);
+      // Usar el método login del AuthContext
+      const userData = await authLogin(loginData);
       console.log('Login exitoso:', userData);
 
       if (onLoginSuccess) {
