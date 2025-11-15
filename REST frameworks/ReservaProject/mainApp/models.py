@@ -6,6 +6,22 @@ from datetime import timedelta
 from encrypted_model_fields.fields import EncryptedCharField
 
 
+# FIX #28 (MODERADO): Custom manager para soft delete
+class SoftDeleteManager(models.Manager):
+    """Manager que excluye automáticamente registros eliminados (deleted_at != NULL)"""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted_at__isnull=True)
+
+    def with_deleted(self):
+        """Incluir registros eliminados"""
+        return super().get_queryset()
+
+    def only_deleted(self):
+        """Solo registros eliminados"""
+        return super().get_queryset().filter(deleted_at__isnull=False)
+
+
 class Perfil(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     ROL_CHOICES = (
@@ -72,6 +88,12 @@ class Reserva(models.Model):
     notas = models.TextField(blank=True, max_length=500, help_text="Notas o requerimientos especiales (máx 500 caracteres)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # FIX #28 (MODERADO): Soft delete - timestamp de eliminación
+    deleted_at = models.DateTimeField(null=True, blank=True, help_text="Fecha y hora de eliminación (soft delete)")
+
+    # FIX #28 (MODERADO): Manager por defecto excluye eliminados
+    objects = SoftDeleteManager()
+    all_objects = models.Manager()  # Manager que incluye eliminados
 
     def __str__(self):
         return f"Reserva {self.id} - {self.cliente.username} - Mesa {self.mesa.numero} ({self.fecha_reserva})"
@@ -149,6 +171,26 @@ class Reserva(models.Model):
 
         self.full_clean()  # Ejecutar validaciones antes de guardar
         super().save(*args, **kwargs)
+
+    # FIX #28 (MODERADO): Soft delete methods
+    def delete(self, using=None, keep_parents=False):
+        """Soft delete: marca como eliminado en lugar de borrar"""
+        self.deleted_at = timezone.now()
+        self.save(using=using)
+
+    def hard_delete(self):
+        """Eliminación real de la base de datos"""
+        super().delete()
+
+    def restore(self):
+        """Restaurar una reserva eliminada"""
+        self.deleted_at = None
+        self.save()
+
+    @property
+    def is_deleted(self):
+        """Verificar si la reserva está eliminada"""
+        return self.deleted_at is not None
 
     class Meta:
         verbose_name = "Reserva"
