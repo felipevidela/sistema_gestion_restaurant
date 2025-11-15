@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from django.db.models import Q
-from datetime import date
+from django.utils import timezone
 
 from rest_framework import viewsets, views, status, filters
 from rest_framework.response import Response
@@ -569,7 +569,7 @@ class ReservaViewSet(viewsets.ModelViewSet):
         # Filtro por fecha (para HU-17: reservas del día)
         fecha = self.request.query_params.get('date', None)
         if fecha == 'today':
-            queryset = queryset.filter(fecha_reserva=date.today())
+            queryset = queryset.filter(fecha_reserva=timezone.now().date())
         elif fecha:
             queryset = queryset.filter(fecha_reserva=fecha)
 
@@ -606,13 +606,12 @@ class ReservaViewSet(viewsets.ModelViewSet):
         - Valida que no se modifiquen reservas de fechas pasadas
         """
         from django.db import transaction
-        from datetime import date
         from rest_framework.exceptions import ValidationError
 
         reserva = self.get_object()
 
-        # Validar que no se actualice una reserva de fecha pasada
-        if reserva.fecha_reserva < date.today():
+        # Validar que no se actualice una reserva de fecha pasada (usando timezone-aware date)
+        if reserva.fecha_reserva < timezone.now().date():
             raise ValidationError({
                 'fecha_reserva': 'No se pueden modificar reservas de fechas pasadas'
             })
@@ -665,7 +664,7 @@ class ReservaViewSet(viewsets.ModelViewSet):
         - #13 MODERADO: Solo cambia estado de mesa si reserva es para hoy/futuro cercano
         """
         from django.db import transaction
-        from datetime import date, timedelta
+        from datetime import timedelta
 
         # FIX #23 (MODERADO): Usar transacción con locks
         with transaction.atomic():
@@ -679,8 +678,8 @@ class ReservaViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # FIX #5 (CRÍTICO): Validar que no se modifiquen reservas de fechas pasadas
-            if reserva.fecha_reserva < date.today():
+            # FIX #5 (CRÍTICO): Validar que no se modifiquen reservas de fechas pasadas (timezone-aware)
+            if reserva.fecha_reserva < timezone.now().date():
                 return Response(
                     {'error': 'No se pueden modificar reservas de fechas pasadas'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -705,7 +704,7 @@ class ReservaViewSet(viewsets.ModelViewSet):
 
             # FIX #13 (MODERADO): Solo actualizar estado de mesa si la reserva es para hoy o futuro cercano
             # No tiene sentido cambiar el estado de la mesa por una reserva de dentro de 2 meses
-            fecha_limite = date.today() + timedelta(days=1)  # Hoy o mañana
+            fecha_limite = timezone.now().date() + timedelta(days=1)  # Hoy o mañana
             debe_actualizar_mesa = reserva.fecha_reserva <= fecha_limite
 
             if debe_actualizar_mesa:

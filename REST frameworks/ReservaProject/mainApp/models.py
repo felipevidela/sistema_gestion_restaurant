@@ -17,9 +17,11 @@ class Perfil(models.Model):
     rol = models.CharField(max_length=10, choices=ROL_CHOICES, default='cliente')
     nombre_completo = models.CharField(max_length=200, blank=True)
     # Campos encriptados con django-encrypted-model-fields
-    rut = EncryptedCharField(max_length=12, blank=True, help_text="RUT del usuario (encriptado)")
+    # FIX #17 (MODERADO): RUT debe ser único
+    rut = EncryptedCharField(max_length=12, blank=True, null=True, unique=True, help_text="RUT del usuario (encriptado)")
     telefono = EncryptedCharField(max_length=15, blank=True, help_text="Teléfono del usuario (encriptado)")
-    email = models.EmailField(blank=True)
+    # FIX #18 (MODERADO): Email debe ser único
+    email = models.EmailField(blank=True, null=True, unique=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.get_rol_display()}"
@@ -66,7 +68,8 @@ class Reserva(models.Model):
     hora_fin = models.TimeField()
     num_personas = models.IntegerField(default=1)
     estado = models.CharField(max_length=15, choices=ESTADO_CHOICES, default='pendiente')
-    notas = models.TextField(blank=True, help_text="Notas o requerimientos especiales")
+    # FIX #32 (MENOR): Limitar longitud de notas
+    notas = models.TextField(blank=True, max_length=500, help_text="Notas o requerimientos especiales (máx 500 caracteres)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -79,21 +82,35 @@ class Reserva(models.Model):
 
         FIX #6 (MODERADO): Valida hora pasada en día actual
         FIX #1 (CRÍTICO): Valida solapamiento de horarios
+        FIX #9 (GRAVE): Usa timezone-aware dates para comparaciones
+        FIX #8 (GRAVE): Valida horario de cierre
         """
-        from datetime import date, datetime
+        from datetime import datetime, time
+        from django.utils import timezone
+
+        # FIX #9 (GRAVE): Usar timezone-aware date para comparaciones
+        hoy = timezone.now().date()
 
         # Validar que la fecha no sea en el pasado
-        if self.fecha_reserva < date.today():
+        if self.fecha_reserva < hoy:
             raise ValidationError("No se pueden crear reservas para fechas pasadas")
 
         # FIX #15 (MODERADO): Validar que la hora no sea pasada si la fecha es hoy
-        if self.fecha_reserva == date.today():
-            hora_actual = datetime.now().time()
+        if self.fecha_reserva == hoy:
+            hora_actual = timezone.now().time()
             if self.hora_inicio < hora_actual:
                 raise ValidationError(
                     f"No se pueden crear reservas para horas pasadas. "
                     f"La hora actual es {hora_actual.strftime('%H:%M')}"
                 )
+
+        # FIX #8 (GRAVE): Validar horario de cierre (restaurante cierra a las 23:00)
+        hora_cierre = time(23, 0)
+        if self.hora_fin > hora_cierre:
+            raise ValidationError(
+                f"La reserva no puede exceder el horario de cierre (23:00). "
+                f"Hora fin calculada: {self.hora_fin.strftime('%H:%M')}"
+            )
 
         # Validar capacidad de la mesa
         if self.num_personas > self.mesa.capacidad:

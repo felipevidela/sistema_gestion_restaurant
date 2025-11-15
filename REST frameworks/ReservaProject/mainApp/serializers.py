@@ -109,7 +109,18 @@ class RegisterSerializer(serializers.ModelSerializer):
             return f'+56{telefono_limpio}'
 
     def validate(self, data):
-        """Validaciones cruzadas"""
+        """
+        Validaciones cruzadas.
+
+        FIX #24 (MODERADO): Validar email duplicado en User
+        """
+        # FIX #24 (MODERADO): Validar que el email no esté en uso
+        if data.get('email'):
+            if User.objects.filter(email=data['email']).exists():
+                raise serializers.ValidationError({
+                    'email': 'Este email ya está registrado'
+                })
+
         # Validar que las contraseñas coincidan
         if data['password'] != data['password_confirm']:
             raise serializers.ValidationError({
@@ -240,7 +251,11 @@ class ReservaSerializer(serializers.ModelSerializer):
         read_only_fields = ('cliente', 'hora_fin', 'created_at', 'updated_at')
 
     def validate(self, data):
-        """Validaciones adicionales a nivel de serializer"""
+        """
+        Validaciones adicionales a nivel de serializer.
+
+        FIX #7 (GRAVE): Validar num_personas en backend
+        """
         from datetime import date
 
         # Validar fecha no sea en el pasado
@@ -249,16 +264,22 @@ class ReservaSerializer(serializers.ModelSerializer):
                 'fecha_reserva': 'No se pueden crear reservas para fechas pasadas'
             })
 
+        # FIX #7 (GRAVE): Validar num_personas con límites razonables
+        if data.get('num_personas'):
+            if data['num_personas'] < 1:
+                raise serializers.ValidationError({
+                    'num_personas': 'Debe reservar para al menos 1 persona'
+                })
+            if data['num_personas'] > 50:
+                raise serializers.ValidationError({
+                    'num_personas': 'El número máximo de personas por reserva es 50. Para grupos más grandes, contacte al restaurante.'
+                })
+
         # Validar capacidad de la mesa
         if data.get('mesa') and data.get('num_personas'):
             if data['num_personas'] > data['mesa'].capacidad:
                 raise serializers.ValidationError({
                     'num_personas': f'La mesa {data["mesa"].numero} tiene capacidad para {data["mesa"].capacidad} personas. No puede reservar para {data["num_personas"]} personas.'
-                })
-
-            if data['num_personas'] < 1:
-                raise serializers.ValidationError({
-                    'num_personas': 'Debe reservar para al menos 1 persona'
                 })
 
         return data
