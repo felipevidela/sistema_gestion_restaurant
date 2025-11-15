@@ -532,8 +532,14 @@ class ConsultarHorasDisponiblesView(views.APIView):
     {
         "fecha": "2025-11-21",
         "personas": 2,
-        "horas_disponibles": ["12:00", "12:30", "14:00", "19:00", ...],
-        "horas_no_disponibles": ["13:00", "13:30", "18:00", ...]
+        "horas": [
+            {"hora": "12:00", "mesas_disponibles": 5},
+            {"hora": "12:30", "mesas_disponibles": 3},
+            {"hora": "13:00", "mesas_disponibles": 0},
+            ...
+        ],
+        "horas_disponibles": ["12:00", "12:30", ...],  # Deprecated, usar 'horas'
+        "horas_no_disponibles": ["13:00", ...]  # Deprecated, usar 'horas'
     }
     """
     permission_classes = [AllowAny]
@@ -571,14 +577,20 @@ class ConsultarHorasDisponiblesView(views.APIView):
 
         if not mesas_suficientes.exists():
             # No hay mesas con capacidad suficiente
+            horas_sin_capacidad = [
+                {'hora': h.strftime('%H:%M'), 'mesas_disponibles': 0}
+                for h in todas_las_horas
+            ]
             return Response({
                 'fecha': fecha_str,
                 'personas': num_personas,
+                'horas': horas_sin_capacidad,
                 'horas_disponibles': [],
                 'horas_no_disponibles': [h.strftime('%H:%M') for h in todas_las_horas],
                 'mensaje': f'No hay mesas disponibles para {num_personas} personas'
             })
 
+        horas_info = []
         horas_disponibles = []
         horas_no_disponibles = []
 
@@ -600,9 +612,18 @@ class ConsultarHorasDisponiblesView(views.APIView):
 
             # Verificar si hay al menos una mesa disponible con capacidad suficiente
             mesas_disponibles = mesas_suficientes.exclude(id__in=mesas_ocupadas_ids)
+            num_mesas_disponibles = mesas_disponibles.count()
 
             hora_str = hora_inicio.strftime('%H:%M')
-            if mesas_disponibles.exists():
+
+            # Agregar info de la hora con cantidad de mesas disponibles
+            horas_info.append({
+                'hora': hora_str,
+                'mesas_disponibles': num_mesas_disponibles
+            })
+
+            # Mantener compatibilidad con versión anterior
+            if num_mesas_disponibles > 0:
                 horas_disponibles.append(hora_str)
             else:
                 horas_no_disponibles.append(hora_str)
@@ -610,8 +631,9 @@ class ConsultarHorasDisponiblesView(views.APIView):
         return Response({
             'fecha': fecha_str,
             'personas': num_personas,
-            'horas_disponibles': horas_disponibles,
-            'horas_no_disponibles': horas_no_disponibles,
+            'horas': horas_info,  # Nueva estructura con cantidad de mesas
+            'horas_disponibles': horas_disponibles,  # Deprecated
+            'horas_no_disponibles': horas_no_disponibles,  # Deprecated
             'total_horas': len(todas_las_horas),
             'disponibles': len(horas_disponibles),
             'no_disponibles': len(horas_no_disponibles)

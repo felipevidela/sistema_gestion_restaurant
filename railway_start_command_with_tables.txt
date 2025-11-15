@@ -1,1 +1,0 @@
-sh -c "cd /app/ReservaProject && python manage.py migrate --noinput && python crear_mesas.py && python manage.py collectstatic --noinput --clear && exec gunicorn Reservas.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 4 --log-file - --log-level info"

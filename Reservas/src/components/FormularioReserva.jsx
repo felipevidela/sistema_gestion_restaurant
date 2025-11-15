@@ -13,6 +13,7 @@ export default function FormularioReserva({ onReservaCreada }) {
   const [loadingHoras, setLoadingHoras] = useState(false);
   const [horasDisponibles, setHorasDisponibles] = useState([]);
   const [horasNoDisponibles, setHorasNoDisponibles] = useState([]);
+  const [horasInfo, setHorasInfo] = useState([]); // Nueva estructura: [{hora, mesas_disponibles}]
 
   // Reglas de validación
   const validationRules = {
@@ -118,6 +119,7 @@ export default function FormularioReserva({ onReservaCreada }) {
 
       setHorasDisponibles(data.horas_disponibles || []);
       setHorasNoDisponibles(data.horas_no_disponibles || []);
+      setHorasInfo(data.horas || []); // Guardar nueva estructura con cantidad de mesas
 
       // Si la hora seleccionada ya no está disponible, limpiarla
       if (formData.hora_inicio && data.horas_no_disponibles?.includes(formData.hora_inicio)) {
@@ -356,14 +358,30 @@ export default function FormularioReserva({ onReservaCreada }) {
                     <option value="">
                       {formData.fecha_reserva && formData.num_personas ? 'Seleccione una hora' : 'Primero seleccione fecha y número de personas'}
                     </option>
-                    {generarOpcionesHora().map(hora => {
-                      const estaDisponible = !horasNoDisponibles.includes(hora);
-                      return (
-                        <option key={hora} value={hora} disabled={!estaDisponible}>
-                          {hora} hrs {!estaDisponible ? '(No disponible)' : ''}
-                        </option>
-                      );
-                    })}
+                    {horasInfo.length > 0 ? (
+                      // Usar la nueva estructura con cantidad de mesas
+                      horasInfo.map(({ hora, mesas_disponibles }) => {
+                        const estaDisponible = mesas_disponibles > 0;
+                        return (
+                          <option key={hora} value={hora} disabled={!estaDisponible}>
+                            {hora} hrs - {estaDisponible
+                              ? `${mesas_disponibles} ${mesas_disponibles === 1 ? 'mesa disponible' : 'mesas disponibles'}`
+                              : 'No disponible'
+                            }
+                          </option>
+                        );
+                      })
+                    ) : (
+                      // Fallback a la estructura antigua
+                      generarOpcionesHora().map(hora => {
+                        const estaDisponible = !horasNoDisponibles.includes(hora);
+                        return (
+                          <option key={hora} value={hora} disabled={!estaDisponible}>
+                            {hora} hrs {!estaDisponible ? '(No disponible)' : ''}
+                          </option>
+                        );
+                      })
+                    )}
                   </select>
                   {getFieldError('hora_inicio') && (
                     <div className="invalid-feedback d-block">
