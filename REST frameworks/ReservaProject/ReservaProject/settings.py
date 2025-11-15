@@ -290,6 +290,54 @@ CACHES = {
 }
 
 # FIX #21 (MODERADO): Sistema de auditoría y logging
+# En producción (Railway), usar solo console logging (Railway captura stdout/stderr)
+# En desarrollo, usar file logging
+
+# Determinar handlers según el entorno
+if DEBUG:
+    # Desarrollo: file handlers (requiere directorio logs/)
+    # Asegurar que el directorio logs/ existe
+    LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+    os.makedirs(LOGS_DIR, exist_ok=True)
+
+    LOGGING_HANDLERS = {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'reservas.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'audit_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'audit.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+    }
+    DJANGO_HANDLERS = ['console', 'file']
+    AUDIT_HANDLERS = ['audit_file', 'console']
+else:
+    # Producción (Railway): solo console logging
+    # Railway captura automáticamente stdout/stderr en sus logs
+    LOGGING_HANDLERS = {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',  # Usar formato verbose en producción
+        },
+    }
+    DJANGO_HANDLERS = ['console']
+    AUDIT_HANDLERS = ['console']
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -311,47 +359,25 @@ LOGGING = {
             '()': 'django.utils.log.RequireDebugTrue',
         },
     },
-    'handlers': {
-        'console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'reservas.log'),
-            'maxBytes': 1024 * 1024 * 10,  # 10 MB
-            'backupCount': 5,
-            'formatter': 'verbose',
-        },
-        'audit_file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'audit.log'),
-            'maxBytes': 1024 * 1024 * 10,  # 10 MB
-            'backupCount': 10,
-            'formatter': 'verbose',
-        },
-    },
+    'handlers': LOGGING_HANDLERS,
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': DJANGO_HANDLERS,
             'level': 'INFO',
             'propagate': False,
         },
         'django.request': {
-            'handlers': ['console', 'file'],
+            'handlers': DJANGO_HANDLERS,
             'level': 'WARNING',
             'propagate': False,
         },
         'mainApp': {
-            'handlers': ['console', 'file'],
+            'handlers': DJANGO_HANDLERS,
             'level': 'INFO',
             'propagate': False,
         },
         'mainApp.audit': {
-            'handlers': ['audit_file', 'console'],
+            'handlers': AUDIT_HANDLERS,
             'level': 'INFO',
             'propagate': False,
         },
