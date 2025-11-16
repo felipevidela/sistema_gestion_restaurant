@@ -91,7 +91,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
 
     // Edit modal state
-    const [editModal, setEditModal] = useState({ isOpen: false, reserva: null });
+    const [editModal, setEditModal] = useState({ isOpen: false, reserva: null, loading: false });
     const [formData, setFormData] = useState({
         fecha_reserva: '',
         hora_inicio: '',
@@ -102,6 +102,10 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     const [mesasDisponibles, setMesasDisponibles] = useState([]);
     const [horasDisponibles, setHorasDisponibles] = useState([]);
     const [loadingEdit, setLoadingEdit] = useState(false);
+
+    // Caché de mesas para optimizar carga del modal de edición
+    const [mesasCache, setMesasCache] = useState(null);
+    const [mesasCacheTimestamp, setMesasCacheTimestamp] = useState(null);
 
     // Función para cargar reservas (reutilizable)
     const cargarReservas = async () => {
@@ -130,6 +134,21 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
         cargarReservas();
         setCurrentPage(1); // Reset to first page on date change
     }, [fecha, fechaInicio, fechaFin, showAllReservations]);
+
+    // Pre-cargar caché de mesas al montar componente (optimización)
+    useEffect(() => {
+        const precargarMesas = async () => {
+            try {
+                const mesas = await getMesas();
+                setMesasCache(mesas);
+                setMesasCacheTimestamp(Date.now());
+            } catch (error) {
+                console.error('Error al pre-cargar mesas:', error);
+                // No mostramos error al usuario, el caché es opcional
+            }
+        };
+        precargarMesas();
+    }, []); // Solo al montar
 
     // Auto-refresh effect
     useEffect(() => {
@@ -389,10 +408,6 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             // Extraer el número de mesa del formato "M01" -> 1
             const numeroMesa = parseInt(reserva.mesa.substring(1));
 
-            // Cargar mesas disponibles
-            const mesas = await getMesas();
-            setMesasDisponibles(mesas);
-
             // Inicializar el formulario con los datos actuales de la reserva
             const formInitial = {
                 fecha_reserva: reserva.fecha,
@@ -403,15 +418,41 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             };
             setFormData(formInitial);
 
-            // Cargar horas disponibles para la fecha y personas actuales
-            await handleCargarHorasDisponibles(reserva.fecha, reserva.personas);
-
-            // Abrir modal
-            setEditModal({ isOpen: true, reserva });
+            // 1. Abrir modal INMEDIATAMENTE con loading state
+            setEditModal({ isOpen: true, reserva, loading: true });
             setDetalleModal({ isOpen: false, reserva: null });
+            setLoadingEdit(true);
+
+            // 2. Verificar caché de mesas (5 minutos de validez)
+            const CACHE_VALIDITY_MS = 5 * 60 * 1000;
+            const cacheValido = mesasCache && mesasCacheTimestamp &&
+                (Date.now() - mesasCacheTimestamp < CACHE_VALIDITY_MS);
+
+            // 3. Ejecutar llamadas en PARALELO para optimizar rendimiento
+            const [mesasData, horasData] = await Promise.all([
+                cacheValido ? Promise.resolve(mesasCache) : getMesas(),
+                getHorasDisponibles({ fecha: reserva.fecha, personas: reserva.personas })
+            ]);
+
+            // 4. Actualizar caché si se cargaron mesas nuevas
+            if (!cacheValido) {
+                setMesasCache(mesasData);
+                setMesasCacheTimestamp(Date.now());
+            }
+
+            // 5. Actualizar estados con datos cargados
+            setMesasDisponibles(mesasData);
+            setHorasDisponibles(horasData.horas_disponibles || []);
+
+            // 6. Quitar loading state
+            setEditModal({ isOpen: true, reserva, loading: false });
+            setLoadingEdit(false);
+
         } catch (err) {
             console.error('Error al abrir modal de edición:', err);
             toast.error('Error al cargar datos para edición');
+            setEditModal({ isOpen: false, reserva: null, loading: false });
+            setLoadingEdit(false);
         }
     }
 
@@ -1433,9 +1474,19 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                     <button
                                         className="btn btn-lg btn-primary"
                                         onClick={() => handleAbrirModalEdicion(detalleModal.reserva)}
+                                        disabled={loadingEdit}
                                     >
-                                        <i className="bi bi-pencil-square me-2"></i>
-                                        Editar Reserva
+                                        {loadingEdit ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                Cargando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <i className="bi bi-pencil-square me-2"></i>
+                                                Editar Reserva
+                                            </>
+                                        )}
                                     </button>
                                 )}
                             </div>
@@ -1449,11 +1500,44 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             {editModal.reserva && (
                 <Modal
                     isOpen={editModal.isOpen}
-                    onClose={() => setEditModal({ isOpen: false, reserva: null })}
+                    onClose={() => setEditModal({ isOpen: false, reserva: null, loading: false })}
                     title={`Editar Reserva #${editModal.reserva.id}`}
                     size="lg"
                 >
-                    <form onSubmit={handleEditarReserva}>
+                    {editModal.loading ? (
+                        /* Skeleton loading mientras cargan los datos */
+                        <div className="p-4">
+                            <div className="row g-3 placeholder-glow">
+                                <div className="col-md-6">
+                                    <div className="placeholder col-4 mb-2" style={{height: '20px'}}></div>
+                                    <div className="placeholder col-12" style={{height: '38px'}}></div>
+                                </div>
+                                <div className="col-md-6">
+                                    <div className="placeholder col-6 mb-2" style={{height: '20px'}}></div>
+                                    <div className="placeholder col-12" style={{height: '38px'}}></div>
+                                </div>
+                                <div className="col-md-6">
+                                    <div className="placeholder col-5 mb-2" style={{height: '20px'}}></div>
+                                    <div className="placeholder col-12" style={{height: '38px'}}></div>
+                                </div>
+                                <div className="col-md-6">
+                                    <div className="placeholder col-3 mb-2" style={{height: '20px'}}></div>
+                                    <div className="placeholder col-12" style={{height: '38px'}}></div>
+                                </div>
+                                <div className="col-12">
+                                    <div className="placeholder col-4 mb-2" style={{height: '20px'}}></div>
+                                    <div className="placeholder col-12" style={{height: '80px'}}></div>
+                                </div>
+                            </div>
+                            <div className="d-flex justify-content-center align-items-center mt-4 py-3">
+                                <div className="spinner-border text-primary me-3" role="status">
+                                    <span className="visually-hidden">Cargando...</span>
+                                </div>
+                                <span className="text-muted">Cargando datos de la reserva...</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleEditarReserva}>
                         <div className="row g-3">
                             {/* Fecha */}
                             <div className="col-md-6">
@@ -1592,6 +1676,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                             </button>
                         </div>
                     </form>
+                    )}
                 </Modal>
             )}
 
