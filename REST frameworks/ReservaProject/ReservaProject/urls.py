@@ -6,7 +6,6 @@ from django.conf import settings
 from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken import views as authtoken_views
 from mainApp import views
-from mainApp import views_debug  # Temporal para debug
 
 # Configurar el router para ViewSets
 router = DefaultRouter()
@@ -32,10 +31,6 @@ urlpatterns = [
     # Endpoints personalizados
     path('api/consultar-mesas/', views.ConsultaMesasView.as_view(), name='consultar-mesas'),
     path('api/horas-disponibles/', views.ConsultarHorasDisponiblesView.as_view(), name='horas-disponibles'),
-
-    # Endpoints temporales de debug (ELIMINAR DESPUÉS)
-    path('api/debug-encryption/', views_debug.debug_encryption, name='debug-encryption'),
-    path('api/ejecutar-comandos/', views_debug.ejecutar_comandos_management, name='ejecutar-comandos'),
 
     # Incluir las rutas generadas por el router (mesas y reservas)
     path('api/', include(router.urls)),

@@ -237,9 +237,9 @@ class MesaSerializer(serializers.ModelSerializer):
 class ReservaSerializer(serializers.ModelSerializer):
     cliente_username = serializers.CharField(source='cliente.username', read_only=True)
     cliente_nombre = serializers.CharField(source='cliente.perfil.nombre_completo', read_only=True)
-    cliente_telefono = serializers.SerializerMethodField()
-    cliente_email = serializers.SerializerMethodField()
-    cliente_rut = serializers.SerializerMethodField()
+    cliente_telefono = serializers.CharField(source='cliente.perfil.telefono', read_only=True)
+    cliente_email = serializers.EmailField(source='cliente.email', read_only=True)
+    cliente_rut = serializers.CharField(source='cliente.perfil.rut', read_only=True)
     mesa_numero = serializers.IntegerField(source='mesa.numero', read_only=True)
     mesa_info = MesaSerializer(source='mesa', read_only=True)
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
@@ -253,67 +253,6 @@ class ReservaSerializer(serializers.ModelSerializer):
                   'num_personas', 'estado', 'estado_display', 'notas',
                   'created_at', 'updated_at')
         read_only_fields = ('cliente', 'hora_fin', 'created_at', 'updated_at')
-
-    def get_cliente_telefono(self, obj):
-        """Obtener teléfono desencriptado del cliente"""
-        try:
-            if hasattr(obj.cliente, 'perfil') and obj.cliente.perfil:
-                return obj.cliente.perfil.telefono
-            return None
-        except AttributeError:
-            return None
-
-    def get_cliente_rut(self, obj):
-        """Obtener RUT desencriptado del cliente"""
-        try:
-            if hasattr(obj.cliente, 'perfil') and obj.cliente.perfil:
-                return obj.cliente.perfil.rut
-            return None
-        except AttributeError:
-            return None
-
-    def get_cliente_email(self, obj):
-        """Obtener email del cliente"""
-        try:
-            return obj.cliente.email if obj.cliente.email else None
-        except AttributeError:
-            return None
-
-    def to_representation(self, instance):
-        """
-        Controla la visibilidad de datos sensibles del cliente (teléfono, RUT).
-
-        - Personal del restaurante (admin, cajero, mesero): puede ver todos los datos
-          desencriptados para contactar al cliente
-        - Cliente dueño de la reserva: puede ver sus propios datos
-        - Otros clientes: NO pueden ver datos sensibles por privacidad
-
-        Los campos encriptados se desencriptan automáticamente mediante SerializerMethodField.
-        """
-        representation = super().to_representation(instance)
-        request = self.context.get('request')
-
-        # Verificar si el usuario tiene permiso para ver datos sensibles
-        tiene_permiso = False
-
-        if request and hasattr(request, 'user'):
-            user = request.user
-
-            # El dueño de la reserva puede ver sus propios datos
-            if user == instance.cliente:
-                tiene_permiso = True
-
-            # Personal del restaurante puede ver datos de contacto del cliente
-            elif hasattr(user, 'perfil') and user.perfil.rol in ['admin', 'cajero', 'mesero']:
-                tiene_permiso = True
-
-        # Si no tiene permiso, ocultar datos sensibles
-        if not tiene_permiso:
-            representation['cliente_telefono'] = None
-            representation['cliente_rut'] = None
-            representation['cliente_email'] = None
-
-        return representation
 
     def validate(self, data):
         """

@@ -269,16 +269,16 @@ export async function getReservas(params = {}, options = {}) {
   } while (nextUrl);
 
   return todasLasReservas.map(reserva => {
-    // FIX: El backend envía cliente_nombre (no cliente_nombre_completo)
-    // Prioridad: nombre completo > username como fallback
-    const nombreCliente =
-      (reserva.cliente_nombre && reserva.cliente_nombre.trim() !== '')
-        ? reserva.cliente_nombre
-        : reserva.cliente_username || 'Sin nombre';
+    const nombreNormalizado =
+      (reserva.cliente_nombre_completo && reserva.cliente_nombre_completo.trim() !== '')
+        ? reserva.cliente_nombre_completo
+        : (reserva.cliente_nombre && reserva.cliente_nombre.trim() !== '')
+          ? reserva.cliente_nombre
+          : reserva.cliente_username;
 
     return {
       id: reserva.id,
-      cliente: nombreCliente,
+      cliente: nombreNormalizado || 'Sin nombre',
       cliente_telefono: reserva.cliente_telefono,
       cliente_email: reserva.cliente_email,
       cliente_rut: reserva.cliente_rut,
@@ -287,7 +287,6 @@ export async function getReservas(params = {}, options = {}) {
       hora: formatearHora24(reserva.hora_inicio),
       personas: reserva.num_personas,
       estado: reserva.estado.toUpperCase(),
-      notas: reserva.notas,
     };
   });
 }
