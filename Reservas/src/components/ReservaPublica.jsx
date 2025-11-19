@@ -176,15 +176,20 @@ export default function ReservaPublica({ onReservaExitosa }) {
     }
   };
 
-  // Cargar horas disponibles
+  // Cargar horas disponibles - solo cuando AMBOS campos estén tocados
   useEffect(() => {
-    if (formData.fecha_reserva && formData.num_personas) {
+    // Solo buscar si AMBOS campos tienen valor Y han sido tocados por el usuario
+    const ambosCompletos = formData.fecha_reserva && formData.num_personas;
+    const ambosInteractuados = touched.fecha_reserva && touched.num_personas;
+
+    if (ambosCompletos && ambosInteractuados) {
       cargarHorasDisponibles();
     } else {
       setHorasDisponibles([]);
       setHorasNoDisponibles([]);
+      setHorasInfo([]);
     }
-  }, [formData.fecha_reserva, formData.num_personas]);
+  }, [formData.fecha_reserva, formData.num_personas, touched.fecha_reserva, touched.num_personas]);
 
   // Cargar mesas cuando hay fecha, hora y personas
   useEffect(() => {
@@ -384,10 +389,12 @@ export default function ReservaPublica({ onReservaExitosa }) {
                           onChange={handleChange}
                           onBlur={handleBlur}
                           required
-                          disabled={!formData.fecha_reserva}
+                          disabled={!formData.fecha_reserva || !formData.num_personas}
                         >
                           <option value="">
-                            {formData.fecha_reserva ? 'Seleccione una hora' : 'Primero seleccione una fecha'}
+                            {!formData.fecha_reserva || !formData.num_personas
+                              ? 'Primero seleccione fecha y número de personas'
+                              : 'Seleccione una hora'}
                           </option>
                           {horasInfo.length > 0 ? (
                             // Usar la nueva estructura con cantidad de mesas
