@@ -3,12 +3,14 @@ import { getMesas, getHorasDisponibles, createReserva } from '../services/reserv
 import { validarSeleccionMesa } from '../utils/validaciones';
 import { useFormValidation } from '../hooks/useFormValidation';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatErrorMessage } from '../utils/errorMessages';
 import { FormSkeleton } from './ui/Skeleton';
 import ModalConfirmacionReserva from './ui/ModalConfirmacionReserva';
 
 export default function FormularioReserva({ onReservaCreada }) {
   const toast = useToast();
+  const { user } = useAuth();
   const [mesas, setMesas] = useState([]);
   const [loadingMesas, setLoadingMesas] = useState(true);
   const [loadingHoras, setLoadingHoras] = useState(false);
@@ -483,7 +485,12 @@ export default function FormularioReserva({ onReservaCreada }) {
         isOpen={mostrarModalConfirmacion}
         onClose={handleCloseModalConfirmacion}
         reservaData={datosReservaConfirmada}
-        clienteData={null} // Para usuarios registrados, no mostramos datos del cliente
+        clienteData={user ? {
+          nombre: user.first_name || user.username || 'Usuario',
+          apellido: user.last_name || '',
+          email: user.email,
+          telefono: user.telefono || ''
+        } : null}
         esInvitado={false}
       />
     </div>
