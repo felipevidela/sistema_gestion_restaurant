@@ -20,6 +20,14 @@ export default function FormularioReserva({ onReservaCreada }) {
   const [mostrarModalConfirmacion, setMostrarModalConfirmacion] = useState(false);
   const [datosReservaConfirmada, setDatosReservaConfirmada] = useState(null);
 
+  // useEffect para abrir el modal cuando los datos estén disponibles
+  useEffect(() => {
+    if (datosReservaConfirmada && !mostrarModalConfirmacion) {
+      console.log('📢 useEffect: Abriendo modal con datos:', datosReservaConfirmada);
+      setMostrarModalConfirmacion(true);
+    }
+  }, [datosReservaConfirmada]);
+
   // Reglas de validación
   const validationRules = {
     mesa: (value) => {
@@ -174,10 +182,14 @@ export default function FormularioReserva({ onReservaCreada }) {
 
   // Manejar cierre del modal de confirmación
   const handleCloseModalConfirmacion = () => {
+    console.log('🔴 Cerrando modal de confirmación');
     setMostrarModalConfirmacion(false);
 
-    // Notificar al componente padre después de cerrar
+    // Limpiar datos después de cerrar
     setTimeout(() => {
+      setDatosReservaConfirmada(null);
+
+      // Notificar al componente padre
       if (onReservaCreada && window._nuevaReserva) {
         try {
           onReservaCreada(window._nuevaReserva);
@@ -233,10 +245,9 @@ export default function FormularioReserva({ onReservaCreada }) {
 
       console.log('📋 Datos preparados para modal:', datosReserva);
 
-      // Abrir modal de confirmación
+      // Establecer datos (el useEffect abrirá el modal automáticamente)
       setDatosReservaConfirmada(datosReserva);
-      setMostrarModalConfirmacion(true);
-      console.log('🎯 Modal state set to true');
+      console.log('🎯 Datos de reserva establecidos, useEffect abrirá el modal');
 
       toast.success('¡Reserva creada exitosamente!');
 
