@@ -386,7 +386,7 @@ export default function FormularioReserva({ onReservaCreada }) {
                     value={formData.hora_inicio}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    disabled={!formData.fecha_reserva || !formData.num_personas}
+                    disabled={!formData.fecha_reserva || !formData.num_personas || loadingHoras}
                     required
                   >
                     <option value="">

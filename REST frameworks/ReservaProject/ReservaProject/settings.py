@@ -109,31 +109,22 @@ WSGI_APPLICATION = 'ReservaProject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Railway proporciona DATABASE_URL automáticamente, así que lo usamos si existe
-DATABASE_URL = os.environ.get('DATABASE_URL')
+# Configuración única: siempre usar Railway
+# DATABASE_URL se proporciona automáticamente en Railway o se puede configurar localmente
+import dj_database_url
 
-if DATABASE_URL:
-    # Configuración para producción (Railway)
-    import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
-else:
-    # Configuración para desarrollo local
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'reservas_db'),
-            'USER': os.environ.get('DB_USER', 'felipevidela'),  # Usuario actual del sistema
-            'PASSWORD': os.environ.get('DB_PASSWORD', ''),  # Sin password en instalación local
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
-        }
-    }
+DATABASE_URL = os.environ.get(
+    'DATABASE_URL',
+    'postgresql://postgres:FAmZgtgkhBMKrGKDbPoWjfTbLjTwseLn@maglev.proxy.rlwy.net:59049/railway'
+)
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
 
 
 # Password validation

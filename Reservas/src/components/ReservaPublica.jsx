@@ -424,7 +424,7 @@ export default function ReservaPublica({ onReservaExitosa }) {
                           onChange={handleChange}
                           onBlur={handleBlur}
                           required
-                          disabled={!formData.fecha_reserva || !formData.num_personas}
+                          disabled={!formData.fecha_reserva || !formData.num_personas || loadingHoras}
                         >
                           <option value="">
                             {!formData.fecha_reserva || !formData.num_personas
