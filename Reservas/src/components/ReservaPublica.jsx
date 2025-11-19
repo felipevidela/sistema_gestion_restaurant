@@ -119,7 +119,7 @@ export default function ReservaPublica({ onReservaExitosa }) {
     {
       fecha_reserva: '',
       hora_inicio: '',
-      num_personas: 1,
+      num_personas: '',
       mesa: '',
       notas: '',
       nombre: '',

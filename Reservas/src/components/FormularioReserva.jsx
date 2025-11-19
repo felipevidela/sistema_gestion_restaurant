@@ -66,7 +66,7 @@ export default function FormularioReserva({ onReservaCreada }) {
       mesa: '',
       fecha_reserva: '',
       hora_inicio: '',
-      num_personas: 1,
+      num_personas: '',
       notas: ''
     },
     validationRules,
