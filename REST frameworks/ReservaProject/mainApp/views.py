@@ -941,25 +941,29 @@ class ReservaViewSet(viewsets.ModelViewSet):
 
     Filtros disponibles:
     1. Por campos estándar (Django Filter Backend):
-       - ?estado=activa         Filtra por estado (pendiente|activa|completada|cancelada)
-       - ?fecha_reserva=2025-11-15  Filtra por fecha específica (formato YYYY-MM-DD)
-       - ?mesa=5                Filtra por número de mesa
+       - ?estado=activa                     Filtra por estado (pendiente|activa|completada|cancelada)
+       - ?fecha_reserva=2025-11-15          Filtra por fecha específica (formato YYYY-MM-DD)
+       - ?fecha_reserva__gte=2025-01-01     Reservas desde fecha (mayor o igual)
+       - ?fecha_reserva__lte=2025-12-31     Reservas hasta fecha (menor o igual)
+       - ?fecha_reserva__range=2025-01-01,2025-12-31  Rango de fechas
+       - ?mesa=5                            Filtra por número de mesa
 
     2. Búsqueda por cliente (Search Filter):
-       - ?search=juan           Busca en: username, nombre, apellido, email, nombre_completo
+       - ?search=juan                       Busca en: username, nombre, apellido, email, nombre_completo
        - La búsqueda es case-insensitive y busca coincidencias parciales
        - Ejemplos: "juan perez", "juan@example.com", "jpérez"
 
-    3. Filtro especial por fecha relativa:
-       - ?date=today            Reservas de hoy
+    3. Filtros especiales de fecha:
+       - ?date=today                        Reservas de hoy
+       - ?all=true                          BÚSQUEDA GLOBAL: sin límite de fecha (usar con precaución)
 
     4. Ordenamiento:
-       - ?ordering=fecha_reserva        Ordena ascendente por fecha
-       - ?ordering=-fecha_reserva       Ordena descendente por fecha
-       - ?ordering=hora_inicio          Ordena por hora de inicio
+       - ?ordering=fecha_reserva            Ordena ascendente por fecha
+       - ?ordering=-fecha_reserva           Ordena descendente por fecha
+       - ?ordering=hora_inicio              Ordena por hora de inicio
 
     5. Paginación (50 elementos por página):
-       - ?page=2                Segunda página de resultados
+       - ?page=2                            Segunda página de resultados
 
     OPTIMIZACIÓN DE RENDIMIENTO (Filtro Masivo):
     ==========================================
@@ -989,18 +993,26 @@ class ReservaViewSet(viewsets.ModelViewSet):
       → Buscar cliente "perez" en fecha específica (OPTIMIZADO)
     - GET /api/reservas/?fecha_reserva=2025-11-15&mesa=5
       → Reservas de la mesa 5 en fecha específica
+    - GET /api/reservas/?all=true&search=juan
+      → BÚSQUEDA GLOBAL: Buscar "juan" en TODO el historial (puede ser lento)
+    - GET /api/reservas/?fecha_reserva__gte=2025-01-01&search=perez
+      → Buscar "perez" en reservas desde el 1 de enero 2025
+    - GET /api/reservas/?fecha_reserva__range=2025-01-01,2025-03-31
+      → Reservas del primer trimestre de 2025
     - GET /api/reservas/?search=@example.com
-      → Todas las reservas de clientes con email @example.com (sin optimización)
+      → Todas las reservas de clientes con email @example.com (últimos 7 días + futuras)
     - GET /api/reservas/?ordering=-created_at&page=1
       → Primera página de reservas ordenadas por fecha de creación descendente
     """
     queryset = Reserva.objects.all()
     serializer_class = ReservaSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    # OPTIMIZATION: 'fecha_reserva' removed from filterset_fields
-    # Se maneja directamente en get_queryset() para aplicar el filtro de fecha PRIMERO
-    # antes de que SearchFilter procese la búsqueda de clientes
-    filterset_fields = ['estado', 'mesa']
+    # Filtros disponibles con lookups avanzados
+    filterset_fields = {
+        'estado': ['exact'],
+        'mesa': ['exact'],
+        'fecha_reserva': ['exact', 'gte', 'lte', 'range'],  # Soporte para rangos de fecha
+    }
     search_fields = ['cliente__username', 'cliente__first_name', 'cliente__last_name',
                      'cliente__email', 'cliente__perfil__nombre_completo']
     ordering_fields = ['fecha_reserva', 'hora_inicio', 'created_at']
@@ -1051,15 +1063,16 @@ class ReservaViewSet(viewsets.ModelViewSet):
 
         # Filtro por fecha (para HU-17: reservas del día)
         fecha = self.request.query_params.get('date', None)
-        fecha_reserva = self.request.query_params.get('fecha_reserva', None)
+        all_results = self.request.query_params.get('all', None)
 
         if fecha == 'today':
             queryset = queryset.filter(fecha_reserva=timezone.now().date())
         elif fecha:
             queryset = queryset.filter(fecha_reserva=fecha)
-        elif fecha_reserva:
-            # Filtro explícito por fecha_reserva (removido de filterset_fields)
-            queryset = queryset.filter(fecha_reserva=fecha_reserva)
+        elif all_results == 'true':
+            # BÚSQUEDA GLOBAL: No aplicar límite de fecha
+            # Usar con precaución - puede ser lento con muchas reservas
+            pass
         else:
             # OPTIMIZACIÓN ADICIONAL: Si no hay filtro de fecha Y hay búsqueda,
             # limitar automáticamente a reservas relevantes (últimos 7 días + futuras)
