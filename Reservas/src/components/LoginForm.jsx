@@ -175,7 +175,18 @@ export default function LoginForm({ onLoginSuccess }) {
         onLoginSuccess(userData);
       }
     } catch (err) {
-      setError(err.message || 'Error al iniciar sesión');
+      // Mostrar mensaje de error más descriptivo
+      const errorMessage = err.message || 'Error al iniciar sesión';
+
+      // Si el error contiene "Credenciales inválidas", mostrar mensaje más amigable
+      if (errorMessage.toLowerCase().includes('credenciales') ||
+          errorMessage.toLowerCase().includes('invalid') ||
+          errorMessage.toLowerCase().includes('401')) {
+        setError('Usuario o contraseña incorrectos. Por favor verifica tus datos e intenta nuevamente.');
+      } else {
+        setError(errorMessage);
+      }
+
       console.error('Error en login:', err);
     } finally {
       setLoading(false);
