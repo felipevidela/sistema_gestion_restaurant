@@ -223,17 +223,21 @@ class TestMiModelo:
 @pytest.mark.api
 def test_crear_reserva(authenticated_client, mesa_disponible):
     """Debe permitir crear una reserva válida"""
+    # NOTA: El campo 'cliente' NO se incluye en los datos
+    # Se asigna automáticamente desde el usuario autenticado
     data = {
         'mesa': mesa_disponible.id,
         'fecha_reserva': '2025-12-25',
         'hora_inicio': '14:00:00',
-        'num_personas': 2
+        'num_personas': 2,
+        'notas': 'Reserva de prueba'  # Opcional
     }
 
     response = authenticated_client.post('/api/reservas/', data, format='json')
 
     assert response.status_code == 201
     assert response.data['estado'] == 'pendiente'
+    assert response.data['cliente'] == authenticated_client.user.id
 ```
 
 ## 🏷️ Markers Personalizados
