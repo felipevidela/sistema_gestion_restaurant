@@ -28,6 +28,12 @@ urlpatterns = [
     path('api/usuarios/', views.listar_usuarios, name='listar-usuarios'),
     path('api/usuarios/<int:user_id>/cambiar-rol/', views.cambiar_rol_usuario, name='cambiar-rol-usuario'),
 
+    # Endpoints para usuarios invitados (sin autenticación)
+    path('api/verificar-token/<str:token>/', views.verificar_token_invitado, name='verificar-token'),
+    path('api/reserva-invitado/<str:token>/', views.ver_reserva_invitado, name='ver-reserva-invitado'),
+    path('api/reserva-invitado/<str:token>/cancelar/', views.cancelar_reserva_invitado, name='cancelar-reserva-invitado'),
+    path('api/activar-cuenta/', views.activar_cuenta_invitado, name='activar-cuenta'),
+
     # Endpoints personalizados
     path('api/consultar-mesas/', views.ConsultaMesasView.as_view(), name='consultar-mesas'),
     path('api/horas-disponibles/', views.ConsultarHorasDisponiblesView.as_view(), name='horas-disponibles'),

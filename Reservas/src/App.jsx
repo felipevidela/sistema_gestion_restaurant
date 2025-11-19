@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import PanelReservas from "./components/PanelReservas";
 import LoginForm from "./components/LoginForm";
 import FormularioReserva from "./components/FormularioReserva";
@@ -7,6 +8,8 @@ import MiPerfil from "./components/MiPerfil";
 import GestionMesas from "./components/GestionMesas";
 import GestionUsuarios from "./components/GestionUsuarios";
 import ReservaPublica from "./components/ReservaPublica";
+import AccesoReservaInvitado from "./components/AccesoReservaInvitado";
+import ActivarCuenta from "./components/ActivarCuenta";
 import { useAuth } from './contexts/AuthContext';
 
 const getDefaultTab = (rol) => {
@@ -16,11 +19,16 @@ const getDefaultTab = (rol) => {
 
 function App() {
   const { user, isAuthenticated, isLoading, logout: authLogout, registerAndLogin } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showLogin, setShowLogin] = useState(false);
   const [activeTab, setActiveTab] = useState(() =>
     isAuthenticated ? getDefaultTab(user?.rol) : 'reservas-dia'
   );
   const [hasInitializedTab, setHasInitializedTab] = useState(false);
+
+  // Rutas públicas que no requieren autenticación
+  const publicRoutes = ['/reserva/:token', '/activar-cuenta/:token', '/reserva', '/login'];
 
   useEffect(() => {
     if (isAuthenticated && user?.rol && !hasInitializedTab) {
@@ -113,6 +121,17 @@ function App() {
           <p className="mt-3 text-muted">Verificando sesión...</p>
         </div>
       </div>
+    );
+  }
+
+  // Renderizar rutas públicas de invitados (no requieren autenticación)
+  const currentPath = location.pathname;
+  if (currentPath.startsWith('/reserva/') || currentPath.startsWith('/activar-cuenta/')) {
+    return (
+      <Routes>
+        <Route path="/reserva/:token" element={<AccesoReservaInvitado />} />
+        <Route path="/activar-cuenta/:token" element={<ActivarCuenta />} />
+      </Routes>
     );
   }
 

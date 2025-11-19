@@ -28,8 +28,9 @@ class UserSerializer(serializers.ModelSerializer):
 
 # Serializer extendido para registro de clientes con datos completos
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True, min_length=8, style={'input_type': 'password'})
-    password_confirm = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+    # Password opcional para permitir reservas sin cuenta
+    password = serializers.CharField(write_only=True, required=False, min_length=8, style={'input_type': 'password'}, allow_blank=True)
+    password_confirm = serializers.CharField(write_only=True, required=False, style={'input_type': 'password'}, allow_blank=True)
 
     # Campos adicionales del Perfil
     nombre = serializers.CharField(required=True, max_length=100, write_only=True)
@@ -113,6 +114,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         Validaciones cruzadas.
 
         FIX #24 (MODERADO): Validar email duplicado en User
+        NUEVO: Validar contraseña solo si se proporciona (soporte para invitados)
         """
         # FIX #24 (MODERADO): Validar que el email no esté en uso
         if data.get('email'):
@@ -121,50 +123,59 @@ class RegisterSerializer(serializers.ModelSerializer):
                     'email': 'Este email ya está registrado'
                 })
 
-        # Validar que las contraseñas coincidan
-        if data['password'] != data['password_confirm']:
-            raise serializers.ValidationError({
-                'password_confirm': 'Las contraseñas no coinciden'
-            })
+        # Obtener password (puede ser None o string vacío)
+        password = data.get('password', '')
+        password_confirm = data.get('password_confirm', '')
 
-        # Validar complejidad de contraseña
-        password = data['password']
+        # Si hay password, validar completamente
+        if password or password_confirm:
+            # Validar que las contraseñas coincidan
+            if password != password_confirm:
+                raise serializers.ValidationError({
+                    'password_confirm': 'Las contraseñas no coinciden'
+                })
 
-        # Longitud mínima
-        if len(password) < 8:
-            raise serializers.ValidationError({
-                'password': 'La contraseña debe tener al menos 8 caracteres'
-            })
+            # Validar complejidad de contraseña
+            # Longitud mínima
+            if len(password) < 8:
+                raise serializers.ValidationError({
+                    'password': 'La contraseña debe tener al menos 8 caracteres'
+                })
 
-        # Debe contener al menos una letra mayúscula
-        if not any(c.isupper() for c in password):
-            raise serializers.ValidationError({
-                'password': 'La contraseña debe contener al menos una letra mayúscula'
-            })
+            # Debe contener al menos una letra mayúscula
+            if not any(c.isupper() for c in password):
+                raise serializers.ValidationError({
+                    'password': 'La contraseña debe contener al menos una letra mayúscula'
+                })
 
-        # Debe contener al menos una letra minúscula
-        if not any(c.islower() for c in password):
-            raise serializers.ValidationError({
-                'password': 'La contraseña debe contener al menos una letra minúscula'
-            })
+            # Debe contener al menos una letra minúscula
+            if not any(c.islower() for c in password):
+                raise serializers.ValidationError({
+                    'password': 'La contraseña debe contener al menos una letra minúscula'
+                })
 
-        # Debe contener al menos un número
-        if not any(c.isdigit() for c in password):
-            raise serializers.ValidationError({
-                'password': 'La contraseña debe contener al menos un número'
-            })
+            # Debe contener al menos un número
+            if not any(c.isdigit() for c in password):
+                raise serializers.ValidationError({
+                    'password': 'La contraseña debe contener al menos un número'
+                })
 
-        # Opcional pero recomendado: caracteres especiales
-        caracteres_especiales = "!@#$%^&*()_+-=[]{}|;:,.<>?"
-        if not any(c in caracteres_especiales for c in password):
-            raise serializers.ValidationError({
-                'password': 'La contraseña debe contener al menos un carácter especial (!@#$%^&*()_+-=[]{}|;:,.<>?)'
-            })
+            # Opcional pero recomendado: caracteres especiales
+            caracteres_especiales = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+            if not any(c in caracteres_especiales for c in password):
+                raise serializers.ValidationError({
+                    'password': 'La contraseña debe contener al menos un carácter especial (!@#$%^&*()_+-=[]{}|;:,.<>?)'
+                })
 
         return data
 
     def create(self, validated_data):
-        """Crear usuario y perfil con todos los datos"""
+        """
+        Crear usuario y perfil con todos los datos.
+        Si no hay contraseña, crear usuario invitado con password aleatoria.
+        """
+        import secrets
+
         # Extraer campos que no pertenecen al modelo User
         nombre = validated_data.pop('nombre')
         apellido = validated_data.pop('apellido')
@@ -172,26 +183,39 @@ class RegisterSerializer(serializers.ModelSerializer):
         rut = validated_data.pop('rut')
         telefono = validated_data.pop('telefono')
         email_perfil = validated_data.pop('email_perfil', '')
-        validated_data.pop('password_confirm')
+        validated_data.pop('password_confirm', None)
+
+        # Determinar si es usuario invitado (sin password)
+        password = validated_data.get('password')
+        es_invitado = not password or password.strip() == ''
+
+        # Si es invitado, generar password aleatoria segura
+        if es_invitado:
+            password = secrets.token_urlsafe(32)
 
         # Crear usuario
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data.get('email', ''),
-            password=validated_data['password']
+            password=password
         )
 
         # Crear o actualizar perfil con datos completos
-        Perfil.objects.update_or_create(
+        perfil, created = Perfil.objects.update_or_create(
             user=user,
             defaults={
                 'rol': 'cliente',
                 'nombre_completo': nombre_completo,
                 'rut': rut,  # Se encriptará automáticamente
                 'telefono': telefono,  # Se encriptará automáticamente
-                'email': email_perfil
+                'email': email_perfil,
+                'es_invitado': es_invitado
             }
         )
+
+        # Si es invitado, generar token de activación
+        if es_invitado:
+            perfil.generar_token_activacion()
 
         return user
 

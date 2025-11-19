@@ -26,6 +26,7 @@ export default function ReservaPublica({ onReservaExitosa }) {
   const [mostrarDatosPersonales, setMostrarDatosPersonales] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  const [crearCuenta, setCrearCuenta] = useState(false);
 
   // Reglas de validación
   const validationRules = {
@@ -80,11 +81,19 @@ export default function ReservaPublica({ onReservaExitosa }) {
       const val = validarTelefono(value);
       return val.valido ? null : val.mensaje;
     },
-    password: (value) => {
+    password: (value, allValues) => {
+      // Si no quiere crear cuenta, no validar password
+      if (!crearCuenta) return null;
+      // Si quiere crear cuenta, validar password
+      if (!value || value.trim() === '') return 'La contraseña es requerida para crear cuenta';
       const val = validarPassword(value);
       return val.valido ? null : val.mensaje;
     },
     password_confirm: (value, allValues) => {
+      // Si no quiere crear cuenta, no validar password
+      if (!crearCuenta) return null;
+      // Si quiere crear cuenta, validar confirmación
+      if (!value || value.trim() === '') return 'Debe confirmar la contraseña';
       const val = validarPasswordConfirm(allValues.password, value);
       return val.valido ? null : val.mensaje;
     }
@@ -253,7 +262,12 @@ export default function ReservaPublica({ onReservaExitosa }) {
       // Registrar y reservar
       const result = await registerAndReserve(values);
 
-      toast.success(`¡Reserva confirmada! Mesa ${result.reserva.mesa_numero} para el ${result.reserva.fecha_reserva}`);
+      // Mostrar mensaje según tipo de usuario
+      if (result.es_invitado) {
+        toast.success('¡Reserva confirmada! Revisa tu email para gestionar tu reserva. 📧');
+      } else {
+        toast.success(`¡Reserva confirmada! Mesa ${result.reserva.mesa_numero} para el ${result.reserva.fecha_reserva}`);
+      }
 
       setTimeout(() => {
         if (onReservaExitosa) {
@@ -584,6 +598,29 @@ export default function ReservaPublica({ onReservaExitosa }) {
                       <small className="text-muted">Usarás tu email para gestionar tu reserva</small>
                     </div>
 
+                    {/* Checkbox para crear cuenta */}
+                    <div className="mb-3">
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id="crearCuenta"
+                          checked={crearCuenta}
+                          onChange={(e) => setCrearCuenta(e.target.checked)}
+                        />
+                        <label className="form-check-label" htmlFor="crearCuenta">
+                          <strong>Quiero crear una cuenta</strong> para gestionar mis reservas más fácilmente
+                        </label>
+                      </div>
+                      <small className="text-muted d-block mt-1">
+                        {crearCuenta
+                          ? '✓ Podrás ver todas tus reservas, modificarlas y recibir recordatorios'
+                          : 'Sin cuenta: recibirás un link por email para gestionar esta reserva'}
+                      </small>
+                    </div>
+
+                    {/* Campos de contraseña - solo si quiere crear cuenta */}
+                    {crearCuenta && (
                     <div className="row">
                       <div className="col-md-6 mb-3">
                         <label htmlFor="password" className="form-label">
@@ -598,7 +635,7 @@ export default function ReservaPublica({ onReservaExitosa }) {
                             value={formData.password}
                             onChange={handleChange}
                             onBlur={handleBlur}
-                            required
+                            required={crearCuenta}
                             style={{ paddingRight: '40px' }}
                           />
                           <span
@@ -635,7 +672,7 @@ export default function ReservaPublica({ onReservaExitosa }) {
                             value={formData.password_confirm}
                             onChange={handleChange}
                             onBlur={handleBlur}
-                            required
+                            required={crearCuenta}
                             style={{ paddingRight: '40px' }}
                           />
                           <span
@@ -658,6 +695,7 @@ export default function ReservaPublica({ onReservaExitosa }) {
                         )}
                       </div>
                     </div>
+                    )}
                   </div>
                 )}
 

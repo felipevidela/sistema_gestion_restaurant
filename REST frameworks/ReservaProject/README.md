@@ -2,32 +2,6 @@
 
 Sistema de gestión de reservas para restaurante desarrollado con Django REST Framework y React.
 
-## 📸 Capturas de Pantalla
-
-### Panel de Reservas del Día
-![Panel de Reservas](../../docs/screenshots/screenshot-01.png)
-
-### Gestión de Mesas
-![Gestión de Mesas](../../docs/screenshots/screenshot-02.png)
-
-### Formulario de Nueva Reserva
-![Nueva Reserva](../../docs/screenshots/screenshot-03.png)
-
-### Gestión de Usuarios (Admin)
-![Gestión de Usuarios](../../docs/screenshots/screenshot-04.png)
-
-### Vista de Mis Reservas (Cliente)
-![Mis Reservas](../../docs/screenshots/screenshot-05.png)
-
-### Reserva Pública (Sin autenticación)
-![Reserva Pública](../../docs/screenshots/screenshot-06.png)
-
-### Panel de Administración
-![Panel Admin](../../docs/screenshots/screenshot-07.png)
-
-### Login
-![Login](../../docs/screenshots/screenshot-08.png)
-
 ## 🚀 Tecnologías Utilizadas
 
 ### Backend
@@ -54,234 +28,7 @@ Sistema de gestión de reservas para restaurante desarrollado con Django REST Fr
 
 ## 🔧 Instalación
 
-### Instalación en Windows (Paso a Paso)
-
-Esta guía te llevará desde cero hasta tener el sistema funcionando en Windows.
-
-#### Paso 1: Instalar Python 3.13+
-
-1. Ve a [https://www.python.org/downloads/](https://www.python.org/downloads/)
-2. Descarga la última versión de Python 3.13+ para Windows
-3. **MUY IMPORTANTE**: Durante la instalación, marca la casilla **"Add Python to PATH"** antes de hacer clic en "Install Now"
-4. Completa la instalación
-5. Abre **PowerShell** o **CMD** y verifica la instalación:
-   ```powershell
-   python --version
-   ```
-   Debería mostrar: `Python 3.13.x`
-
-6. Verifica que pip esté instalado:
-   ```powershell
-   pip --version
-   ```
-
-#### Paso 2: Instalar PostgreSQL
-
-1. Ve a [https://www.postgresql.org/download/windows/](https://www.postgresql.org/download/windows/)
-2. Descarga el instalador de PostgreSQL (versión 16 recomendada)
-3. Ejecuta el instalador y sigue estos pasos:
-   - **Puerto**: Deja el puerto por defecto (5432)
-   - **Contraseña**: Elige una contraseña para el usuario `postgres` y **anótala** (la necesitarás después)
-   - **Locale**: Deja la configuración regional por defecto
-   - Instala todos los componentes (PostgreSQL Server, pgAdmin, Command Line Tools)
-
-4. **Agregar PostgreSQL al PATH**:
-   - Abre "Variables de entorno" en Windows (busca "variables de entorno" en el menú inicio)
-   - En "Variables del sistema", busca la variable "Path" y haz clic en "Editar"
-   - Haz clic en "Nuevo" y agrega: `C:\Program Files\PostgreSQL\16\bin`
-   - Haz clic en "Aceptar" para guardar
-
-5. Abre una **nueva** terminal PowerShell/CMD y verifica la instalación:
-   ```powershell
-   psql --version
-   ```
-   Debería mostrar la versión de PostgreSQL instalada
-
-#### Paso 3: Crear la Base de Datos
-
-1. Abre PowerShell o CMD
-2. Conéctate a PostgreSQL (usa la contraseña que configuraste):
-   ```powershell
-   psql -U postgres
-   ```
-   Si te pide contraseña, ingresa la que configuraste durante la instalación
-
-3. Dentro de psql (verás el prompt `postgres=#`), ejecuta:
-   ```sql
-   CREATE DATABASE reservas_db;
-   ```
-
-4. Verifica que la base de datos se creó:
-   ```sql
-   \l
-   ```
-   Deberías ver `reservas_db` en la lista
-
-5. Sal de psql:
-   ```sql
-   \q
-   ```
-
-#### Paso 4: Instalar Node.js y npm
-
-1. Ve a [https://nodejs.org/](https://nodejs.org/)
-2. Descarga la versión LTS (Long Term Support) - actualmente Node.js 20+
-3. Ejecuta el instalador con las opciones por defecto
-4. Completa la instalación
-5. Abre una **nueva** terminal PowerShell/CMD y verifica:
-   ```powershell
-   node --version
-   npm --version
-   ```
-
-#### Paso 5: Descargar el Proyecto
-
-Si tienes Git instalado:
-```powershell
-git clone https://github.com/felipevidela/modulo_reservas.git
-cd modulo_reservas
-```
-
-Si no tienes Git, descarga el ZIP desde GitHub y descomprímelo.
-
-#### Paso 6: Configurar el Backend (Django)
-
-1. Abre PowerShell o CMD y navega a la carpeta del proyecto:
-   ```powershell
-   cd "C:\ruta\donde\descargaste\modulo_reservas"
-   cd "REST frameworks\ReservaProject"
-   ```
-
-2. Crea un entorno virtual de Python:
-   ```powershell
-   python -m venv venv
-   ```
-
-3. Activa el entorno virtual:
-   ```powershell
-   .\venv\Scripts\activate
-   ```
-   Verás `(venv)` al inicio de la línea de comando
-
-4. Instala Django y las dependencias:
-   ```powershell
-   pip install Django==5.2.7
-   pip install djangorestframework==3.16.1
-   pip install psycopg2-binary==2.9.10
-   pip install django-encrypted-model-fields==0.6.5
-   pip install django-cors-headers==4.6.0
-   pip install django-filter==24.3
-   pip install cryptography==46.0.3
-   ```
-
-   O instala todo desde el archivo requirements.txt:
-   ```powershell
-   pip install -r requirements.txt
-   ```
-
-5. Configura las variables de entorno:
-   ```powershell
-   copy .env.example .env
-   ```
-
-6. Edita el archivo `.env` con Notepad o tu editor preferido:
-   ```powershell
-   notepad .env
-   ```
-
-   Configura las siguientes variables:
-   ```env
-   SECRET_KEY=tu-clave-secreta-aqui
-   FIELD_ENCRYPTION_KEY=4GmvO9dDiZCcJ-B1PglnW5nwn5pkQK3E5jYU-F517W0=
-   DATABASE_NAME=reservas_db
-   DATABASE_USER=postgres
-   DATABASE_PASSWORD=tu-contraseña-de-postgres
-   DATABASE_HOST=localhost
-   DATABASE_PORT=5432
-   ```
-
-7. Ejecuta las migraciones de Django:
-   ```powershell
-   python manage.py makemigrations
-   python manage.py migrate
-   ```
-
-8. (Opcional) Crea un superusuario para acceder al panel de admin:
-   ```powershell
-   python manage.py createsuperuser
-   ```
-   Sigue las instrucciones para crear el usuario
-
-9. Inicia el servidor de Django:
-   ```powershell
-   python manage.py runserver
-   ```
-
-   Deberías ver:
-   ```
-   Starting development server at http://127.0.0.1:8000/
-   ```
-
-   ✅ **El backend está funcionando!** Déjalo corriendo y abre una nueva terminal para el frontend.
-
-#### Paso 7: Configurar el Frontend (React)
-
-1. Abre una **nueva** terminal PowerShell o CMD
-2. Navega a la carpeta del frontend:
-   ```powershell
-   cd "C:\ruta\donde\descargaste\modulo_reservas"
-   cd Reservas
-   ```
-
-3. Instala las dependencias de Node.js:
-   ```powershell
-   npm install
-   ```
-   Esto puede tomar unos minutos
-
-4. Inicia el servidor de desarrollo:
-   ```powershell
-   npm run dev
-   ```
-
-   Deberías ver:
-   ```
-   VITE ready in XXX ms
-   ➜  Local:   http://localhost:5173/
-   ```
-
-   ✅ **El frontend está funcionando!**
-
-5. Abre tu navegador en [http://localhost:5173](http://localhost:5173)
-
-#### 🎉 ¡Sistema Listo!
-
-Ahora tienes:
-- **Backend** corriendo en: http://localhost:8000
-- **Frontend** corriendo en: http://localhost:5173
-- **Base de datos** PostgreSQL configurada
-
-#### Comandos Útiles para Windows
-
-```powershell
-# Ver qué proceso está usando el puerto 8000
-netstat -ano | findstr :8000
-
-# Matar un proceso por su PID (reemplaza <PID> con el número)
-taskkill /PID <PID> /F
-
-# Desactivar el entorno virtual de Python
-deactivate
-
-# Activar el entorno virtual (si lo cerraste)
-.\venv\Scripts\activate
-```
-
----
-
-### Instalación en macOS/Linux
-
-#### 1. Configurar Backend (Django)
+### 1. Configurar Backend (Django)
 
 ```bash
 cd "REST frameworks/ReservaProject"
@@ -311,7 +58,7 @@ python3 manage.py runserver
 
 El servidor estará disponible en: `http://localhost:8000`
 
-#### 2. Configurar Frontend (React)
+### 2. Configurar Frontend (React)
 
 ```bash
 cd Reservas
@@ -575,7 +322,7 @@ Este proyecto fue desarrollado como parte del Sprint 3 del módulo de reservas.
 
 ## 👨‍💻 Desarrolladores
 
-- Equipo de desarrollo Sprint 3
+- Equipo de desarrollo Sprint 3Q
 
 ---
 

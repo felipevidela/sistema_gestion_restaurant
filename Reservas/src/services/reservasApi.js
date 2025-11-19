@@ -546,3 +546,82 @@ export async function updatePerfil(perfilData) {
 
   return data;
 }
+
+// ============ FUNCIONES PARA USUARIOS INVITADOS ============
+
+/**
+ * Verificar si un token de invitado es válido
+ * @param {string} token - Token único del invitado
+ * @returns {Object} - {valido, email, nombre_completo, es_invitado, token_usado, expira}
+ */
+export async function verificarTokenInvitado(token) {
+  const response = await fetch(`${API_BASE_URL}/verificar-token/${token}/`, {
+    method: 'GET',
+    headers: getHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al verificar token');
+  }
+
+  return response.json();
+}
+
+/**
+ * Ver reserva de un invitado usando su token
+ * @param {string} token - Token único del invitado
+ * @returns {Object} - {reserva, cliente, es_invitado, puede_activar_cuenta}
+ */
+export async function verReservaInvitado(token) {
+  const response = await fetch(`${API_BASE_URL}/reserva-invitado/${token}/`, {
+    method: 'GET',
+    headers: getHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al cargar reserva');
+  }
+
+  return response.json();
+}
+
+/**
+ * Cancelar reserva de un invitado usando su token
+ * @param {string} token - Token único del invitado
+ * @returns {Object} - {success, message, reserva_cancelada}
+ */
+export async function cancelarReservaInvitado(token) {
+  const response = await fetch(`${API_BASE_URL}/reserva-invitado/${token}/cancelar/`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al cancelar reserva');
+  }
+
+  return response.json();
+}
+
+/**
+ * Activar cuenta de un invitado estableciendo contraseña
+ * @param {Object} data - {token, password, password_confirm}
+ * @returns {Object} - {success, message, token, user_id, username, email, rol, nombre_completo}
+ */
+export async function activarCuentaInvitado(data) {
+  const response = await fetch(`${API_BASE_URL}/activar-cuenta/`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al activar cuenta');
+  }
+
+  return response.json();
+}

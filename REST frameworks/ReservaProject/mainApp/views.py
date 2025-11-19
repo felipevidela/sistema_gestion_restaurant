@@ -86,23 +86,29 @@ def register_and_reserve(request):
     """
     Endpoint combinado: registrar usuario y crear reserva en una sola transacción.
     Pensado para el flujo de reserva pública.
+
+    Soporta dos flujos:
+    1. Con contraseña: usuario registrado con cuenta completa
+    2. Sin contraseña: usuario invitado (genera password aleatoria + token)
+
     POST /api/register-and-reserve/
     Body: {
         # Datos del usuario
-        email, password, password_confirm, nombre, apellido, rut, telefono,
+        email, password (opcional), password_confirm (opcional), nombre, apellido, rut, telefono,
         # Datos de la reserva
         mesa, fecha_reserva, hora_inicio, num_personas, notas (opcional)
     }
     Rate limit: 5 intentos por hora
     """
     from django.db import transaction
+    from .email_service import enviar_email_confirmacion_invitado, enviar_email_confirmacion_usuario_registrado
 
     # Separar datos de usuario y reserva
     user_data = {
         'username': request.data.get('email'),  # Usar email como username
         'email': request.data.get('email'),
-        'password': request.data.get('password'),
-        'password_confirm': request.data.get('password_confirm'),
+        'password': request.data.get('password', ''),  # Puede ser vacío para invitados
+        'password_confirm': request.data.get('password_confirm', ''),
         'nombre': request.data.get('nombre'),
         'apellido': request.data.get('apellido'),
         'rut': request.data.get('rut'),
@@ -120,7 +126,7 @@ def register_and_reserve(request):
 
     try:
         with transaction.atomic():
-            # 1. Registrar usuario
+            # 1. Registrar usuario (puede ser invitado o con cuenta)
             user_serializer = RegisterSerializer(data=user_data)
             if not user_serializer.is_valid():
                 return Response({
@@ -151,21 +157,33 @@ def register_and_reserve(request):
 
             reserva = reserva_serializer.save(cliente=user)
 
-            # 3. Actualizar estado de la mesa
+            # 4. Actualizar estado de la mesa
             if mesa.estado == 'disponible':
                 mesa.estado = 'reservada'
                 mesa.save()
 
-            # 4. Generar token para auto-login
-            token, created = Token.objects.get_or_create(user=user)
+            # 5. Obtener perfil del usuario
+            perfil = user.perfil
 
-            return Response({
-                'token': token.key,
+            # 6. Enviar email de confirmación según tipo de usuario
+            if perfil.es_invitado:
+                # Usuario invitado: enviar email con link único y link de activación
+                enviar_email_confirmacion_invitado(reserva, perfil)
+                mensaje_respuesta = '¡Reserva confirmada! Revisa tu email para ver los detalles y un link para gestionar tu reserva.'
+            else:
+                # Usuario registrado: enviar email de bienvenida con link al dashboard
+                enviar_email_confirmacion_usuario_registrado(reserva, perfil)
+                mensaje_respuesta = '¡Reserva creada exitosamente! Tu cuenta ha sido registrada.'
+
+            # 7. Preparar respuesta
+            response_data = {
                 'user_id': user.id,
                 'username': user.username,
                 'email': user.email,
-                'rol': user.perfil.rol,
-                'nombre_completo': user.perfil.nombre_completo,
+                'rol': perfil.rol,
+                'rol_display': perfil.get_rol_display(),
+                'nombre_completo': perfil.nombre_completo,
+                'es_invitado': perfil.es_invitado,
                 'reserva': {
                     'id': reserva.id,
                     'mesa_numero': reserva.mesa.numero,
@@ -175,8 +193,15 @@ def register_and_reserve(request):
                     'num_personas': reserva.num_personas,
                     'estado': reserva.estado,
                 },
-                'message': '¡Reserva creada exitosamente! Tu cuenta ha sido registrada.'
-            }, status=status.HTTP_201_CREATED)
+                'message': mensaje_respuesta
+            }
+
+            # 8. Si es usuario registrado (no invitado), generar token para auto-login
+            if not perfil.es_invitado:
+                token, created = Token.objects.get_or_create(user=user)
+                response_data['token'] = token.key
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
 
     except Exception as e:
         return Response({
@@ -408,6 +433,264 @@ def cambiar_rol_usuario(request, user_id):
             'rol_display': perfil.get_rol_display(),
         }
     })
+
+
+# ============ ENDPOINTS PARA USUARIOS INVITADOS ============
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def verificar_token_invitado(request, token):
+    """
+    Verifica si un token de invitado es válido y retorna información básica.
+    GET /api/verificar-token/<token>/
+    """
+    try:
+        perfil = Perfil.objects.get(token_activacion=token)
+
+        if not perfil.token_es_valido():
+            return Response({
+                'error': 'Token inválido o expirado'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'valido': True,
+            'email': perfil.user.email,
+            'nombre_completo': perfil.nombre_completo,
+            'es_invitado': perfil.es_invitado,
+            'token_usado': perfil.token_usado,
+            'expira': perfil.token_expira
+        })
+
+    except Perfil.DoesNotExist:
+        return Response({
+            'error': 'Token no encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ver_reserva_invitado(request, token):
+    """
+    Permite a un invitado ver su reserva usando el token único.
+    GET /api/reserva-invitado/<token>/
+    """
+    try:
+        perfil = Perfil.objects.get(token_activacion=token)
+
+        # Validar token
+        if not perfil.token_es_valido():
+            return Response({
+                'error': 'Token inválido o expirado. El link solo es válido por 48 horas.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Obtener reserva más reciente del usuario
+        reserva = Reserva.objects.filter(
+            cliente=perfil.user,
+            estado__in=['pendiente', 'activa']
+        ).select_related('mesa').order_by('-created_at').first()
+
+        if not reserva:
+            return Response({
+                'error': 'No se encontró una reserva activa para este usuario'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Serializar reserva
+        from .serializers import ReservaListSerializer
+        serializer = ReservaListSerializer(reserva)
+
+        return Response({
+            'reserva': serializer.data,
+            'cliente': {
+                'nombre_completo': perfil.nombre_completo,
+                'email': perfil.user.email,
+                'telefono': perfil.telefono
+            },
+            'es_invitado': perfil.es_invitado,
+            'puede_activar_cuenta': perfil.es_invitado and not perfil.token_usado
+        })
+
+    except Perfil.DoesNotExist:
+        return Response({
+            'error': 'Token no encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def cancelar_reserva_invitado(request, token):
+    """
+    Permite a un invitado cancelar su reserva usando el token único.
+    DELETE /api/reserva-invitado/<token>/cancelar/
+    """
+    from django.db import transaction
+    from .email_service import enviar_email_cancelacion_reserva
+
+    try:
+        perfil = Perfil.objects.get(token_activacion=token)
+
+        # Validar token
+        if not perfil.token_es_valido():
+            return Response({
+                'error': 'Token inválido o expirado'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Obtener reserva más reciente del usuario
+        reserva = Reserva.objects.filter(
+            cliente=perfil.user,
+            estado__in=['pendiente', 'activa']
+        ).select_related('mesa').order_by('-created_at').first()
+
+        if not reserva:
+            return Response({
+                'error': 'No se encontró una reserva activa para cancelar'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        with transaction.atomic():
+            # Guardar datos antes de eliminar
+            mesa = reserva.mesa
+            reserva_info = {
+                'id': reserva.id,
+                'mesa_numero': mesa.numero,
+                'fecha_reserva': reserva.fecha_reserva,
+                'hora_inicio': reserva.hora_inicio
+            }
+
+            # Marcar reserva como cancelada (en lugar de eliminar)
+            reserva.estado = 'cancelada'
+            reserva.save()
+
+            # Verificar si hay otras reservas activas/pendientes para esta mesa
+            otras_reservas_activas = Reserva.objects.filter(
+                mesa=mesa,
+                estado__in=['pendiente', 'activa']
+            ).exists()
+
+            # Solo marcar como disponible si no hay otras reservas
+            if not otras_reservas_activas:
+                mesa.estado = 'disponible'
+                mesa.save()
+
+            # Enviar email de confirmación de cancelación
+            enviar_email_cancelacion_reserva(reserva, perfil)
+
+        return Response({
+            'success': True,
+            'message': 'Reserva cancelada exitosamente',
+            'reserva_cancelada': reserva_info
+        })
+
+    except Perfil.DoesNotExist:
+        return Response({
+            'error': 'Token no encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def activar_cuenta_invitado(request):
+    """
+    Activa la cuenta de un invitado estableciendo una contraseña.
+    POST /api/activar-cuenta/
+    Body: {token, password, password_confirm}
+    """
+    from django.contrib.auth.hashers import make_password
+    from .email_service import enviar_email_bienvenida_cuenta_activada
+
+    token = request.data.get('token')
+    password = request.data.get('password')
+    password_confirm = request.data.get('password_confirm')
+
+    # Validaciones básicas
+    if not token or not password or not password_confirm:
+        return Response({
+            'error': 'Token, contraseña y confirmación son requeridos'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if password != password_confirm:
+        return Response({
+            'error': 'Las contraseñas no coinciden'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validar complejidad de contraseña
+    if len(password) < 8:
+        return Response({
+            'error': 'La contraseña debe tener al menos 8 caracteres'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if not any(c.isupper() for c in password):
+        return Response({
+            'error': 'La contraseña debe contener al menos una letra mayúscula'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if not any(c.islower() for c in password):
+        return Response({
+            'error': 'La contraseña debe contener al menos una letra minúscula'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if not any(c.isdigit() for c in password):
+        return Response({
+            'error': 'La contraseña debe contener al menos un número'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    caracteres_especiales = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+    if not any(c in caracteres_especiales for c in password):
+        return Response({
+            'error': 'La contraseña debe contener al menos un carácter especial'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        perfil = Perfil.objects.get(token_activacion=token)
+
+        # Validar que sea invitado
+        if not perfil.es_invitado:
+            return Response({
+                'error': 'Esta cuenta ya está activada'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validar token
+        if not perfil.token_es_valido():
+            return Response({
+                'error': 'Token inválido o expirado'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validar que el token no haya sido usado
+        if perfil.token_usado:
+            return Response({
+                'error': 'Este token ya fue utilizado'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Actualizar usuario y perfil
+        user = perfil.user
+        user.set_password(password)
+        user.save()
+
+        perfil.es_invitado = False
+        perfil.token_usado = True
+        perfil.save()
+
+        # Generar token de autenticación
+        from rest_framework.authtoken.models import Token
+        token_auth, created = Token.objects.get_or_create(user=user)
+
+        # Enviar email de bienvenida
+        enviar_email_bienvenida_cuenta_activada(perfil)
+
+        return Response({
+            'success': True,
+            'message': '¡Cuenta activada exitosamente! Ya puedes iniciar sesión.',
+            'token': token_auth.key,
+            'user_id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'rol': perfil.rol,
+            'rol_display': perfil.get_rol_display(),
+            'nombre_completo': perfil.nombre_completo
+        }, status=status.HTTP_200_OK)
+
+    except Perfil.DoesNotExist:
+        return Response({
+            'error': 'Token no encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)
 
 
 # ============ ENDPOINTS DE MESAS ============

@@ -39,8 +39,47 @@ class Perfil(models.Model):
     # FIX #18 (MODERADO): Email debe ser único
     email = models.EmailField(blank=True, null=True, unique=True)
 
+    # Campos para sistema de invitados (reservas sin cuenta)
+    es_invitado = models.BooleanField(
+        default=False,
+        help_text="Usuario creado sin contraseña para reserva pública"
+    )
+    token_activacion = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        unique=True,
+        help_text="Token único para acceso sin login y activación de cuenta"
+    )
+    token_expira = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Fecha de expiración del token (48 horas desde creación)"
+    )
+    token_usado = models.BooleanField(
+        default=False,
+        help_text="Indica si el token de activación ya fue usado para crear cuenta"
+    )
+
     def __str__(self):
         return f"{self.user.username} - {self.get_rol_display()}"
+
+    def generar_token_activacion(self):
+        """Genera un token único de activación válido por 48 horas"""
+        import secrets
+        self.token_activacion = secrets.token_urlsafe(32)
+        self.token_expira = timezone.now() + timedelta(hours=48)
+        self.token_usado = False
+        self.save()
+        return self.token_activacion
+
+    def token_es_valido(self):
+        """Verifica si el token de activación es válido"""
+        if not self.token_activacion or self.token_usado:
+            return False
+        if self.token_expira and self.token_expira < timezone.now():
+            return False
+        return True
 
     class Meta:
         verbose_name = "Perfil"
