@@ -224,7 +224,7 @@ export default function FormularioReserva({ onReservaCreada }) {
       const datosReserva = {
         id: nuevaReserva.id,
         mesa_numero: nuevaReserva.mesa_numero || nuevaReserva.mesa,
-        mesa_capacidad: values.num_personas,
+        mesa_capacidad: mesaAunDisponible.capacidad,  // Usar la capacidad real de la mesa
         fecha_reserva: nuevaReserva.fecha_reserva,
         hora_inicio: nuevaReserva.hora_inicio,
         hora_fin: nuevaReserva.hora_fin,
@@ -480,19 +480,21 @@ export default function FormularioReserva({ onReservaCreada }) {
         </form>
       </div>
 
-      {/* Modal de Confirmación */}
-      <ModalConfirmacionReserva
-        isOpen={mostrarModalConfirmacion}
-        onClose={handleCloseModalConfirmacion}
-        reservaData={datosReservaConfirmada}
-        clienteData={user ? {
-          nombre: user.first_name || user.username || 'Usuario',
-          apellido: user.last_name || '',
-          email: user.email,
-          telefono: user.telefono || ''
-        } : null}
-        esInvitado={false}
-      />
+      {/* Modal de Confirmación - solo renderizar cuando tenemos datos */}
+      {datosReservaConfirmada && (
+        <ModalConfirmacionReserva
+          isOpen={mostrarModalConfirmacion}
+          onClose={handleCloseModalConfirmacion}
+          reservaData={datosReservaConfirmada}
+          clienteData={user ? {
+            nombre: user.first_name || user.username || 'Usuario',
+            apellido: user.last_name || '',
+            email: user.email,
+            telefono: user.telefono || ''
+          } : null}
+          esInvitado={false}
+        />
+      )}
     </div>
   );
 }
