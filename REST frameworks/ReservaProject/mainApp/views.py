@@ -136,12 +136,20 @@ def register_and_reserve(request):
     email = request.data.get('email')
     confirm_existing = request.data.get('confirm_existing', False)
 
+    # DEBUG: Log para diagnosticar
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"🔍 DEBUG - Email recibido: {email}")
+    logger.info(f"🔍 DEBUG - confirm_existing: {confirm_existing}")
+
     try:
         # Verificar si el usuario existe
         existing_user = User.objects.filter(email=email).first() if email else None
+        logger.info(f"🔍 DEBUG - Usuario existente encontrado: {existing_user is not None}")
 
         # Si existe y NO fue confirmado, solicitar confirmación
         if existing_user and not confirm_existing:
+            logger.info(f"🔍 DEBUG - Retornando requires_confirmation")
             # Verificar que tenga perfil
             if not hasattr(existing_user, 'perfil'):
                 return Response({
