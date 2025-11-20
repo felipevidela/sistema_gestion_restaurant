@@ -118,11 +118,12 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             // FIX: Smart search logic - don't apply date filter when searching by name
             const isSearchingByName = busqueda && busqueda.trim() !== '';
 
-            if (showAllReservations) {
+            // Date range mode (for showAllReservations OR when range is set in normal mode)
+            if (showAllReservations || (fechaInicio || fechaFin)) {
                 if (fechaInicio) filtros.fecha_inicio = fechaInicio;
                 if (fechaFin) filtros.fecha_fin = fechaFin;
             } else if (fecha && !isSearchingByName) {
-                // Only apply fecha filter if NOT searching by name
+                // Single date mode - only if NOT searching by name and NO range set
                 filtros.fecha = fecha;
             }
 
@@ -789,9 +790,18 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                     className="form-control form-control-sm"
                                     value={fecha}
                                     onChange={(e) => setFecha(e.target.value)}
+                                    disabled={fechaInicio || fechaFin}
+                                    style={(fechaInicio || fechaFin) ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                                 />
                                 <small className="text-muted">
-                                    {fechaLegible}
+                                    {(fechaInicio || fechaFin) ? (
+                                        <span className="text-warning">
+                                            <i className="bi bi-info-circle me-1"></i>
+                                            Rango de fechas activo (ver búsqueda avanzada)
+                                        </span>
+                                    ) : (
+                                        fechaLegible
+                                    )}
                                 </small>
                             </div>
                         ) : (
@@ -925,6 +935,26 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                         </div>
                     )}
 
+                    {/* Show range badge in normal mode when date range is active */}
+                    {!showAllReservations && (fechaInicio || fechaFin) && (
+                        <div className="d-flex flex-wrap align-items-center gap-2 mb-3 pb-2 border-bottom">
+                            <span className="badge rounded-pill badge-soft-info">
+                                <i className="bi bi-funnel me-1"></i>
+                                Rango activo: {fechaInicio || 'inicio'} → {fechaFin || 'hoy'}
+                            </span>
+                            <button
+                                className="btn btn-link btn-sm p-0"
+                                onClick={() => {
+                                    setFechaInicio('');
+                                    setFechaFin('');
+                                }}
+                            >
+                                <i className="bi bi-x-circle me-1"></i>
+                                Limpiar rango
+                            </button>
+                        </div>
+                    )}
+
                     {/* Manual refresh button */}
                     <div className="d-flex justify-content-end pt-2 border-top">
                         <button
@@ -971,6 +1001,53 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                             </div>
                                         </div>
                                     </div>
+                                )}
+
+                                {/* Date Range Filter - Only in normal mode */}
+                                {!showAllReservations && (
+                                    <>
+                                        <div className="col-12 mb-2 mt-3">
+                                            <div className="alert alert-secondary py-2 px-3 mb-0">
+                                                <strong>
+                                                    <i className="bi bi-calendar-range me-2"></i>
+                                                    Filtro por rango de fechas
+                                                </strong>
+                                                <div className="small text-muted mt-1">
+                                                    Filtra reservas entre dos fechas. Útil para ver reservas de la semana, mes, etc.
+                                                    Si usas este filtro, la fecha única de arriba se desactiva.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="col-md-3">
+                                            <label htmlFor="advanced-fecha-inicio" className="form-label small">
+                                                Fecha desde
+                                            </label>
+                                            <input
+                                                type="date"
+                                                id="advanced-fecha-inicio"
+                                                className="form-control form-control-sm"
+                                                value={fechaInicio}
+                                                onChange={(e) => setFechaInicio(e.target.value)}
+                                            />
+                                            <small className="text-muted">Inicio del rango (opcional)</small>
+                                        </div>
+
+                                        <div className="col-md-3">
+                                            <label htmlFor="advanced-fecha-fin" className="form-label small">
+                                                Fecha hasta
+                                            </label>
+                                            <input
+                                                type="date"
+                                                id="advanced-fecha-fin"
+                                                className="form-control form-control-sm"
+                                                value={fechaFin}
+                                                min={fechaInicio || undefined}
+                                                onChange={(e) => setFechaFin(e.target.value)}
+                                            />
+                                            <small className="text-muted">Fin del rango (opcional)</small>
+                                        </div>
+                                    </>
                                 )}
 
                                 <div className="col-md-3">
