@@ -53,6 +53,26 @@ const ERROR_MESSAGES = {
     message: 'Las contraseñas ingresadas no coinciden.',
     suggestion: 'Verifique que ambas contraseñas sean idénticas.',
   },
+  'username: Ya existe un usuario con este nombre': {
+    message: 'Este correo ya está asociado a una cuenta.',
+    suggestion: 'Inicia sesión con tu cuenta o utiliza otro correo.',
+  },
+  'Este correo ya está registrado': {
+    message: 'Este correo ya se encuentra registrado.',
+    suggestion: 'Inicia sesión con tu cuenta o utiliza otro correo.',
+  },
+  'Este correo ya tiene una reserva registrada': {
+    message: 'Ya existe una reserva con este correo.',
+    suggestion: 'Revisa tu email para gestionar la reserva existente o utiliza otro correo.',
+  },
+  'El RUT ingresado ya se encuentra registrado': {
+    message: 'El RUT ingresado ya fue utilizado.',
+    suggestion: 'Si ya tienes una cuenta, inicia sesión; de lo contrario usa otro RUT.',
+  },
+  'duplicate key value violates unique constraint': {
+    message: 'Algunos datos ya estaban registrados (correo o RUT duplicados).',
+    suggestion: 'Verifica que el correo y el RUT no estén en uso o inicia sesión con tu cuenta.',
+  },
 
   // Errores de red
   'Network Error': {

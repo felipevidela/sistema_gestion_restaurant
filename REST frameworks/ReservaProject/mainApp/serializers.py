@@ -116,12 +116,30 @@ class RegisterSerializer(serializers.ModelSerializer):
         FIX #24 (MODERADO): Validar email duplicado en User
         NUEVO: Validar contraseña solo si se proporciona (soporte para invitados)
         """
-        # FIX #24 (MODERADO): Validar que el email no esté en uso
-        if data.get('email'):
-            if User.objects.filter(email=data['email']).exists():
+        email = data.get('email')
+        username = data.get('username') or email
+        rut_normalizado = data.get('rut')
+
+        # FIX #24 (MODERADO): Validar que el email/username no esté en uso
+        if email:
+            if User.objects.filter(email=email).exists():
                 raise serializers.ValidationError({
-                    'email': 'Este email ya está registrado'
+                    'email': 'Este correo ya está registrado. Usa otro correo o inicia sesión con tu cuenta existente.'
                 })
+            if Perfil.objects.filter(email=email).exists():
+                raise serializers.ValidationError({
+                    'email': 'Este correo ya tiene una reserva registrada.'
+                })
+
+        if username and User.objects.filter(username=username).exists():
+            raise serializers.ValidationError({
+                'email': 'Ya existe una cuenta asociada a este correo. Inicia sesión o elige otro correo.'
+            })
+
+        if rut_normalizado and Perfil.objects.filter(rut=rut_normalizado).exists():
+            raise serializers.ValidationError({
+                'rut': 'El RUT ingresado ya se encuentra registrado.'
+            })
 
         # Obtener password (puede ser None o string vacío)
         password = data.get('password', '')
