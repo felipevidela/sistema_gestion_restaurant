@@ -90,6 +90,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
 
     // Calendar view state
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
+    const [lastUpdated, setLastUpdated] = useState(null);
 
     // Autocomplete state
     const [autocompleteSuggestions, setAutocompleteSuggestions] = useState([]);
@@ -115,15 +116,16 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     const [mesasCache, setMesasCache] = useState(null);
     const [mesasCacheTimestamp, setMesasCacheTimestamp] = useState(null);
 
+    const trimmedBusqueda = busqueda.trim();
+    const isSearchingByName = trimmedBusqueda !== '';
+    const historialActivo = searchAllHistory && isSearchingByName && !showAllReservations;
+
     // Función para cargar reservas (reutilizable)
     const cargarReservas = async () => {
         try {
             setLoading(true);
             setError("");
             const filtros = {};
-
-            // FIX: Smart search logic - don't apply date filter when searching by name
-            const isSearchingByName = busqueda && busqueda.trim() !== '';
 
             // Date range mode (for showAllReservations OR when range is set in normal mode)
             if (showAllReservations || (fechaInicio || fechaFin)) {
@@ -134,9 +136,13 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                 filtros.fecha = fecha;
             }
 
+            if (estadoFiltro && estadoFiltro !== "TODOS") {
+                filtros.estado = estadoFiltro.toLowerCase();
+            }
+
             // Agregar búsqueda por cliente (nombre, email, username)
             if (isSearchingByName) {
-                filtros.search = busqueda.trim();
+                filtros.search = trimmedBusqueda;
                 // Apply searchAllHistory flag when searching
                 if (searchAllHistory && !showAllReservations) {
                     filtros.all = 'true';
@@ -146,6 +152,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
 
             const data = await getReservas(filtros);
             setReservas(data);
+            setLastUpdated(new Date());
         } catch (err) {
             console.error(err);
             setError("No se pudieron cargar las reservas.");
@@ -166,10 +173,15 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             // Buscar reservas que coincidan con el término de búsqueda
             const filtros = {
                 search: searchTerm.trim(),
-                all: 'true' // Buscar en todo el historial
+                all: 'true', // Buscar en todo el historial
+                page_size: 5
             };
 
-            const data = await getReservas(filtros);
+            if (estadoFiltro && estadoFiltro !== "TODOS") {
+                filtros.estado = estadoFiltro.toLowerCase();
+            }
+
+            const data = await getReservas(filtros, { fetchAllPages: false });
 
             // Extraer clientes únicos de las reservas
             const clientesMap = new Map();
@@ -199,7 +211,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     useEffect(() => {
         cargarReservas();
         setCurrentPage(1); // Reset to first page on date change
-    }, [fecha, fechaInicio, fechaFin, showAllReservations, searchAllHistory]);
+    }, [fecha, fechaInicio, fechaFin, showAllReservations, searchAllHistory, estadoFiltro]);
 
     // Debounced search: Esperar 300ms después de que el usuario deje de escribir
     useEffect(() => {
@@ -410,6 +422,10 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
         setCurrentPage(1);
     };
 
+    const handleSearchAllHistoryChange = (checked) => {
+        setSearchAllHistory(checked);
+    };
+
     // Date navigation functions
     const navegarFecha = (dias) => {
         const fechaActual = fecha ? new Date(fecha) : new Date();
@@ -501,6 +517,15 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
         // Quitar segundos si los hay (HH:MM:SS -> HH:MM)
         return hora.substring(0, 5);
     }
+
+    const formatearFechaCorta = (fechaStr) => {
+        if (!fechaStr) return '';
+        return new Date(`${fechaStr}T00:00:00`).toLocaleDateString('es-CL', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
 
     async function handleCambiarEstado(id, nuevoEstado, requiresConfirmation = false) {
         // Destructive actions require confirmation
@@ -753,6 +778,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     const rangoLegible = fechaInicio || fechaFin
         ? `${fechaInicio || 'inicio'} → ${fechaFin || 'sin fin'}`
         : 'Sin rango';
+    const isDateFilterDisabled = Boolean(fechaInicio || fechaFin || historialActivo);
     const handleLimpiarRango = () => {
         setFechaInicio(defaultFechaInicio());
         setFechaFin('');
@@ -777,6 +803,38 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             tone: 'danger'
         },
     ]), [resumen]);
+
+    const searchScope = useMemo(() => {
+        if (!isSearchingByName) return null;
+        if (historialActivo) return 'en todo el historial';
+        if (fechaInicio || fechaFin) {
+            return `entre ${fechaInicio || 'inicio'} y ${fechaFin || 'hoy'}`;
+        }
+        if (fecha) {
+            return `el ${formatearFechaCorta(fecha)}`;
+        }
+        return 'en los últimos 7 días';
+    }, [isSearchingByName, historialActivo, fechaInicio, fechaFin, fecha]);
+
+    const searchSummaryDescription = useMemo(() => {
+        if (!isSearchingByName || !searchScope) return null;
+        return `Mostrando coincidencias para "${trimmedBusqueda}" ${searchScope}`;
+    }, [isSearchingByName, trimmedBusqueda, searchScope]);
+
+    const noResultsMessage = useMemo(() => {
+        if (loading || reservasFiltradas.length > 0) return null;
+        if (isSearchingByName && searchScope) {
+            return `Sin reservas para "${trimmedBusqueda}" ${searchScope}.`;
+        }
+        return 'No hay reservas que coincidan con los filtros seleccionados.';
+    }, [loading, reservasFiltradas.length, isSearchingByName, trimmedBusqueda, searchScope]);
+
+    const lastUpdatedLabel = lastUpdated
+        ? lastUpdated.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+        : null;
+    const lastUpdatedText = lastUpdatedLabel
+        ? `Actualizado a las ${lastUpdatedLabel}`
+        : 'Aún sin actualización manual';
 
     return (
         <div className="container py-4">
@@ -910,11 +968,16 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                     className="form-control form-control-sm"
                                     value={fecha}
                                     onChange={(e) => setFecha(e.target.value)}
-                                    disabled={fechaInicio || fechaFin}
-                                    style={(fechaInicio || fechaFin) ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+                                    disabled={isDateFilterDisabled}
+                                    style={isDateFilterDisabled ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                                 />
                                 <small className="text-muted">
-                                    {(fechaInicio || fechaFin) ? (
+                                    {historialActivo ? (
+                                        <span className="text-info">
+                                            <i className="bi bi-database me-1"></i>
+                                            Historial completo activo (se ignoran los filtros de fecha)
+                                        </span>
+                                    ) : (fechaInicio || fechaFin) ? (
                                         <span className="text-warning">
                                             <i className="bi bi-info-circle me-1"></i>
                                             Rango de fechas activo (ver búsqueda avanzada)
@@ -998,10 +1061,6 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                     value={busqueda}
                                     onChange={(e) => {
                                         setBusqueda(e.target.value);
-                                        // FIX: Auto-enable global search when user starts typing
-                                        if (e.target.value && !searchAllHistory) {
-                                            setSearchAllHistory(true);
-                                        }
                                     }}
                                     onKeyDown={handleSearchKeyDown}
                                     onFocus={() => {
@@ -1139,7 +1198,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                     )}
 
                     {/* Manual refresh button */}
-                    <div className="d-flex justify-content-end pt-2 border-top">
+                    <div className="d-flex flex-column flex-sm-row justify-content-sm-end align-items-sm-center gap-2 pt-2 border-top">
                         <button
                             className="btn btn-outline-secondary btn-sm"
                             onClick={cargarReservas}
@@ -1148,6 +1207,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                             <i className="bi bi-arrow-clockwise me-1"></i>
                             Actualizar ahora
                         </button>
+                        <small className="text-muted">{lastUpdatedText}</small>
                     </div>
 
                     {/* Advanced Search Toggle */}
@@ -1172,7 +1232,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                                     type="checkbox"
                                                     id="search-all-history"
                                                     checked={searchAllHistory}
-                                                    onChange={(e) => setSearchAllHistory(e.target.checked)}
+                                                    onChange={(e) => handleSearchAllHistoryChange(e.target.checked)}
                                                 />
                                                 <label className="form-check-label small" htmlFor="search-all-history">
                                                     <i className="bi bi-database me-1"></i>
@@ -1196,6 +1256,8 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                                     className="form-control form-control-sm"
                                                     value={fechaInicio}
                                                     onChange={(e) => setFechaInicio(e.target.value)}
+                                                    disabled={historialActivo}
+                                                    style={historialActivo ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                                                 />
                                             </div>
 
@@ -1210,9 +1272,19 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                                     value={fechaFin}
                                                     min={fechaInicio || undefined}
                                                     onChange={(e) => setFechaFin(e.target.value)}
+                                                    disabled={historialActivo}
+                                                    style={historialActivo ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                                                 />
                                             </div>
                                         </>
+                                    )}
+
+                                    {historialActivo && (
+                                        <div className="col-12">
+                                            <small className="text-info">
+                                                Mientras el historial completo esté activo se ignorarán los filtros de fecha.
+                                            </small>
+                                        </div>
                                     )}
 
                                     <div className="col-md-2">
@@ -1292,8 +1364,19 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                         </div>
                     </div>
 
+                    {searchSummaryDescription && (
+                        <div className="alert alert-light border-start border-primary py-2 px-3 small mb-3">
+                            <i className="bi bi-search me-1"></i>
+                            {searchSummaryDescription}
+                        </div>
+                    )}
+
                     {error && (
                         <div className="alert alert-danger py-2 small">{error}</div>
+                    )}
+
+                    {noResultsMessage && (
+                        <div className="alert alert-info py-2 small">{noResultsMessage}</div>
                     )}
 
                     {/* Calendar View */}
@@ -1558,6 +1641,19 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                     </div>
                                 </div>
                             </div>
+                            {historialActivo && (
+                                <div className="d-flex align-items-center gap-2 mt-1 small text-info">
+                                    <i className="bi bi-database"></i>
+                                    Historial completo activo
+                                    <button
+                                        type="button"
+                                        className="btn btn-link btn-sm p-0"
+                                        onClick={() => handleSearchAllHistoryChange(false)}
+                                    >
+                                        Limitar por fechas
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="row g-4">
