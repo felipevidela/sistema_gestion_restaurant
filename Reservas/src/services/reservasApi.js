@@ -268,7 +268,17 @@ export async function getReservas(params = {}, options = {}) {
 
   const normalizeUrl = (url) => {
     if (!url) return null;
-    if (url.startsWith('http')) return url;
+
+    // Si ya es una URL completa, verificar y corregir protocolo
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      // Forzar HTTPS si estamos en producción
+      if (import.meta.env.PROD && url.startsWith('http://')) {
+        return url.replace('http://', 'https://');
+      }
+      return url;
+    }
+
+    // URLs relativas
     if (url.startsWith('/')) {
       return `${API_BASE_URL}${url}`;
     }

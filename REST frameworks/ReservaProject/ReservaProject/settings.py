@@ -237,6 +237,29 @@ else:
 
 CORS_ALLOW_CREDENTIALS = True
 
+# Headers permitidos en requests CORS
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Métodos HTTP permitidos
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
 # FIX #30 (MODERADO): Configuración CSRF correcta
 # CSRF Trusted Origins para permitir requests POST/PUT/DELETE desde frontend
 csrf_trusted_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
@@ -260,6 +283,16 @@ CSRF_COOKIE_HTTPONLY = False  # False para que JavaScript pueda leer el token
 CSRF_COOKIE_SAMESITE = 'Lax'  # Protección contra CSRF
 SESSION_COOKIE_SECURE = not DEBUG  # Session cookie solo sobre HTTPS en producción
 SESSION_COOKIE_SAMESITE = 'Lax'
+
+# FIX: Configuración para HTTPS detrás de proxy (Railway)
+# Railway usa proxy reverso, necesitamos que Django reconozca HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# En producción, forzar HTTPS
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True  # Redirigir HTTP a HTTPS
+    SESSION_COOKIE_SECURE = True  # Cookies solo por HTTPS
+    CSRF_COOKIE_SECURE = True  # CSRF token solo por HTTPS
 
 # Configuración de django-encrypted-model-fields para encriptación
 # IMPORTANTE: Esta clave debe ser secreta en producción y guardarse en variables de entorno
