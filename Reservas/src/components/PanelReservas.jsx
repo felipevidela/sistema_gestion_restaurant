@@ -59,6 +59,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     const [fechaFin, setFechaFin] = useState(savedFilters?.fechaFin || '');
     const [estadoFiltro, setEstadoFiltro] = useState(savedFilters?.estadoFiltro || "TODOS");
     const [busqueda, setBusqueda] = useState(savedFilters?.busqueda || "");
+    const [busquedaInput, setBusquedaInput] = useState(savedFilters?.busqueda || "");
 
     // Advanced search state
     const [searchHora, setSearchHora] = useState(savedFilters?.searchHora || "");
@@ -117,8 +118,13 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     const [mesasCacheTimestamp, setMesasCacheTimestamp] = useState(null);
 
     const trimmedBusqueda = busqueda.trim();
+    const trimmedBusquedaInput = busquedaInput.trim();
     const isSearchingByName = trimmedBusqueda !== '';
     const historialActivo = searchAllHistory && isSearchingByName && !showAllReservations;
+    const hasPendingSearchChanges = busquedaInput !== busqueda;
+    const isSearchButtonDisabled = !hasPendingSearchChanges &&
+        trimmedBusqueda === '' &&
+        trimmedBusquedaInput === '';
 
     // Función para cargar reservas (reutilizable)
     const cargarReservas = async () => {
@@ -226,8 +232,8 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     // Debounced autocomplete: Fetch suggestions as user types
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (busqueda && busqueda.trim().length >= 2) {
-                fetchAutocompleteSuggestions(busqueda);
+            if (busquedaInput && busquedaInput.trim().length >= 2) {
+                fetchAutocompleteSuggestions(busquedaInput);
             } else {
                 setShowAutocomplete(false);
                 setAutocompleteSuggestions([]);
@@ -235,7 +241,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
         }, 200); // Faster response for autocomplete
 
         return () => clearTimeout(timer);
-    }, [busqueda]);
+    }, [busquedaInput]);
 
     // Click outside to close autocomplete
     useEffect(() => {
@@ -418,6 +424,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
         setFechaFin('');
         setEstadoFiltro("TODOS");
         setBusqueda("");
+        setBusquedaInput("");
         setSearchHora("");
         setSearchPersonasMin("");
         setSearchPersonasMax("");
@@ -462,11 +469,23 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
         setViewMode('list'); // Switch to list view to show details
     };
 
-    // Autocomplete handlers
-    const handleSuggestionClick = (suggestion) => {
-        setBusqueda(suggestion.nombre);
+    const handleAplicarBusqueda = (valor = busquedaInput) => {
+        const normalizado = (valor || '').trim();
+        setBusquedaInput(normalizado);
+        setCurrentPage(1);
         setShowAutocomplete(false);
         setSelectedSuggestionIndex(-1);
+
+        if (normalizado !== busqueda) {
+            setBusqueda(normalizado);
+        } else {
+            cargarReservas();
+        }
+    };
+
+    // Autocomplete handlers
+    const handleSuggestionClick = (suggestion) => {
+        handleAplicarBusqueda(suggestion.nombre);
     };
 
     const handleSearchKeyDown = (e) => {
@@ -488,7 +507,9 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             case 'Enter':
                 e.preventDefault();
                 if (selectedSuggestionIndex >= 0) {
-                    handleSuggestionClick(autocompleteSuggestions[selectedSuggestionIndex]);
+                    handleAplicarBusqueda(autocompleteSuggestions[selectedSuggestionIndex].nombre);
+                } else {
+                    handleAplicarBusqueda();
                 }
                 break;
             case 'Escape':
@@ -1056,79 +1077,95 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                             >
                                 Buscar cliente
                             </label>
-                            <div style={{ position: 'relative' }}>
-                                <input
-                                    ref={searchInputRef}
-                                    type="text"
-                                    id="filtro-busqueda"
-                                    className="form-control form-control-sm"
-                                    placeholder="Buscar por nombre, email o usuario..."
-                                    value={busqueda}
-                                    onChange={(e) => {
-                                        setBusqueda(e.target.value);
-                                    }}
-                                    onKeyDown={handleSearchKeyDown}
-                                    onFocus={() => {
-                                        if (busqueda && busqueda.trim().length >= 2 && autocompleteSuggestions.length > 0) {
-                                            setShowAutocomplete(true);
-                                        }
-                                    }}
-                                    autoComplete="off"
-                                />
-
-                                {/* Autocomplete dropdown */}
-                                {showAutocomplete && autocompleteSuggestions.length > 0 && (
-                                    <div
-                                        ref={autocompleteRef}
-                                        style={{
-                                            position: 'absolute',
-                                            top: '100%',
-                                            left: 0,
-                                            right: 0,
-                                            backgroundColor: 'white',
-                                            border: '1px solid #dee2e6',
-                                            borderRadius: '0.25rem',
-                                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                                            zIndex: 1000,
-                                            maxHeight: '400px',
-                                            overflowY: 'auto',
-                                            marginTop: '2px'
-                                        }}
-                                    >
-                                        {autocompleteSuggestions.map((suggestion, index) => (
-                                            <div
-                                                key={index}
-                                                onClick={() => handleSuggestionClick(suggestion)}
-                                                style={{
-                                                    padding: '10px 12px',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: selectedSuggestionIndex === index ? '#e9ecef' : 'white',
-                                                    borderBottom: index < autocompleteSuggestions.length - 1 ? '1px solid #f1f3f5' : 'none',
-                                                    transition: 'background-color 0.15s ease'
+                                    <div style={{ position: 'relative' }}>
+                                        <div className="input-group input-group-sm">
+                                            <input
+                                                ref={searchInputRef}
+                                                type="text"
+                                                id="filtro-busqueda"
+                                                className="form-control"
+                                                placeholder="Buscar por nombre, email o usuario..."
+                                                value={busquedaInput}
+                                                onChange={(e) => {
+                                                    setBusquedaInput(e.target.value);
                                                 }}
-                                                onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                                                onKeyDown={handleSearchKeyDown}
+                                                onFocus={() => {
+                                                    if (busquedaInput && busquedaInput.trim().length >= 2 && autocompleteSuggestions.length > 0) {
+                                                        setShowAutocomplete(true);
+                                                    }
+                                                }}
+                                                autoComplete="off"
+                                            />
+                                            <button
+                                                type="button"
+                                                className="btn btn-primary"
+                                                onClick={() => handleAplicarBusqueda()}
+                                                disabled={isSearchButtonDisabled}
                                             >
-                                                <div style={{ fontWeight: 500, color: '#212529', marginBottom: '2px' }}>
-                                                    <i className="bi bi-person-circle me-2 text-primary"></i>
-                                                    {suggestion.nombre}
-                                                </div>
-                                                {suggestion.email && (
-                                                    <div style={{ fontSize: '0.85rem', color: '#6c757d' }}>
-                                                        <i className="bi bi-envelope me-2"></i>
-                                                        {suggestion.email}
+                                                <i className="bi bi-search me-1"></i>
+                                                Buscar
+                                            </button>
+                                        </div>
+
+                    {/* Autocomplete dropdown */}
+                                        {showAutocomplete && autocompleteSuggestions.length > 0 && (
+                                            <div
+                                                ref={autocompleteRef}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    left: 0,
+                                                    right: 0,
+                                                    backgroundColor: 'white',
+                                                    border: '1px solid #dee2e6',
+                                                    borderRadius: '0.25rem',
+                                                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                                                    zIndex: 1000,
+                                                    maxHeight: '400px',
+                                                    overflowY: 'auto',
+                                                    marginTop: '2px'
+                                                }}
+                                            >
+                                                {autocompleteSuggestions.map((suggestion, index) => (
+                                                    <div
+                                                        key={index}
+                                                        onClick={() => handleSuggestionClick(suggestion)}
+                                                        style={{
+                                                            padding: '10px 12px',
+                                                            cursor: 'pointer',
+                                                            backgroundColor: selectedSuggestionIndex === index ? '#e9ecef' : 'white',
+                                                            borderBottom: index < autocompleteSuggestions.length - 1 ? '1px solid #f1f3f5' : 'none',
+                                                            transition: 'background-color 0.15s ease'
+                                                        }}
+                                                        onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                                                    >
+                                                        <div style={{ fontWeight: 500, color: '#212529', marginBottom: '2px' }}>
+                                                            <i className="bi bi-person-circle me-2 text-primary"></i>
+                                                            {suggestion.nombre}
+                                                        </div>
+                                                        {suggestion.email && (
+                                                            <div style={{ fontSize: '0.85rem', color: '#6c757d' }}>
+                                                                <i className="bi bi-envelope me-2"></i>
+                                                                {suggestion.email}
+                                                            </div>
+                                                        )}
+                                                        {suggestion.telefono && (
+                                                            <div style={{ fontSize: '0.85rem', color: '#6c757d' }}>
+                                                                <i className="bi bi-telephone me-2"></i>
+                                                                {suggestion.telefono}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                                {suggestion.telefono && (
-                                                    <div style={{ fontSize: '0.85rem', color: '#6c757d' }}>
-                                                        <i className="bi bi-telephone me-2"></i>
-                                                        {suggestion.telefono}
-                                                    </div>
-                                                )}
+                                                ))}
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
-                                )}
-                            </div>
+                                    {hasPendingSearchChanges && (
+                                        <small className="text-warning d-block mt-1">
+                                            Cambios sin aplicar: presiona <strong>Buscar</strong> para actualizar resultados.
+                                        </small>
+                                    )}
                             {/* FIX: Make search scope checkbox visible */}
                             {!showAllReservations && (
                                 <div className="form-check mt-1">
