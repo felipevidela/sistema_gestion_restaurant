@@ -207,8 +207,19 @@ export default function GestionMesas() {
     });
   };
 
-  // Función para verificar si una mesa está bloqueada AHORA (fecha/hora actual del sistema)
-  const estaBloqueadaAhora = (numeroMesa) => {
+  // Función para verificar si una mesa está bloqueada (en la fecha/hora que se está visualizando)
+  const estaBloqueada = (numeroMesa) => {
+    // Si el modo de disponibilidad está activo, usar la fecha/hora filtrada
+    if (mostrarDisponibilidad) {
+      // Usar la función existente que ya verifica bloqueos en la fecha filtrada
+      if (horaFiltro) {
+        return estaBloqueadaEnHora(numeroMesa, horaFiltro);
+      } else {
+        return tieneBloqueos(numeroMesa);
+      }
+    }
+
+    // Si no hay filtro de disponibilidad, verificar con fecha/hora actual del sistema
     const ahora = new Date();
     const fechaActual = ahora.toISOString().slice(0, 10);
     const horaActual = ahora.toTimeString().slice(0, 5);
@@ -237,8 +248,8 @@ export default function GestionMesas() {
 
   // Función para obtener color de estado con prioridad de bloqueo
   const getEstadoColorConBloqueo = (mesa) => {
-    // Prioridad 1: Si está bloqueada AHORA, color de bloqueo
-    if (estaBloqueadaAhora(mesa.numero)) {
+    // Prioridad 1: Si está bloqueada (en la fecha/hora visualizada), color de bloqueo
+    if (estaBloqueada(mesa.numero)) {
       return 'danger'; // Rojo para indicar bloqueo activo
     }
 
@@ -248,8 +259,8 @@ export default function GestionMesas() {
 
   // Función para obtener icono de estado con prioridad de bloqueo
   const getEstadoIconConBloqueo = (mesa) => {
-    // Prioridad 1: Si está bloqueada AHORA, icono de candado
-    if (estaBloqueadaAhora(mesa.numero)) {
+    // Prioridad 1: Si está bloqueada (en la fecha/hora visualizada), icono de candado
+    if (estaBloqueada(mesa.numero)) {
       return 'bi-lock-fill';
     }
 
@@ -546,7 +557,7 @@ export default function GestionMesas() {
                   </div>
                   <div className="mb-3 d-flex align-items-center gap-2 flex-wrap">
                     <span className={`badge bg-${getEstadoColorConBloqueo(mesa)}`}>
-                      {estaBloqueadaAhora(mesa.numero) ? 'BLOQUEADA' : mesa.estado.toUpperCase()}
+                      {estaBloqueada(mesa.numero) ? 'BLOQUEADA' : mesa.estado.toUpperCase()}
                     </span>
                     {mostrarDisponibilidad && (
                       <span className="badge bg-light text-muted border">
@@ -662,7 +673,7 @@ export default function GestionMesas() {
 
                   {mesaEditando === mesa.id ? (
                     <div>
-                      {estaBloqueadaAhora(mesa.numero) ? (
+                      {estaBloqueada(mesa.numero) ? (
                         <div className="alert alert-danger py-2 mb-2 small">
                           <i className="bi bi-lock-fill me-2"></i>
                           <strong>Mesa bloqueada.</strong> No se puede cambiar el estado mientras esté activo el bloqueo.
@@ -716,7 +727,7 @@ export default function GestionMesas() {
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={() => setMesaEditando(mesa.id)}
-                        disabled={estaBloqueadaAhora(mesa.numero)}
+                        disabled={estaBloqueada(mesa.numero)}
                       >
                         <i className="bi bi-pencil me-1"></i>
                         Cambiar Estado
