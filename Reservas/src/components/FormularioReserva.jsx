@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Badge } from 'react-bootstrap';
 import { getMesas, getHorasDisponibles, createReserva } from '../services/reservasApi';
 import { validarSeleccionMesa } from '../utils/validaciones';
 import { useFormValidation } from '../hooks/useFormValidation';
@@ -286,25 +287,25 @@ export default function FormularioReserva({ onReservaCreada }) {
   // Mostrar skeleton mientras cargan las mesas
   if (loadingMesas) {
     return (
-      <div className="card shadow-sm">
-        <div className="card-header bg-primary text-white">
+      <Card className="shadow-sm">
+        <Card.Header className="bg-primary text-white">
           <h5 className="mb-0">Nueva Reserva</h5>
-        </div>
-        <div className="card-body">
+        </Card.Header>
+        <Card.Body>
           <FormSkeleton fields={5} />
-        </div>
-      </div>
+        </Card.Body>
+      </Card>
     );
   }
 
   return (
-    <div className="card shadow-sm">
-      <div className="card-header bg-primary text-white">
+    <Card className="shadow-sm">
+      <Card.Header className="bg-primary text-white">
         <h5 className="mb-0">Nueva Reserva</h5>
-      </div>
-      <div className="card-body">
-        <form onSubmit={onSubmit}>
-          <div className="row">
+      </Card.Header>
+      <Card.Body>
+        <Form onSubmit={onSubmit}>
+          <Row>
             {/* Seleccionar Mesa */}
             <div className="col-md-6 mb-3">
               <label htmlFor="mesa" className="form-label">Mesa *</label>
@@ -459,30 +460,31 @@ export default function FormularioReserva({ onReservaCreada }) {
                 placeholder="Ej: Celebración de cumpleaños, restricciones alimentarias, etc."
               ></textarea>
             </div>
-          </div>
+          </Row>
 
           <div className="d-grid gap-2">
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary btn-lg"
+              variant="primary"
+              size="lg"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
                 <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  <Spinner animation="border" size="sm" className="me-2" />
                   Creando reserva...
                 </>
               ) : (
                 'Crear Reserva'
               )}
-            </button>
+            </Button>
           </div>
 
           <small className="text-muted d-block mt-2">
             * Campos obligatorios
           </small>
-        </form>
-      </div>
+        </Form>
+      </Card.Body>
 
       {/* Modal de Confirmación - solo renderizar cuando tenemos datos */}
       {datosReservaConfirmada && (
@@ -499,6 +501,6 @@ export default function FormularioReserva({ onReservaCreada }) {
           esInvitado={false}
         />
       )}
-    </div>
+    </Card>
   );
 }

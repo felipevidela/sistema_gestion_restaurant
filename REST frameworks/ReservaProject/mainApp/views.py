@@ -12,14 +12,16 @@ from rest_framework.authtoken.models import Token
 from rest_framework.throttling import AnonRateThrottle
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Mesa, Perfil, Reserva
+from .models import Mesa, Perfil, Reserva, BloqueoMesa
 from .serializers import (
     MesaSerializer,
     PerfilSerializer,
     ReservaSerializer,
     ReservaListSerializer,
     UserSerializer,
-    RegisterSerializer
+    RegisterSerializer,
+    BloqueoMesaSerializer,
+    BloqueoMesaListSerializer
 )
 from .permissions import (
     IsAdministrador,
@@ -853,8 +855,20 @@ class ConsultaMesasView(views.APIView):
                     Q(hora_inicio__lt=hora_fin) & Q(hora_fin__gt=hora_inicio)
                 ).values_list('mesa_id', flat=True)
 
-                # Excluir mesas ocupadas
-                mesas = mesas.exclude(id__in=mesas_ocupadas_ids)
+                # Obtener mesas con bloqueos activos que se solapen
+                mesas_bloqueadas_ids = BloqueoMesa.objects.filter(
+                    activo=True,
+                    fecha_inicio__lte=fecha,
+                    fecha_fin__gte=fecha
+                ).filter(
+                    # Si el bloqueo tiene horario, verificar solapamiento de horas
+                    # Si el bloqueo es de día completo (hora_inicio=None), bloquear toda la mesa
+                    Q(hora_inicio__isnull=True) |  # Bloqueo de día completo
+                    (Q(hora_inicio__lt=hora_fin) & Q(hora_fin__gt=hora_inicio))  # Solapamiento de horario
+                ).values_list('mesa_id', flat=True)
+
+                # Excluir mesas ocupadas y bloqueadas
+                mesas = mesas.exclude(id__in=list(mesas_ocupadas_ids) + list(mesas_bloqueadas_ids))
 
             except ValueError:
                 # Si hay error en el formato de fecha/hora, ignorar el filtro
@@ -957,8 +971,21 @@ class ConsultarHorasDisponiblesView(views.APIView):
                 Q(hora_inicio__lt=hora_fin) & Q(hora_fin__gt=hora_inicio)
             ).values_list('mesa_id', flat=True)
 
+            # Buscar mesas bloqueadas en este horario
+            mesas_bloqueadas_ids = BloqueoMesa.objects.filter(
+                activo=True,
+                fecha_inicio__lte=fecha,
+                fecha_fin__gte=fecha
+            ).filter(
+                # Si el bloqueo tiene horario, verificar solapamiento de horas
+                # Si el bloqueo es de día completo (hora_inicio=None), bloquear toda la mesa
+                Q(hora_inicio__isnull=True) |  # Bloqueo de día completo
+                (Q(hora_inicio__lt=hora_fin) & Q(hora_fin__gt=hora_inicio))  # Solapamiento de horario
+            ).values_list('mesa_id', flat=True)
+
             # Verificar si hay al menos una mesa disponible con capacidad suficiente
-            mesas_disponibles = mesas_suficientes.exclude(id__in=mesas_ocupadas_ids)
+            mesas_no_disponibles_ids = list(mesas_ocupadas_ids) + list(mesas_bloqueadas_ids)
+            mesas_disponibles = mesas_suficientes.exclude(id__in=mesas_no_disponibles_ids)
             num_mesas_disponibles = mesas_disponibles.count()
 
             hora_str = hora_inicio.strftime('%H:%M')
@@ -1318,3 +1345,152 @@ class ReservaViewSet(viewsets.ModelViewSet):
 
             serializer = self.get_serializer(reserva)
             return Response(serializer.data)
+
+
+class BloqueoMesaViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para el CRUD completo de Bloqueos de Mesas.
+    Solo los Administradores pueden crear, modificar y eliminar bloqueos.
+    Todos los usuarios autenticados pueden consultar bloqueos.
+
+    Endpoints:
+    - GET /api/bloqueos/ - Listar todos los bloqueos
+    - POST /api/bloqueos/ - Crear un nuevo bloqueo (solo admin)
+    - GET /api/bloqueos/{id}/ - Ver detalle de un bloqueo
+    - PUT/PATCH /api/bloqueos/{id}/ - Modificar un bloqueo (solo admin)
+    - DELETE /api/bloqueos/{id}/ - Eliminar un bloqueo (solo admin)
+
+    Filtros disponibles:
+    - mesa: Filtrar por número de mesa
+    - activo: Filtrar por estado activo/inactivo
+    - categoria: Filtrar por categoría de bloqueo
+    - fecha_inicio: Filtrar por fecha de inicio
+    - fecha_fin: Filtrar por fecha de fin
+    """
+    queryset = BloqueoMesa.objects.all()
+    serializer_class = BloqueoMesaSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['mesa__numero', 'activo', 'categoria', 'fecha_inicio', 'fecha_fin']
+    search_fields = ['motivo', 'notas']
+    ordering_fields = ['fecha_inicio', 'fecha_fin', 'created_at']
+    ordering = ['-fecha_inicio', '-hora_inicio']
+
+    def get_permissions(self):
+        """
+        Permisos:
+        - Lectura (list, retrieve): Usuarios autenticados
+        - Escritura (create, update, destroy): Solo administradores
+        """
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAdministrador]
+        return [permission() for permission in permission_classes]
+
+    def get_serializer_class(self):
+        """Usar serializer compacto para listados"""
+        if self.action == 'list':
+            return BloqueoMesaListSerializer
+        return BloqueoMesaSerializer
+
+    def perform_create(self, serializer):
+        """
+        Asignar automáticamente el usuario creador al crear un bloqueo.
+        """
+        serializer.save(usuario_creador=self.request.user)
+
+    def get_queryset(self):
+        """
+        Filtrado adicional del queryset.
+        Permite filtrar por:
+        - mesa_numero: Número de la mesa
+        - activos_en_fecha: Bloqueos activos en una fecha específica
+        """
+        queryset = super().get_queryset()
+
+        # Filtrar por número de mesa
+        mesa_numero = self.request.query_params.get('mesa_numero', None)
+        if mesa_numero:
+            queryset = queryset.filter(mesa__numero=mesa_numero)
+
+        # Filtrar solo bloqueos activos
+        solo_activos = self.request.query_params.get('solo_activos', None)
+        if solo_activos == 'true':
+            queryset = queryset.filter(activo=True)
+
+        # Filtrar bloqueos activos en una fecha específica
+        activos_en_fecha = self.request.query_params.get('activos_en_fecha', None)
+        if activos_en_fecha:
+            from datetime import datetime
+            try:
+                fecha = datetime.strptime(activos_en_fecha, '%Y-%m-%d').date()
+                queryset = queryset.filter(
+                    activo=True,
+                    fecha_inicio__lte=fecha,
+                    fecha_fin__gte=fecha
+                )
+            except ValueError:
+                pass  # Ignorar fechas inválidas
+
+        return queryset
+
+    @action(detail=False, methods=['get'], url_path='activos-hoy')
+    def activos_hoy(self, request):
+        """
+        Endpoint personalizado: Obtener bloqueos activos para hoy.
+        GET /api/bloqueos/activos-hoy/
+        """
+        from datetime import date
+        hoy = date.today()
+
+        bloqueos_hoy = self.get_queryset().filter(
+            activo=True,
+            fecha_inicio__lte=hoy,
+            fecha_fin__gte=hoy
+        )
+
+        serializer = self.get_serializer(bloqueos_hoy, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='desactivar')
+    def desactivar(self, request, pk=None):
+        """
+        Endpoint personalizado: Desactivar un bloqueo sin eliminarlo.
+        POST /api/bloqueos/{id}/desactivar/
+        Solo administradores.
+        """
+        bloqueo = self.get_object()
+        bloqueo.activo = False
+        bloqueo.save()
+
+        serializer = self.get_serializer(bloqueo)
+        return Response({
+            'message': 'Bloqueo desactivado exitosamente',
+            'bloqueo': serializer.data
+        })
+
+    @action(detail=True, methods=['post'], url_path='activar')
+    def activar(self, request, pk=None):
+        """
+        Endpoint personalizado: Activar un bloqueo previamente desactivado.
+        POST /api/bloqueos/{id}/activar/
+        Solo administradores.
+        """
+        bloqueo = self.get_object()
+
+        # Validar que el bloqueo pueda ser reactivado (sin solapamientos)
+        try:
+            bloqueo.activo = True
+            bloqueo.full_clean()  # Esto ejecutará las validaciones del modelo
+            bloqueo.save()
+
+            serializer = self.get_serializer(bloqueo)
+            return Response({
+                'message': 'Bloqueo activado exitosamente',
+                'bloqueo': serializer.data
+            })
+        except Exception as e:
+            bloqueo.activo = False  # Revertir cambio
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Container, Row, Col, Card, Button, ButtonGroup, Alert, Spinner, Table, Badge, Form, Pagination } from 'react-bootstrap';
 import { listarUsuarios, cambiarRolUsuario } from '../services/reservasApi';
 
 export default function GestionUsuarios() {
@@ -103,97 +104,98 @@ export default function GestionUsuarios() {
   if (loading) {
     return (
       <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status">
+        <Spinner animation="border" variant="primary" role="status">
           <span className="visually-hidden">Cargando...</span>
-        </div>
+        </Spinner>
         <p className="mt-2">Cargando usuarios...</p>
       </div>
     );
   }
 
   return (
-    <div className="container-fluid">
+    <Container fluid>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0">Gestión de Usuarios</h2>
-        <button
-          className="btn btn-outline-primary btn-sm"
+        <Button
+          variant="outline-primary"
+          size="sm"
           onClick={cargarUsuarios}
           disabled={loading}
         >
           <i className="bi bi-arrow-clockwise me-1"></i>
           Actualizar
-        </button>
+        </Button>
       </div>
 
       {error && (
-        <div className="alert alert-danger alert-dismissible fade show" role="alert">
+        <Alert variant="danger" dismissible onClose={() => setError('')}>
           {error}
-          <button type="button" className="btn-close" onClick={() => setError('')}></button>
-        </div>
+        </Alert>
       )}
 
       {/* Estadísticas */}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <div className="card border-danger">
-            <div className="card-body text-center">
+      <Row className="mb-4">
+        <Col md={3}>
+          <Card className="border-danger">
+            <Card.Body className="text-center">
               <i className="bi bi-shield-fill-check fs-3 text-danger"></i>
               <h5 className="mt-2">{usuarios.filter(u => u.rol === 'admin').length}</h5>
               <small className="text-muted">Administradores</small>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-primary">
-            <div className="card-body text-center">
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={3}>
+          <Card className="border-primary">
+            <Card.Body className="text-center">
               <i className="bi bi-cash-coin fs-3 text-primary"></i>
               <h5 className="mt-2">{usuarios.filter(u => u.rol === 'cajero').length}</h5>
               <small className="text-muted">Cajeros</small>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-info">
-            <div className="card-body text-center">
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={3}>
+          <Card className="border-info">
+            <Card.Body className="text-center">
               <i className="bi bi-person-badge fs-3 text-info"></i>
               <h5 className="mt-2">{usuarios.filter(u => u.rol === 'mesero').length}</h5>
               <small className="text-muted">Meseros</small>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-secondary">
-            <div className="card-body text-center">
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={3}>
+          <Card className="border-secondary">
+            <Card.Body className="text-center">
               <i className="bi bi-person fs-3 text-secondary"></i>
               <h5 className="mt-2">{usuarios.filter(u => u.rol === 'cliente').length}</h5>
               <small className="text-muted">Clientes</small>
-            </div>
-          </div>
-        </div>
-      </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
 
       {/* Filtros y Controles */}
-      <div className="row mb-4 align-items-center">
-        <div className="col-md-8">
-          <div className="btn-group" role="group">
+      <Row className="mb-4 align-items-center">
+        <Col md={8}>
+          <ButtonGroup>
             {['TODOS', 'ADMIN', 'CAJERO', 'MESERO', 'CLIENTE'].map(rol => (
-              <button
+              <Button
                 key={rol}
-                type="button"
-                className={`btn ${filtroRol === rol ? 'btn-primary' : 'btn-outline-primary'}`}
+                variant={filtroRol === rol ? 'primary' : 'outline-primary'}
                 onClick={() => setFiltroRol(rol)}
               >
                 {rol}
-              </button>
+              </Button>
             ))}
-          </div>
-        </div>
-        <div className="col-md-4">
+          </ButtonGroup>
+        </Col>
+        <Col md={4}>
           <div className="d-flex align-items-center justify-content-end">
-            <label htmlFor="itemsPerPage" className="me-2 small text-nowrap">Items por página:</label>
-            <select
+            <Form.Label htmlFor="itemsPerPage" className="me-2 small text-nowrap mb-0">
+              Items por página:
+            </Form.Label>
+            <Form.Select
               id="itemsPerPage"
-              className="form-select form-select-sm"
+              size="sm"
               style={{ width: '80px' }}
               value={itemsPerPage}
               onChange={(e) => setItemsPerPage(Number(e.target.value))}
@@ -203,22 +205,22 @@ export default function GestionUsuarios() {
               <option value="25">25</option>
               <option value="50">50</option>
               <option value="100">100</option>
-            </select>
+            </Form.Select>
           </div>
-        </div>
-      </div>
+        </Col>
+      </Row>
 
       {/* Tabla de Usuarios */}
       {usuariosFiltrados.length === 0 ? (
-        <div className="alert alert-info">
+        <Alert variant="info">
           <i className="bi bi-info-circle me-2"></i>
           No hay usuarios {filtroRol !== 'TODOS' ? `con rol ${filtroRol.toLowerCase()}` : ''}.
-        </div>
+        </Alert>
       ) : (
-        <div className="card shadow-sm">
-          <div className="card-body">
+        <Card className="shadow-sm">
+          <Card.Body>
             <div className="table-responsive">
-              <table className="table table-hover">
+              <Table hover>
                 <thead className="table-light">
                   <tr>
                     <th>ID</th>
@@ -242,9 +244,9 @@ export default function GestionUsuarios() {
                       <td>{usuario.email}</td>
                       <td>{usuario.nombre_completo || <em className="text-muted">-</em>}</td>
                       <td>
-                        <span className={`badge ${getRolBadgeClass(usuario.rol)}`}>
+                        <Badge bg="" className={getRolBadgeClass(usuario.rol)}>
                           {usuario.rol_display}
-                        </span>
+                        </Badge>
                       </td>
                       <td>
                         <small className="text-muted">
@@ -259,8 +261,8 @@ export default function GestionUsuarios() {
                       <td>
                         {usuarioEditando === usuario.id ? (
                           <div className="d-flex gap-2 align-items-center">
-                            <select
-                              className="form-select form-select-sm"
+                            <Form.Select
+                              size="sm"
                               value={nuevoRol}
                               onChange={(e) => setNuevoRol(e.target.value)}
                               style={{ width: '120px' }}
@@ -270,26 +272,29 @@ export default function GestionUsuarios() {
                               <option value="cajero">Cajero</option>
                               <option value="mesero">Mesero</option>
                               <option value="cliente">Cliente</option>
-                            </select>
-                            <button
-                              className="btn btn-sm btn-success"
+                            </Form.Select>
+                            <Button
+                              size="sm"
+                              variant="success"
                               onClick={() => handleCambiarRol(usuario.id)}
                             >
                               <i className="bi bi-check-lg"></i>
-                            </button>
-                            <button
-                              className="btn btn-sm btn-secondary"
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
                               onClick={() => {
                                 setUsuarioEditando(null);
                                 setNuevoRol('');
                               }}
                             >
                               <i className="bi bi-x-lg"></i>
-                            </button>
+                            </Button>
                           </div>
                         ) : (
-                          <button
-                            className="btn btn-sm btn-outline-primary"
+                          <Button
+                            size="sm"
+                            variant="outline-primary"
                             onClick={() => {
                               setUsuarioEditando(usuario.id);
                               setNuevoRol(usuario.rol);
@@ -297,13 +302,13 @@ export default function GestionUsuarios() {
                           >
                             <i className="bi bi-pencil me-1"></i>
                             Cambiar Rol
-                          </button>
+                          </Button>
                         )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </Table>
             </div>
 
             {/* Paginación */}
@@ -312,62 +317,59 @@ export default function GestionUsuarios() {
                 <div className="text-muted small">
                   Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, usuariosFiltrados.length)} de {usuariosFiltrados.length} usuarios
                 </div>
-                <nav aria-label="Paginación de usuarios">
-                  <ul className="pagination pagination-sm mb-0">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      return (
-                        <li key={pageNum} className={`page-item ${currentPage === pageNum ? 'active' : ''}`}>
-                          <button
-                            className="page-link"
-                            onClick={() => setCurrentPage(pageNum)}
-                          >
-                            {pageNum}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </nav>
+                <Pagination size="sm" className="mb-0">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <Pagination.Item
+                        key={pageNum}
+                        active={currentPage === pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Pagination.Item>
+                    );
+                  })}
+                </Pagination>
               </div>
             )}
-          </div>
-        </div>
+          </Card.Body>
+        </Card>
       )}
 
       {/* Información de Roles */}
-      <div className="card mt-4">
-        <div className="card-body">
-          <h6 className="card-title">Información de Roles:</h6>
-          <div className="row">
-            <div className="col-md-3">
-              <span className="badge bg-danger me-2">ADMINISTRADOR</span>
+      <Card className="mt-4">
+        <Card.Body>
+          <Card.Title as="h6">Información de Roles:</Card.Title>
+          <Row>
+            <Col md={3}>
+              <Badge bg="danger" className="me-2">ADMINISTRADOR</Badge>
               <small className="text-muted d-block">Acceso completo al sistema</small>
-            </div>
-            <div className="col-md-3">
-              <span className="badge bg-primary me-2">CAJERO</span>
+            </Col>
+            <Col md={3}>
+              <Badge bg="primary" className="me-2">CAJERO</Badge>
               <small className="text-muted d-block">Gestiona reservas y visualiza estados</small>
-            </div>
-            <div className="col-md-3">
-              <span className="badge bg-info me-2">MESERO</span>
+            </Col>
+            <Col md={3}>
+              <Badge bg="info" className="me-2">MESERO</Badge>
               <small className="text-muted d-block">Consulta mesas y reservas</small>
-            </div>
-            <div className="col-md-3">
-              <span className="badge bg-secondary me-2">CLIENTE</span>
+            </Col>
+            <Col md={3}>
+              <Badge bg="secondary" className="me-2">CLIENTE</Badge>
               <small className="text-muted d-block">Crea y ve sus propias reservas</small>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
+    </Container>
   );
 }

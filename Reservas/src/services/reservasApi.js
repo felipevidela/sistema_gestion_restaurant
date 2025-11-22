@@ -658,3 +658,180 @@ export async function activarCuentaInvitado(data) {
 
   return response.json();
 }
+
+// ============ BLOQUEOS DE MESAS ============
+
+/**
+ * Listar todos los bloqueos de mesas
+ * @param {Object} filters - Filtros opcionales: { mesa_numero, activo, categoria, solo_activos, activos_en_fecha }
+ * @returns {Array} - Lista de bloqueos
+ */
+export async function listarBloqueos(filters = {}) {
+  const queryParams = new URLSearchParams();
+
+  if (filters.mesa_numero) queryParams.append('mesa_numero', filters.mesa_numero);
+  if (filters.activo !== undefined) queryParams.append('activo', filters.activo);
+  if (filters.categoria) queryParams.append('categoria', filters.categoria);
+  if (filters.solo_activos) queryParams.append('solo_activos', 'true');
+  if (filters.activos_en_fecha) queryParams.append('activos_en_fecha', filters.activos_en_fecha);
+
+  const url = `${API_BASE_URL}/bloqueos/?${queryParams.toString()}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al listar bloqueos');
+  }
+
+  return response.json();
+}
+
+/**
+ * Obtener detalle de un bloqueo específico
+ * @param {number} bloqueoId - ID del bloqueo
+ * @returns {Object} - Detalles del bloqueo
+ */
+export async function obtenerBloqueo(bloqueoId) {
+  const response = await fetch(`${API_BASE_URL}/bloqueos/${bloqueoId}/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al obtener bloqueo');
+  }
+
+  return response.json();
+}
+
+/**
+ * Crear un nuevo bloqueo de mesa
+ * @param {Object} bloqueoData - Datos del bloqueo
+ * @returns {Object} - Bloqueo creado
+ */
+export async function crearBloqueo(bloqueoData) {
+  const response = await fetch(`${API_BASE_URL}/bloqueos/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(bloqueoData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    // Formatear errores del backend
+    if (typeof error === 'object' && !error.error) {
+      const errorMessages = Object.entries(error)
+        .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+        .join('\n');
+      throw new Error(errorMessages);
+    }
+    throw new Error(error.error || 'Error al crear bloqueo');
+  }
+
+  return response.json();
+}
+
+/**
+ * Actualizar un bloqueo existente
+ * @param {number} bloqueoId - ID del bloqueo
+ * @param {Object} bloqueoData - Datos actualizados del bloqueo
+ * @returns {Object} - Bloqueo actualizado
+ */
+export async function actualizarBloqueo(bloqueoId, bloqueoData) {
+  const response = await fetch(`${API_BASE_URL}/bloqueos/${bloqueoId}/`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(bloqueoData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    // Formatear errores del backend
+    if (typeof error === 'object' && !error.error) {
+      const errorMessages = Object.entries(error)
+        .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+        .join('\n');
+      throw new Error(errorMessages);
+    }
+    throw new Error(error.error || 'Error al actualizar bloqueo');
+  }
+
+  return response.json();
+}
+
+/**
+ * Eliminar un bloqueo
+ * @param {number} bloqueoId - ID del bloqueo
+ * @returns {void}
+ */
+export async function eliminarBloqueo(bloqueoId) {
+  const response = await fetch(`${API_BASE_URL}/bloqueos/${bloqueoId}/`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al eliminar bloqueo');
+  }
+}
+
+/**
+ * Desactivar un bloqueo (sin eliminarlo)
+ * @param {number} bloqueoId - ID del bloqueo
+ * @returns {Object} - Bloqueo desactivado
+ */
+export async function desactivarBloqueo(bloqueoId) {
+  const response = await fetch(`${API_BASE_URL}/bloqueos/${bloqueoId}/desactivar/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al desactivar bloqueo');
+  }
+
+  return response.json();
+}
+
+/**
+ * Activar un bloqueo previamente desactivado
+ * @param {number} bloqueoId - ID del bloqueo
+ * @returns {Object} - Bloqueo activado
+ */
+export async function activarBloqueo(bloqueoId) {
+  const response = await fetch(`${API_BASE_URL}/bloqueos/${bloqueoId}/activar/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al activar bloqueo');
+  }
+
+  return response.json();
+}
+
+/**
+ * Obtener bloqueos activos para hoy
+ * @returns {Array} - Lista de bloqueos activos hoy
+ */
+export async function obtenerBloqueosActivosHoy() {
+  const response = await fetch(`${API_BASE_URL}/bloqueos/activos-hoy/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al obtener bloqueos activos hoy');
+  }
+
+  return response.json();
+}

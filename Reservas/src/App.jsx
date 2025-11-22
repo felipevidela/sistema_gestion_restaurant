@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Navbar, Container, Nav, Tab, Tabs, Spinner, Alert, Badge, Button } from 'react-bootstrap';
 import PanelReservas from "./components/PanelReservas";
 import LoginForm from "./components/LoginForm";
 import FormularioReserva from "./components/FormularioReserva";
@@ -7,6 +8,7 @@ import MisReservas from "./components/MisReservas";
 import MiPerfil from "./components/MiPerfil";
 import GestionMesas from "./components/GestionMesas";
 import GestionUsuarios from "./components/GestionUsuarios";
+import ListaBloqueosActivos from "./components/ListaBloqueosActivos";
 import ReservaPublica from "./components/ReservaPublica";
 import AccesoReservaInvitado from "./components/AccesoReservaInvitado";
 import ActivarCuenta from "./components/ActivarCuenta";
@@ -81,7 +83,8 @@ function App() {
       admin: [
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
         { id: 'gestion-usuarios', label: 'Gestión de Usuarios', icon: 'bi-people' },
-        { id: 'gestion-mesas', label: 'Gestión de Mesas', icon: 'bi-grid-3x3' }
+        { id: 'gestion-mesas', label: 'Gestión de Mesas', icon: 'bi-grid-3x3' },
+        { id: 'bloqueos-mesas', label: 'Bloqueos de Mesas', icon: 'bi-lock' }
       ]
     };
 
@@ -105,8 +108,10 @@ function App() {
         return <GestionMesas />;
       case 'gestion-usuarios':
         return <GestionUsuarios />;
+      case 'bloqueos-mesas':
+        return <ListaBloqueosActivos />;
       default:
-        return <div className="alert alert-warning">Sección no encontrada</div>;
+        return <Alert variant="warning">Sección no encontrada</Alert>;
     }
   };
 
@@ -115,9 +120,9 @@ function App() {
     return (
       <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
         <div className="text-center">
-          <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+          <Spinner animation="border" variant="primary" role="status" style={{ width: '3rem', height: '3rem' }}>
             <span className="visually-hidden">Cargando...</span>
-          </div>
+          </Spinner>
           <p className="mt-3 text-muted">Verificando sesión...</p>
         </div>
       </div>
@@ -150,21 +155,22 @@ function App() {
     return (
       <div className="bg-light min-vh-100">
         {/* Header con botón de Login */}
-        <nav className="navbar navbar-light bg-white shadow-sm">
-          <div className="container-fluid">
-            <span className="navbar-brand mb-0 h1">
+        <Navbar bg="white" className="shadow-sm">
+          <Container fluid>
+            <Navbar.Brand className="mb-0 h1">
               <i className="bi bi-calendar-check me-2 text-primary"></i>
               Sistema de Reservas
-            </span>
-            <button
-              className="btn btn-outline-primary btn-sm"
+            </Navbar.Brand>
+            <Button
+              variant="outline-primary"
+              size="sm"
               onClick={() => setShowLogin(true)}
             >
               <i className="bi bi-box-arrow-in-right me-1"></i>
               Iniciar Sesión
-            </button>
-          </div>
-        </nav>
+            </Button>
+          </Container>
+        </Navbar>
 
         {/* Formulario de Reserva Pública */}
         <ReservaPublica onReservaExitosa={handleReservaExitosa} />
@@ -178,39 +184,40 @@ function App() {
   return (
     <div className="bg-light min-vh-100">
       {/* Header */}
-      <nav className="navbar navbar-dark bg-primary shadow-sm">
-        <div className="container-fluid">
-          <span className="navbar-brand mb-0 h1">
+      <Navbar bg="primary" variant="dark" className="shadow-sm">
+        <Container fluid>
+          <Navbar.Brand className="mb-0 h1">
             <i className="bi bi-calendar-check me-2"></i>
             Sistema de Reservas
-          </span>
+          </Navbar.Brand>
           <div className="d-flex align-items-center text-white">
             <div className="me-3">
               <i className="bi bi-person-circle me-2"></i>
               <strong>{user?.username}</strong>
-              <span className="badge bg-light text-primary ms-2">
+              <Badge bg="light" text="primary" className="ms-2">
                 {user?.rol_display}
-              </span>
+              </Badge>
             </div>
-            <button
-              className="btn btn-outline-light btn-sm"
+            <Button
+              variant="outline-light"
+              size="sm"
               onClick={handleLogout}
             >
               <i className="bi bi-box-arrow-right me-1"></i>
               Salir
-            </button>
+            </Button>
           </div>
-        </div>
-      </nav>
+        </Container>
+      </Navbar>
 
       {/* Tabs Navigation */}
       <div className="bg-white border-bottom">
-        <div className="container-fluid">
-          <ul className="nav nav-tabs border-0">
+        <Container fluid>
+          <Nav variant="tabs" className="border-0" activeKey={activeTab}>
             {tabs.map(tab => (
-              <li key={tab.id} className="nav-item">
-                <button
-                  className={`nav-link ${activeTab === tab.id ? 'active' : ''}`}
+              <Nav.Item key={tab.id}>
+                <Nav.Link
+                  eventKey={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   style={{
                     border: 'none',
@@ -221,17 +228,17 @@ function App() {
                 >
                   <i className={`bi ${tab.icon} me-2`}></i>
                   {tab.label}
-                </button>
-              </li>
+                </Nav.Link>
+              </Nav.Item>
             ))}
-          </ul>
-        </div>
+          </Nav>
+        </Container>
       </div>
 
       {/* Tab Content */}
-      <div className="container-fluid py-4">
+      <Container fluid className="py-4">
         {renderTabContent()}
-      </div>
+      </Container>
     </div>
   );
 }

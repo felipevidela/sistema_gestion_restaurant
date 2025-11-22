@@ -284,3 +284,202 @@ class Reserva(models.Model):
             ),
         ]
 
+
+class BloqueoMesa(models.Model):
+    """
+    Modelo para bloquear mesas por mantenimiento, eventos, u otros motivos.
+    Permite bloqueos por rango de fechas, días completos y recurrencias.
+    """
+    CATEGORIA_CHOICES = (
+        ('mantenimiento', 'Mantenimiento'),
+        ('evento_privado', 'Evento Privado'),
+        ('reparacion', 'Reparación'),
+        ('reserva_especial', 'Reserva Especial'),
+        ('otro', 'Otro'),
+    )
+
+    TIPO_RECURRENCIA_CHOICES = (
+        ('ninguna', 'Sin Recurrencia'),
+        ('diaria', 'Diaria'),
+        ('semanal', 'Semanal'),
+        ('mensual', 'Mensual'),
+    )
+
+    mesa = models.ForeignKey(
+        Mesa,
+        on_delete=models.CASCADE,
+        related_name='bloqueos',
+        help_text="Mesa a bloquear"
+    )
+    fecha_inicio = models.DateField(help_text="Fecha de inicio del bloqueo")
+    fecha_fin = models.DateField(help_text="Fecha de fin del bloqueo")
+    hora_inicio = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="Hora de inicio (dejar vacío para bloqueo de día completo)"
+    )
+    hora_fin = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="Hora de fin (dejar vacío para bloqueo de día completo)"
+    )
+    motivo = models.CharField(
+        max_length=200,
+        help_text="Motivo del bloqueo"
+    )
+    categoria = models.CharField(
+        max_length=20,
+        choices=CATEGORIA_CHOICES,
+        default='otro',
+        help_text="Categoría del bloqueo"
+    )
+    notas = models.TextField(
+        blank=True,
+        max_length=500,
+        help_text="Notas adicionales (máx 500 caracteres)"
+    )
+    usuario_creador = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='bloqueos_creados',
+        help_text="Usuario que creó el bloqueo"
+    )
+    tipo_recurrencia = models.CharField(
+        max_length=10,
+        choices=TIPO_RECURRENCIA_CHOICES,
+        default='ninguna',
+        help_text="Tipo de recurrencia del bloqueo"
+    )
+    activo = models.BooleanField(
+        default=True,
+        help_text="Si el bloqueo está activo"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Bloqueo Mesa {self.mesa.numero} - {self.fecha_inicio} ({self.get_categoria_display()})"
+
+    def clean(self):
+        """Validaciones del modelo BloqueoMesa"""
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+
+        # Validar que fecha_fin sea posterior o igual a fecha_inicio
+        if self.fecha_fin < self.fecha_inicio:
+            raise ValidationError({
+                'fecha_fin': 'La fecha de fin debe ser posterior o igual a la fecha de inicio.'
+            })
+
+        # Validar que las fechas no sean en el pasado
+        hoy = timezone.now().date()
+        if self.fecha_inicio < hoy:
+            raise ValidationError({
+                'fecha_inicio': 'No se pueden crear bloqueos para fechas pasadas.'
+            })
+
+        # Si se especifica hora_inicio, debe especificarse hora_fin y viceversa
+        if (self.hora_inicio is None) != (self.hora_fin is None):
+            raise ValidationError(
+                'Debe especificar tanto hora_inicio como hora_fin, o dejar ambas vacías para bloqueo de día completo.'
+            )
+
+        # Si hay horas especificadas, validar que hora_fin sea posterior a hora_inicio
+        if self.hora_inicio and self.hora_fin:
+            if self.hora_fin <= self.hora_inicio:
+                raise ValidationError({
+                    'hora_fin': 'La hora de fin debe ser posterior a la hora de inicio.'
+                })
+
+            # Validar horario de operación (12:00 - 23:00)
+            from datetime import time
+            hora_apertura = time(12, 0)
+            hora_cierre = time(23, 0)
+
+            if self.hora_inicio < hora_apertura or self.hora_inicio > hora_cierre:
+                raise ValidationError({
+                    'hora_inicio': 'La hora de inicio debe estar entre 12:00 y 23:00.'
+                })
+
+            if self.hora_fin < hora_apertura or self.hora_fin > hora_cierre:
+                raise ValidationError({
+                    'hora_fin': 'La hora de fin debe estar entre 12:00 y 23:00.'
+                })
+
+        # Validar solapamiento con otros bloqueos activos de la misma mesa
+        if self.activo:
+            bloqueos_conflicto = BloqueoMesa.objects.filter(
+                mesa=self.mesa,
+                activo=True
+            ).exclude(id=self.id)
+
+            for bloqueo in bloqueos_conflicto:
+                # Verificar solapamiento de fechas
+                if (self.fecha_inicio <= bloqueo.fecha_fin and
+                    self.fecha_fin >= bloqueo.fecha_inicio):
+
+                    # Si ambos bloqueos son de día completo, hay conflicto
+                    if not self.hora_inicio and not bloqueo.hora_inicio:
+                        raise ValidationError(
+                            f"Existe un bloqueo de día completo en las fechas {bloqueo.fecha_inicio} - {bloqueo.fecha_fin}"
+                        )
+
+                    # Si uno es de día completo y el otro tiene horario, hay conflicto
+                    if not self.hora_inicio or not bloqueo.hora_inicio:
+                        raise ValidationError(
+                            f"Existe un bloqueo que se solapa con las fechas seleccionadas"
+                        )
+
+                    # Si ambos tienen horario, verificar solapamiento de horas
+                    if (self.hora_inicio < bloqueo.hora_fin and
+                        self.hora_fin > bloqueo.hora_inicio):
+                        raise ValidationError(
+                            f"Existe un bloqueo entre {bloqueo.hora_inicio} y {bloqueo.hora_fin} "
+                            f"en las fechas {bloqueo.fecha_inicio} - {bloqueo.fecha_fin}"
+                        )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # Ejecutar validaciones antes de guardar
+        super().save(*args, **kwargs)
+
+    def esta_activo_en_fecha_hora(self, fecha, hora_inicio=None, hora_fin=None):
+        """
+        Verifica si el bloqueo está activo en una fecha y hora específica.
+
+        Args:
+            fecha: DateField - fecha a verificar
+            hora_inicio: TimeField - hora de inicio a verificar (opcional)
+            hora_fin: TimeField - hora de fin a verificar (opcional)
+
+        Returns:
+            bool - True si el bloqueo aplica en la fecha/hora especificada
+        """
+        if not self.activo:
+            return False
+
+        # Verificar si la fecha está dentro del rango
+        if not (self.fecha_inicio <= fecha <= self.fecha_fin):
+            return False
+
+        # Si el bloqueo es de día completo, aplica siempre
+        if not self.hora_inicio:
+            return True
+
+        # Si no se especificaron horas a verificar, solo verificar fecha
+        if hora_inicio is None or hora_fin is None:
+            return True
+
+        # Verificar solapamiento de horarios
+        return (hora_inicio < self.hora_fin and hora_fin > self.hora_inicio)
+
+    class Meta:
+        verbose_name = "Bloqueo de Mesa"
+        verbose_name_plural = "Bloqueos de Mesas"
+        ordering = ['-fecha_inicio', '-hora_inicio']
+        indexes = [
+            models.Index(fields=['mesa', 'fecha_inicio', 'fecha_fin']),
+            models.Index(fields=['activo']),
+            models.Index(fields=['categoria']),
+        ]
+

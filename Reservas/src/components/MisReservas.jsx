@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Container, Row, Col, Card, Button, ButtonGroup, Alert, Badge, Spinner } from 'react-bootstrap';
 import { getReservas, updateEstadoReserva } from '../services/reservasApi';
 import { ConfirmModal } from './ui/Modal';
 import { useToast } from '../contexts/ToastContext';
@@ -78,45 +79,45 @@ export default function MisReservas() {
 
   if (loading && reservas.length === 0) {
     return (
-      <div className="container-fluid">
+      <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2 className="mb-0">Mis Reservas</h2>
         </div>
         <div className="mb-4">
-          <div className="btn-group" role="group">
+          <ButtonGroup>
             {['TODOS', 'PENDIENTE', 'ACTIVA', 'COMPLETADA', 'CANCELADA'].map(estado => (
-              <button
+              <Button
                 key={estado}
-                type="button"
-                className="btn btn-outline-primary"
+                variant="outline-primary"
                 disabled
               >
                 {estado}
-              </button>
+              </Button>
             ))}
-          </div>
+          </ButtonGroup>
         </div>
-        <div className="row">
+        <Row>
           {[1, 2, 3].map(i => (
             <ReservaSkeleton key={i} />
           ))}
-        </div>
-      </div>
+        </Row>
+      </Container>
     );
   }
 
   return (
-    <div className="container-fluid">
+    <Container fluid>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0">Mis Reservas</h2>
-        <button
-          className="btn btn-outline-primary btn-sm"
+        <Button
+          variant="outline-primary"
+          size="sm"
           onClick={cargarReservas}
           disabled={loading}
         >
           {loading ? (
             <>
-              <span className="spinner-border spinner-border-sm me-1"></span>
+              <Spinner animation="border" size="sm" className="me-1" />
               Actualizando...
             </>
           ) : (
@@ -125,44 +126,42 @@ export default function MisReservas() {
               Actualizar
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       {error && (
-        <div className="alert alert-danger alert-dismissible fade show" role="alert">
+        <Alert variant="danger" dismissible onClose={() => setError('')}>
           {error}
-          <button type="button" className="btn-close" onClick={() => setError('')}></button>
-        </div>
+        </Alert>
       )}
 
       {/* Filtros */}
       <div className="mb-4">
-        <div className="btn-group" role="group">
+        <ButtonGroup>
           {['TODOS', 'PENDIENTE', 'ACTIVA', 'COMPLETADA', 'CANCELADA'].map(estado => (
-            <button
+            <Button
               key={estado}
-              type="button"
-              className={`btn ${filtroEstado === estado ? 'btn-primary' : 'btn-outline-primary'}`}
+              variant={filtroEstado === estado ? 'primary' : 'outline-primary'}
               onClick={() => setFiltroEstado(estado)}
             >
               {estado}
-            </button>
+            </Button>
           ))}
-        </div>
+        </ButtonGroup>
       </div>
 
       {/* Lista de Reservas */}
       {reservas.length === 0 ? (
-        <div className="alert alert-info">
+        <Alert variant="info">
           <i className="bi bi-info-circle me-2"></i>
           No tiene reservas {filtroEstado !== 'TODOS' ? `en estado ${filtroEstado.toLowerCase()}` : ''}.
-        </div>
+        </Alert>
       ) : (
-        <div className="row">
+        <Row>
           {reservas.map(reserva => (
-            <div key={reserva.id} className="col-md-6 col-lg-4 mb-3">
-              <div className="card h-100 shadow-sm reserva-card">
-                <div className="card-body d-flex flex-column h-100">
+            <Col key={reserva.id} md={6} lg={4} className="mb-3">
+              <Card className="h-100 shadow-sm reserva-card">
+                <Card.Body className="d-flex flex-column h-100">
                   <div className="d-flex justify-content-between align-items-start mb-3">
                     <div>
                       <p className="text-muted small mb-1">Mesa</p>
@@ -195,61 +194,62 @@ export default function MisReservas() {
                   </div>
 
                   <div className="d-flex align-items-center gap-2 mt-3">
-                    <span className="badge rounded-pill badge-soft-primary">
+                    <Badge pill bg="" className="badge-soft-primary">
                       <i className="bi bi-people-fill me-1"></i>
                       {reserva.personas} {reserva.personas === 1 ? 'persona' : 'personas'}
-                    </span>
-                    <span className="badge rounded-pill bg-light text-muted">
+                    </Badge>
+                    <Badge pill bg="light" text="muted">
                       ID #{reserva.id}
-                    </span>
+                    </Badge>
                   </div>
 
                   {reserva.estado === 'PENDIENTE' ? (
                     <div className="mt-auto pt-3">
-                      <button
-                        className="btn btn-soft-danger w-100"
+                      <Button
+                        variant=""
+                        className="btn-soft-danger w-100"
                         onClick={() => handleCancelarReserva(reserva.id)}
                       >
                         <i className="bi bi-x-circle me-2"></i>
                         Cancelar Reserva
-                      </button>
+                      </Button>
                     </div>
                   ) : (
                     <div className="mt-auto pt-3 text-muted small">
                       Última actualización: {formatearFecha(reserva.fecha)}
                     </div>
                   )}
-                </div>
-              </div>
-            </div>
+                </Card.Body>
+              </Card>
+            </Col>
           ))}
-        </div>
+        </Row>
       )}
 
       {/* Leyenda de Estados */}
-      <div className="card mt-4">
-        <div className="card-body">
-          <h6 className="card-title">Leyenda de Estados:</h6>
+      <Card className="mt-4">
+        <Card.Body>
+          <Card.Title as="h6">Leyenda de Estados:</Card.Title>
           <div className="d-flex flex-wrap gap-3">
             <div>
-              <span className="badge bg-warning me-2">PENDIENTE</span>
+              <Badge bg="warning" className="me-2">PENDIENTE</Badge>
               <small>Reserva confirmada, esperando llegada</small>
             </div>
             <div>
-              <span className="badge bg-success me-2">ACTIVA</span>
+              <Badge bg="success" className="me-2">ACTIVA</Badge>
               <small>Mesa ocupada actualmente</small>
             </div>
             <div>
-              <span className="badge bg-secondary me-2">COMPLETADA</span>
+              <Badge bg="secondary" className="me-2">COMPLETADA</Badge>
               <small>Reserva finalizada</small>
             </div>
             <div>
-              <span className="badge bg-danger me-2">CANCELADA</span>
+              <Badge bg="danger" className="me-2">CANCELADA</Badge>
               <small>Reserva cancelada</small>
             </div>
           </div>
-        </div>
-      </div>
+        </Card.Body>
+      </Card>
 
       {/* Modal de confirmación para cancelar reserva */}
       <ConfirmModal
@@ -263,6 +263,6 @@ export default function MisReservas() {
         confirmVariant="danger"
         isLoading={cancelModal.isLoading}
       />
-    </div>
+    </Container>
   );
 }

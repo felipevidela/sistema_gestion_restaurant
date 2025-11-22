@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { register } from '../services/reservasApi';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -235,11 +236,11 @@ export default function LoginForm({ onLoginSuccess }) {
   };
 
   return (
-    <div className="container">
-      <div className="row justify-content-center align-items-center min-vh-100">
-        <div className="col-md-6 col-lg-5">
-          <div className="card shadow">
-            <div className="card-body p-4">
+    <Container>
+      <Row className="justify-content-center align-items-center min-vh-100">
+        <Col md={6} lg={5}>
+          <Card className="shadow">
+            <Card.Body className="p-4">
               <div className="text-center mb-4">
                 <h3 className="fw-bold text-primary">Sistema de Reservas</h3>
                 <p className="text-muted">
@@ -249,31 +250,28 @@ export default function LoginForm({ onLoginSuccess }) {
 
               {/* Mensajes de error y éxito */}
               {error && (
-                <div className="alert alert-danger" role="alert">
+                <Alert variant="danger">
                   <i className="bi bi-exclamation-triangle me-2"></i>
                   {error.split('\n').map((line, i) => (
                     <div key={i}>{line}</div>
                   ))}
-                </div>
+                </Alert>
               )}
 
               {success && (
-                <div className="alert alert-success" role="alert">
+                <Alert variant="success">
                   <i className="bi bi-check-circle me-2"></i>
                   {success}
-                </div>
+                </Alert>
               )}
 
               {/* FORMULARIO DE LOGIN */}
               {modo === 'login' && (
-                <form onSubmit={handleLoginSubmit}>
-                  <div className="mb-3">
-                    <label htmlFor="username" className="form-label">
-                      Email o Usuario
-                    </label>
-                    <input
+                <Form onSubmit={handleLoginSubmit}>
+                  <Form.Group className="mb-3">
+                    <Form.Label htmlFor="username">Email o Usuario</Form.Label>
+                    <Form.Control
                       type="text"
-                      className="form-control"
                       id="username"
                       name="username"
                       value={loginData.username}
@@ -282,16 +280,13 @@ export default function LoginForm({ onLoginSuccess }) {
                       required
                       autoFocus
                     />
-                  </div>
+                  </Form.Group>
 
-                  <div className="mb-3">
-                    <label htmlFor="password" className="form-label">
-                      Contraseña
-                    </label>
+                  <Form.Group className="mb-3">
+                    <Form.Label htmlFor="password">Contraseña</Form.Label>
                     <div style={{ position: 'relative' }}>
-                      <input
+                      <Form.Control
                         type={showPassword ? "text" : "password"}
-                        className="form-control"
                         id="password"
                         name="password"
                         value={loginData.password}
@@ -329,287 +324,303 @@ export default function LoginForm({ onLoginSuccess }) {
                         )}
                       </span>
                     </div>
-                  </div>
+                  </Form.Group>
 
                   <div className="d-grid mb-3">
-                    <button
+                    <Button
                       type="submit"
-                      className="btn btn-primary"
+                      variant="primary"
                       disabled={loading}
                     >
                       {loading ? (
                         <>
-                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          <Spinner animation="border" size="sm" className="me-2" />
                           Iniciando sesión...
                         </>
                       ) : (
                         'Iniciar Sesión'
                       )}
-                    </button>
+                    </Button>
                   </div>
 
                   <div className="text-center">
-                    <button
-                      type="button"
-                      className="btn btn-link text-decoration-none"
+                    <Button
+                      variant="link"
+                      className="text-decoration-none"
                       onClick={toggleModo}
                     >
                       ¿No tienes cuenta? Regístrate aquí
-                    </button>
+                    </Button>
                   </div>
-                </form>
+                </Form>
               )}
 
               {/* FORMULARIO DE REGISTRO */}
               {modo === 'register' && (
-                <form onSubmit={handleRegisterSubmit}>
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="nombre" className="form-label">
-                        Nombre <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className={`form-control ${validationErrors.nombre ? 'is-invalid' : ''}`}
-                        id="nombre"
-                        name="nombre"
-                        value={registerData.nombre}
-                        onChange={handleRegisterChange}
-                        required
-                        autoFocus
-                      />
-                      {validationErrors.nombre && (
-                        <div className="invalid-feedback">{validationErrors.nombre}</div>
-                      )}
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="apellido" className="form-label">
-                        Apellido <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className={`form-control ${validationErrors.apellido ? 'is-invalid' : ''}`}
-                        id="apellido"
-                        name="apellido"
-                        value={registerData.apellido}
-                        onChange={handleRegisterChange}
-                        required
-                      />
-                      {validationErrors.apellido && (
-                        <div className="invalid-feedback">{validationErrors.apellido}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="telefono" className="form-label">
-                        Teléfono <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className={`form-control ${validationErrors.telefono ? 'is-invalid' : ''}`}
-                        id="telefono"
-                        name="telefono"
-                        value={registerData.telefono}
-                        onChange={handleRegisterChange}
-                        placeholder="+56 9 1234 5678"
-                        required
-                      />
-                      {validationErrors.telefono && (
-                        <div className="invalid-feedback">{validationErrors.telefono}</div>
-                      )}
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="rut" className="form-label">
-                        RUT <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className={`form-control ${validationErrors.rut ? 'is-invalid' : ''}`}
-                        id="rut"
-                        name="rut"
-                        value={registerData.rut}
-                        onChange={handleRegisterChange}
-                        placeholder="12.345.678-9"
-                        required
-                      />
-                      {validationErrors.rut && (
-                        <div className="invalid-feedback">{validationErrors.rut}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="register-username" className="form-label">
-                        Usuario <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className={`form-control ${validationErrors.username ? 'is-invalid' : ''}`}
-                        id="register-username"
-                        name="username"
-                        value={registerData.username}
-                        onChange={handleRegisterChange}
-                        required
-                      />
-                      {validationErrors.username && (
-                        <div className="invalid-feedback">{validationErrors.username}</div>
-                      )}
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="register-email" className="form-label">
-                        Email <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        className={`form-control ${validationErrors.email ? 'is-invalid' : ''}`}
-                        id="register-email"
-                        name="email"
-                        value={registerData.email}
-                        onChange={handleRegisterChange}
-                        required
-                      />
-                      {validationErrors.email && (
-                        <div className="invalid-feedback">{validationErrors.email}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="register-password" className="form-label">
-                        Contraseña <span className="text-danger">*</span>
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          className={`form-control ${validationErrors.password ? 'is-invalid' : ''}`}
-                          id="register-password"
-                          name="password"
-                          value={registerData.password}
+                <Form onSubmit={handleRegisterSubmit}>
+                  <Row>
+                    <Col md={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label htmlFor="nombre">
+                          Nombre <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          id="nombre"
+                          name="nombre"
+                          value={registerData.nombre}
                           onChange={handleRegisterChange}
+                          isInvalid={!!validationErrors.nombre}
                           required
-                          style={{ paddingRight: '70px' }}
+                          autoFocus
                         />
-                        <span
-                          onClick={() => setShowPassword(!showPassword)}
-                          style={{
-                            position: 'absolute',
-                            right: '40px',
-                            top: '10px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            color: '#6c757d',
-                            zIndex: 10
-                          }}
-                          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                          role="button"
-                          tabIndex="-1"
-                        >
-                          {showPassword ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                              <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z"/>
-                              <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/>
-                              <path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12-.708.708z"/>
-                            </svg>
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                              <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-                              <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
-                            </svg>
-                          )}
-                        </span>
-                        {validationErrors.password && (
-                          <div className="invalid-feedback">{validationErrors.password}</div>
-                        )}
-                      </div>
-                      <small className="text-muted">Mínimo 8 caracteres</small>
-                    </div>
+                        <Form.Control.Feedback type="invalid">
+                          {validationErrors.nombre}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
 
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="password_confirm" className="form-label">
-                        Confirmar Contraseña <span className="text-danger">*</span>
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type={showPasswordConfirm ? "text" : "password"}
-                          className={`form-control ${validationErrors.password_confirm ? 'is-invalid' : ''}`}
-                          id="password_confirm"
-                          name="password_confirm"
-                          value={registerData.password_confirm}
+                    <Col md={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label htmlFor="apellido">
+                          Apellido <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          id="apellido"
+                          name="apellido"
+                          value={registerData.apellido}
                           onChange={handleRegisterChange}
+                          isInvalid={!!validationErrors.apellido}
                           required
-                          style={{ paddingRight: '70px' }}
                         />
-                        <span
-                          onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                          style={{
-                            position: 'absolute',
-                            right: '40px',
-                            top: '10px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            color: '#6c757d',
-                            zIndex: 10
-                          }}
-                          aria-label={showPasswordConfirm ? "Ocultar contraseña" : "Mostrar contraseña"}
-                          role="button"
-                          tabIndex="-1"
-                        >
-                          {showPasswordConfirm ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                              <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z"/>
-                              <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/>
-                              <path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12-.708.708z"/>
-                            </svg>
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                              <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-                              <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
-                            </svg>
-                          )}
-                        </span>
-                        {validationErrors.password_confirm && (
-                          <div className="invalid-feedback">{validationErrors.password_confirm}</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                        <Form.Control.Feedback type="invalid">
+                          {validationErrors.apellido}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label htmlFor="telefono">
+                          Teléfono <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          id="telefono"
+                          name="telefono"
+                          value={registerData.telefono}
+                          onChange={handleRegisterChange}
+                          placeholder="+56 9 1234 5678"
+                          isInvalid={!!validationErrors.telefono}
+                          required
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {validationErrors.telefono}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label htmlFor="rut">
+                          RUT <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          id="rut"
+                          name="rut"
+                          value={registerData.rut}
+                          onChange={handleRegisterChange}
+                          placeholder="12.345.678-9"
+                          isInvalid={!!validationErrors.rut}
+                          required
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {validationErrors.rut}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label htmlFor="register-username">
+                          Usuario <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          id="register-username"
+                          name="username"
+                          value={registerData.username}
+                          onChange={handleRegisterChange}
+                          isInvalid={!!validationErrors.username}
+                          required
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {validationErrors.username}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label htmlFor="register-email">
+                          Email <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                          type="email"
+                          id="register-email"
+                          name="email"
+                          value={registerData.email}
+                          onChange={handleRegisterChange}
+                          isInvalid={!!validationErrors.email}
+                          required
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {validationErrors.email}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label htmlFor="register-password">
+                          Contraseña <span className="text-danger">*</span>
+                        </Form.Label>
+                        <div style={{ position: 'relative' }}>
+                          <Form.Control
+                            type={showPassword ? "text" : "password"}
+                            id="register-password"
+                            name="password"
+                            value={registerData.password}
+                            onChange={handleRegisterChange}
+                            isInvalid={!!validationErrors.password}
+                            required
+                            style={{ paddingRight: '70px' }}
+                          />
+                          <span
+                            onClick={() => setShowPassword(!showPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: '40px',
+                              top: '10px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              color: '#6c757d',
+                              zIndex: 10
+                            }}
+                            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                            role="button"
+                            tabIndex="-1"
+                          >
+                            {showPassword ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z"/>
+                                <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/>
+                                <path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12-.708.708z"/>
+                              </svg>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                                <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                              </svg>
+                            )}
+                          </span>
+                          <Form.Control.Feedback type="invalid">
+                            {validationErrors.password}
+                          </Form.Control.Feedback>
+                        </div>
+                        <Form.Text className="text-muted">Mínimo 8 caracteres</Form.Text>
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={6} className="mb-3">
+                      <Form.Group>
+                        <Form.Label htmlFor="password_confirm">
+                          Confirmar Contraseña <span className="text-danger">*</span>
+                        </Form.Label>
+                        <div style={{ position: 'relative' }}>
+                          <Form.Control
+                            type={showPasswordConfirm ? "text" : "password"}
+                            id="password_confirm"
+                            name="password_confirm"
+                            value={registerData.password_confirm}
+                            onChange={handleRegisterChange}
+                            isInvalid={!!validationErrors.password_confirm}
+                            required
+                            style={{ paddingRight: '70px' }}
+                          />
+                          <span
+                            onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                            style={{
+                              position: 'absolute',
+                              right: '40px',
+                              top: '10px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              color: '#6c757d',
+                              zIndex: 10
+                            }}
+                            aria-label={showPasswordConfirm ? "Ocultar contraseña" : "Mostrar contraseña"}
+                            role="button"
+                            tabIndex="-1"
+                          >
+                            {showPasswordConfirm ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z"/>
+                                <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/>
+                                <path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12-.708.708z"/>
+                              </svg>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                                <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                              </svg>
+                            )}
+                          </span>
+                          <Form.Control.Feedback type="invalid">
+                            {validationErrors.password_confirm}
+                          </Form.Control.Feedback>
+                        </div>
+                      </Form.Group>
+                    </Col>
+                  </Row>
 
                   <div className="d-grid mb-3">
-                    <button
+                    <Button
                       type="submit"
-                      className="btn btn-success"
+                      variant="success"
                       disabled={loading}
                     >
                       {loading ? (
                         <>
-                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          <Spinner animation="border" size="sm" className="me-2" />
                           Registrando...
                         </>
                       ) : (
                         'Crear Cuenta'
                       )}
-                    </button>
+                    </Button>
                   </div>
 
                   <div className="text-center">
-                    <button
-                      type="button"
-                      className="btn btn-link text-decoration-none"
+                    <Button
+                      variant="link"
+                      className="text-decoration-none"
                       onClick={toggleModo}
                     >
                       ¿Ya tienes cuenta? Inicia sesión
-                    </button>
+                    </Button>
                   </div>
-                </form>
+                </Form>
               )}
 
               <div className="mt-3 text-center">
@@ -617,10 +628,10 @@ export default function LoginForm({ onLoginSuccess }) {
                   Sistema de Gestión de Reservas - Restaurante
                 </small>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
   );
 }

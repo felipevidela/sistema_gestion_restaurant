@@ -199,3 +199,229 @@ body {
         opacity: 1;
     }
 }
+
+/* Mejoras profesionales adicionales */
+
+/* Cards con efecto hover elevado */
+.card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Botones con mejores transiciones */
+.btn {
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+/* Form controls modernos */
+.form-control, .form-select {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 0.65rem;
+    padding: 0.65rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+/* Badges modernos */
+.badge {
+    font-weight: 600;
+    padding: 0.45rem 0.85rem;
+    letter-spacing: 0.02em;
+}
+
+/* Alerts con mejor diseño */
+.alert {
+    border: none;
+    border-radius: 0.85rem;
+    border-left: 4px solid;
+}
+
+.alert-danger {
+    background: rgba(220, 53, 69, 0.08);
+    border-left-color: #dc3545;
+    color: #842029;
+}
+
+.alert-success {
+    background: rgba(25, 135, 84, 0.08);
+    border-left-color: #198754;
+    color: #0f5132;
+}
+
+.alert-info {
+    background: rgba(13, 202, 240, 0.08);
+    border-left-color: #0dcaf0;
+    color: #055160;
+}
+
+.alert-warning {
+    background: rgba(255, 193, 7, 0.08);
+    border-left-color: #ffc107;
+    color: #664d03;
+}
+
+/* Navbar mejorado */
+.navbar {
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Tabs con mejor diseño */
+.nav-tabs {
+    border: none !important;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-radius: 0.5rem 0.5rem 0 0;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link:hover {
+    background: rgba(13, 110, 253, 0.05);
+}
+
+.nav-tabs .nav-link.active {
+    background: transparent;
+    color: var(--brand-primary) !important;
+}
+
+/* ButtonGroup moderno */
+.btn-group {
+    gap: 0.35rem;
+    background: rgba(0, 0, 0, 0.02);
+    padding: 0.4rem;
+    border-radius: 0.75rem;
+}
+
+.btn-group .btn {
+    border-radius: 0.5rem !important;
+}
+
+/* Modal mejorado */
+.modal-content {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 1.5rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 1.5rem;
+}
+
+/* Spinner animación suave */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner-border {
+    animation: spin 0.75s linear infinite;
+}
+
+/* Tablas profesionales */
+.table {
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.table thead th {
+    background: rgba(13, 110, 253, 0.05);
+    border: none;
+    padding: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    color: var(--brand-muted);
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.table tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.02);
+}
+
+.table tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+/* Loading skeleton animation */
+@keyframes skeleton-loading {
+    0% {
+        background-position: -200px 0;
+    }
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+.skeleton {
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+    background: linear-gradient(90deg, #f0f0f0 0px, #f8f8f8 40px, #f0f0f0 80px);
+    background-size: 200px 100%;
+}
+
+/* Responsive mejoras */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn-group {
+        flex-wrap: wrap;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+}

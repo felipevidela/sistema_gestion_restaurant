@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Mesa, Perfil, Reserva
+from .models import Mesa, Perfil, Reserva, BloqueoMesa
 import re
 
 
@@ -387,5 +387,83 @@ class ReservaListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reserva
         fields = ('id', 'cliente_username', 'mesa_numero', 'fecha_reserva',
-                  'hora_inicio', 'hora_fin', 'num_personas', 'estado') 
+                  'hora_inicio', 'hora_fin', 'num_personas', 'estado')
+
+
+# Serializer para el modelo BloqueoMesa
+class BloqueoMesaSerializer(serializers.ModelSerializer):
+    mesa_numero = serializers.IntegerField(source='mesa.numero', read_only=True)
+    mesa_info = MesaSerializer(source='mesa', read_only=True)
+    usuario_creador_username = serializers.CharField(source='usuario_creador.username', read_only=True)
+    categoria_display = serializers.CharField(source='get_categoria_display', read_only=True)
+    tipo_recurrencia_display = serializers.CharField(source='get_tipo_recurrencia_display', read_only=True)
+
+    class Meta:
+        model = BloqueoMesa
+        fields = ('id', 'mesa', 'mesa_numero', 'mesa_info',
+                  'fecha_inicio', 'fecha_fin', 'hora_inicio', 'hora_fin',
+                  'motivo', 'categoria', 'categoria_display',
+                  'notas', 'usuario_creador', 'usuario_creador_username',
+                  'tipo_recurrencia', 'tipo_recurrencia_display',
+                  'activo', 'created_at', 'updated_at')
+        read_only_fields = ('usuario_creador', 'created_at', 'updated_at')
+
+    def validate(self, data):
+        """
+        Validaciones adicionales a nivel de serializer.
+        """
+        from datetime import date, time
+        from django.utils import timezone
+
+        # Validar fecha de inicio no sea en el pasado
+        if data.get('fecha_inicio') and data['fecha_inicio'] < timezone.now().date():
+            raise serializers.ValidationError({
+                'fecha_inicio': 'No se pueden crear bloqueos para fechas pasadas'
+            })
+
+        # Validar que fecha_fin sea posterior o igual a fecha_inicio
+        if data.get('fecha_inicio') and data.get('fecha_fin'):
+            if data['fecha_fin'] < data['fecha_inicio']:
+                raise serializers.ValidationError({
+                    'fecha_fin': 'La fecha de fin debe ser posterior o igual a la fecha de inicio'
+                })
+
+        # Validar horario de operación si se especifican horas
+        if data.get('hora_inicio') and data.get('hora_fin'):
+            hora_apertura = time(12, 0)
+            hora_cierre = time(23, 0)
+
+            if data['hora_inicio'] < hora_apertura or data['hora_inicio'] > hora_cierre:
+                raise serializers.ValidationError({
+                    'hora_inicio': 'La hora de inicio debe estar entre 12:00 y 23:00'
+                })
+
+            if data['hora_fin'] < hora_apertura or data['hora_fin'] > hora_cierre:
+                raise serializers.ValidationError({
+                    'hora_fin': 'La hora de fin debe estar entre 12:00 y 23:00'
+                })
+
+            if data['hora_fin'] <= data['hora_inicio']:
+                raise serializers.ValidationError({
+                    'hora_fin': 'La hora de fin debe ser posterior a la hora de inicio'
+                })
+
+        # Validar que si se especifica una hora, se especifique la otra
+        if (data.get('hora_inicio') is None) != (data.get('hora_fin') is None):
+            raise serializers.ValidationError(
+                'Debe especificar tanto hora_inicio como hora_fin, o dejar ambas vacías para bloqueo de día completo'
+            )
+
+        return data
+
+
+# Serializer compacto para listados de bloqueos
+class BloqueoMesaListSerializer(serializers.ModelSerializer):
+    mesa_numero = serializers.IntegerField(source='mesa.numero', read_only=True)
+    categoria_display = serializers.CharField(source='get_categoria_display', read_only=True)
+
+    class Meta:
+        model = BloqueoMesa
+        fields = ('id', 'mesa_numero', 'fecha_inicio', 'fecha_fin',
+                  'hora_inicio', 'hora_fin', 'motivo', 'categoria_display', 'activo')
 

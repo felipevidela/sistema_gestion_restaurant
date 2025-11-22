@@ -11,6 +11,7 @@ from mainApp import views
 router = DefaultRouter()
 router.register(r'mesas', views.MesaViewSet, basename='mesa')
 router.register(r'reservas', views.ReservaViewSet, basename='reserva')
+router.register(r'bloqueos', views.BloqueoMesaViewSet, basename='bloqueo')
 
 urlpatterns = [
     # Panel de administración de Django

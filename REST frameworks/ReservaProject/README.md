@@ -13,6 +13,7 @@ Este sistema permite a un restaurante gestionar sus reservas de forma eficiente 
 - **Reservas públicas**: Los clientes pueden hacer reservas sin necesidad de crear cuenta
 - **Sistema de usuarios**: Opción de crear cuenta para gestionar múltiples reservas
 - **Gestión de mesas**: Control de disponibilidad y estados de las mesas
+- **Bloqueos de mesas**: Sistema administrativo para bloquear mesas por mantenimiento, eventos o reparaciones
 - **Roles de usuario**: Cliente, Mesero, Cajero y Administrador
 - **Validación de horarios**: Prevención de solapamientos y reservas duplicadas
 
@@ -29,6 +30,7 @@ Este sistema permite a un restaurante gestionar sus reservas de forma eficiente 
 ### Frontend
 - **React 19** - Librería de JavaScript para interfaces
 - **Vite** - Herramienta de desarrollo rápida
+- **React Bootstrap 5** - Componentes de Bootstrap para React
 - **Bootstrap 5** - Framework CSS para estilos
 - **React Router** - Navegación entre páginas
 
@@ -121,7 +123,23 @@ Diferentes niveles de acceso según el rol:
 
 - **Mesero**: Ver reservas del día, gestionar mesas
 - **Cajero**: Ver y gestionar todas las reservas
-- **Administrador**: Acceso completo al sistema
+- **Administrador**: Acceso completo al sistema, incluyendo gestión de bloqueos
+
+### 4. Bloqueos de Mesas (Solo Administradores)
+
+Los administradores pueden bloquear mesas para:
+- **Mantenimiento programado**: Reparaciones, limpieza profunda
+- **Eventos privados**: Reservas especiales, eventos corporativos
+- **Reparaciones urgentes**: Bloqueo temporal por daños
+- **Otros motivos**: Cualquier situación que requiera bloquear una mesa
+
+**Características de los bloqueos**:
+- Bloqueos por rango de fechas
+- Bloqueos de día completo o por horario específico
+- Categorización (mantenimiento, evento privado, reparación, etc.)
+- Motivo y notas descriptivas
+- Activación/desactivación sin eliminación
+- Las mesas bloqueadas NO aparecen como disponibles para reservas
 
 ---
 
@@ -146,6 +164,16 @@ Diferentes niveles de acceso según el rol:
 - Rol (cliente, mesero, cajero, admin)
 - Datos personales (RUT y teléfono encriptados)
 - Información de contacto
+
+#### Bloqueo de Mesa
+- Mesa bloqueada
+- Rango de fechas (inicio y fin)
+- Horario específico (opcional, día completo si no se especifica)
+- Motivo del bloqueo
+- Categoría (mantenimiento, evento privado, reparación, reserva especial, otro)
+- Notas adicionales
+- Usuario que creó el bloqueo
+- Estado activo/inactivo
 
 ---
 
@@ -199,6 +227,25 @@ GET  /api/reserva-invitado/:token/  - Ver reserva con token
 GET  /api/mesas/                    - Listar mesas
 GET  /api/mesas/?fecha=&hora=       - Mesas disponibles
 ```
+
+### Bloqueos (Solo Administradores)
+```
+GET    /api/bloqueos/                      - Listar bloqueos
+POST   /api/bloqueos/                      - Crear bloqueo
+GET    /api/bloqueos/:id/                  - Ver detalle de bloqueo
+PATCH  /api/bloqueos/:id/                  - Actualizar bloqueo
+DELETE /api/bloqueos/:id/                  - Eliminar bloqueo
+POST   /api/bloqueos/:id/activar/          - Activar bloqueo
+POST   /api/bloqueos/:id/desactivar/       - Desactivar bloqueo
+GET    /api/bloqueos/activos-hoy/          - Bloqueos activos para hoy
+```
+
+**Filtros disponibles para /api/bloqueos/**:
+- `mesa_numero`: Filtrar por número de mesa
+- `activo`: true/false - Filtrar por estado
+- `categoria`: Filtrar por categoría de bloqueo
+- `solo_activos`: true - Solo bloqueos activos
+- `activos_en_fecha`: YYYY-MM-DD - Bloqueos activos en una fecha
 
 ---
 
@@ -375,3 +422,14 @@ Este proyecto es de uso educativo para el curso de Desarrollo de Aplicaciones We
 ---
 
 **Última actualización**: Noviembre 2025
+
+### Changelog - Noviembre 2025
+
+#### Nueva Funcionalidad: Sistema de Bloqueo de Mesas
+- ✨ Los administradores pueden bloquear mesas temporalmente
+- 🔒 Soporte para bloqueos de día completo o por horario específico
+- 📅 Bloqueos por rango de fechas con validación de solapamientos
+- 🏷️ Categorización de bloqueos (mantenimiento, eventos, reparaciones)
+- 🔄 Activación/desactivación de bloqueos sin eliminación
+- ✅ Integración automática con sistema de disponibilidad de mesas
+- 📱 Interfaz completa en React Bootstrap con filtros y búsqueda

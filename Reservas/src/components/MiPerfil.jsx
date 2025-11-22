@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Form, Button, Alert, Badge, Spinner } from 'react-bootstrap';
 import { getCurrentUser, getPerfil, updatePerfil } from '../services/reservasApi';
 import {
   validarRUT,
@@ -167,149 +168,149 @@ export default function MiPerfil() {
   };
 
   return (
-    <div className="container-fluid py-4">
-      <div className="row justify-content-center">
-        <div className="col-md-8 col-lg-6">
-          <div className="card shadow-sm">
-            <div className="card-header bg-primary text-white">
+    <Container fluid className="py-4">
+      <Row className="justify-content-center">
+        <Col md={8} lg={6}>
+          <Card className="shadow-sm">
+            <Card.Header className="bg-primary text-white">
               <h5 className="mb-0">
                 <i className="bi bi-person-circle me-2"></i>
                 Mi Perfil
               </h5>
-            </div>
-            <div className="card-body p-4">
+            </Card.Header>
+            <Card.Body className="p-4">
               {error && (
-                <div className="alert alert-danger alert-dismissible fade show" role="alert">
+                <Alert variant="danger" dismissible onClose={() => setError('')}>
                   <i className="bi bi-exclamation-triangle me-2"></i>
                   {error}
-                  <button type="button" className="btn-close" onClick={() => setError('')}></button>
-                </div>
+                </Alert>
               )}
 
               {success && (
-                <div className="alert alert-success alert-dismissible fade show" role="alert">
+                <Alert variant="success" dismissible onClose={() => setSuccess('')}>
                   <i className="bi bi-check-circle me-2"></i>
                   {success}
-                  <button type="button" className="btn-close" onClick={() => setSuccess('')}></button>
-                </div>
+                </Alert>
               )}
 
-              <form onSubmit={handleSubmit}>
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="nombre" className="form-label">
-                      Nombre <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className={`form-control ${validationErrors.nombre ? 'is-invalid' : ''}`}
-                      id="nombre"
-                      name="nombre"
-                      value={formData.nombre}
-                      onChange={handleChange}
-                      disabled={!editMode}
-                      required
-                    />
-                    {validationErrors.nombre && (
-                      <div className="invalid-feedback">{validationErrors.nombre}</div>
-                    )}
-                  </div>
+              <Form onSubmit={handleSubmit}>
+                <Row>
+                  <Col md={6} className="mb-3">
+                    <Form.Group>
+                      <Form.Label htmlFor="nombre">
+                        Nombre <span className="text-danger">*</span>
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        id="nombre"
+                        name="nombre"
+                        value={formData.nombre}
+                        onChange={handleChange}
+                        disabled={!editMode}
+                        isInvalid={!!validationErrors.nombre}
+                        required
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        {validationErrors.nombre}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  </Col>
 
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="apellido" className="form-label">
-                      Apellido <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className={`form-control ${validationErrors.apellido ? 'is-invalid' : ''}`}
-                      id="apellido"
-                      name="apellido"
-                      value={formData.apellido}
-                      onChange={handleChange}
-                      disabled={!editMode}
-                      required
-                    />
-                    {validationErrors.apellido && (
-                      <div className="invalid-feedback">{validationErrors.apellido}</div>
-                    )}
-                  </div>
-                </div>
+                  <Col md={6} className="mb-3">
+                    <Form.Group>
+                      <Form.Label htmlFor="apellido">
+                        Apellido <span className="text-danger">*</span>
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        id="apellido"
+                        name="apellido"
+                        value={formData.apellido}
+                        onChange={handleChange}
+                        disabled={!editMode}
+                        isInvalid={!!validationErrors.apellido}
+                        required
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        {validationErrors.apellido}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  </Col>
+                </Row>
 
-                <div className="mb-3">
-                  <label htmlFor="email" className="form-label">
-                    Email
-                  </label>
-                  <input
+                <Form.Group className="mb-3">
+                  <Form.Label htmlFor="email">Email</Form.Label>
+                  <Form.Control
                     type="email"
-                    className="form-control"
                     id="email"
                     name="email"
                     value={formData.email}
                     disabled
                   />
-                  <small className="text-muted">El email no se puede modificar</small>
-                </div>
+                  <Form.Text className="text-muted">
+                    El email no se puede modificar
+                  </Form.Text>
+                </Form.Group>
 
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="telefono" className="form-label">
-                      Teléfono
-                    </label>
-                    <input
-                      type="text"
-                      className={`form-control ${validationErrors.telefono ? 'is-invalid' : ''}`}
-                      id="telefono"
-                      name="telefono"
-                      value={formData.telefono}
-                      onChange={handleChange}
-                      placeholder="+56 9 1234 5678"
-                      disabled={!editMode}
-                    />
-                    {validationErrors.telefono && (
-                      <div className="invalid-feedback">{validationErrors.telefono}</div>
-                    )}
-                  </div>
+                <Row>
+                  <Col md={6} className="mb-3">
+                    <Form.Group>
+                      <Form.Label htmlFor="telefono">Teléfono</Form.Label>
+                      <Form.Control
+                        type="text"
+                        id="telefono"
+                        name="telefono"
+                        value={formData.telefono}
+                        onChange={handleChange}
+                        placeholder="+56 9 1234 5678"
+                        disabled={!editMode}
+                        isInvalid={!!validationErrors.telefono}
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        {validationErrors.telefono}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  </Col>
 
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="rut" className="form-label">
-                      RUT
-                    </label>
-                    <input
-                      type="text"
-                      className={`form-control ${validationErrors.rut ? 'is-invalid' : ''}`}
-                      id="rut"
-                      name="rut"
-                      value={formData.rut}
-                      onChange={handleChange}
-                      placeholder="12.345.678-9"
-                      disabled={!editMode}
-                    />
-                    {validationErrors.rut && (
-                      <div className="invalid-feedback">{validationErrors.rut}</div>
-                    )}
-                  </div>
-                </div>
+                  <Col md={6} className="mb-3">
+                    <Form.Group>
+                      <Form.Label htmlFor="rut">RUT</Form.Label>
+                      <Form.Control
+                        type="text"
+                        id="rut"
+                        name="rut"
+                        value={formData.rut}
+                        onChange={handleChange}
+                        placeholder="12.345.678-9"
+                        disabled={!editMode}
+                        isInvalid={!!validationErrors.rut}
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        {validationErrors.rut}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  </Col>
+                </Row>
 
                 <div className="d-flex gap-2 mt-4">
                   {!editMode ? (
-                    <button
-                      type="button"
-                      className="btn btn-primary"
+                    <Button
+                      variant="primary"
                       onClick={() => setEditMode(true)}
                     >
                       <i className="bi bi-pencil me-2"></i>
                       Editar Perfil
-                    </button>
+                    </Button>
                   ) : (
                     <>
-                      <button
+                      <Button
                         type="submit"
-                        className="btn btn-success"
+                        variant="success"
                         disabled={loading}
                       >
                         {loading ? (
                           <>
-                            <span className="spinner-border spinner-border-sm me-2"></span>
+                            <Spinner animation="border" size="sm" className="me-2" />
                             Guardando...
                           </>
                         ) : (
@@ -318,38 +319,37 @@ export default function MiPerfil() {
                             Guardar Cambios
                           </>
                         )}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
+                      </Button>
+                      <Button
+                        variant="secondary"
                         onClick={handleCancelar}
                         disabled={loading}
                       >
                         <i className="bi bi-x-circle me-2"></i>
                         Cancelar
-                      </button>
+                      </Button>
                     </>
                   )}
                 </div>
-              </form>
+              </Form>
 
               <div className="mt-4 pt-4 border-top">
                 <h6 className="text-muted">Información de la cuenta</h6>
-                <div className="row">
-                  <div className="col-md-6">
+                <Row>
+                  <Col md={6}>
                     <small className="text-muted d-block">Usuario:</small>
                     <strong>{user?.username}</strong>
-                  </div>
-                  <div className="col-md-6">
+                  </Col>
+                  <Col md={6}>
                     <small className="text-muted d-block">Rol:</small>
-                    <span className="badge bg-primary">{user?.rol_display}</span>
-                  </div>
-                </div>
+                    <Badge bg="primary">{user?.rol_display}</Badge>
+                  </Col>
+                </Row>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
   );
 }

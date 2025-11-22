@@ -1,98 +1,38 @@
-import { useEffect } from 'react';
+import Modal from 'react-bootstrap/Modal';
 
 /**
- * Componente Modal reutilizable
+ * Componente Modal reutilizable usando React Bootstrap
  * @param {boolean} isOpen - Controla si el modal está visible
  * @param {function} onClose - Callback al cerrar el modal
  * @param {string} title - Título del modal
  * @param {node} children - Contenido del modal
- * @param {string} size - Tamaño del modal: 'sm', 'md', 'lg', 'xl'
+ * @param {string} size - Tamaño del modal: 'sm', 'lg', 'xl' (md es el default)
  * @param {boolean} closeOnBackdrop - Si true, cierra al hacer click fuera del modal
  */
-export default function Modal({
+export default function CustomModal({
   isOpen,
   onClose,
   title,
   children,
-  size = 'md',
+  size,
   closeOnBackdrop = true,
 }) {
-  // Cerrar con tecla Escape
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      // Prevenir scroll del body cuando el modal está abierto
-      document.body.style.overflow = 'hidden';
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  const sizeClasses = {
-    sm: 'modal-sm',
-    md: '',
-    lg: 'modal-lg',
-    xl: 'modal-xl'
-  };
-
-  const handleBackdropClick = (e) => {
-    if (closeOnBackdrop && e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="modal-backdrop fade show"
-        style={{ zIndex: 1050 }}
-        onClick={handleBackdropClick}
-      ></div>
-
-      {/* Modal */}
-      <div
-        className="modal fade show"
-        style={{ display: 'block', zIndex: 1055 }}
-        tabIndex="-1"
-        role="dialog"
-        aria-modal="true"
-        onClick={handleBackdropClick}
-      >
-        <div className={`modal-dialog modal-dialog-centered ${sizeClasses[size]}`} role="document">
-          <div className="modal-content">
-            {/* Header */}
-            {title && (
-              <div className="modal-header">
-                <h5 className="modal-title">{title}</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={onClose}
-                  aria-label="Cerrar"
-                ></button>
-              </div>
-            )}
-
-            {/* Body */}
-            <div className="modal-body">
-              {children}
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+    <Modal
+      show={isOpen}
+      onHide={onClose}
+      backdrop={closeOnBackdrop ? true : 'static'}
+      keyboard={true}
+      centered
+      size={size === 'md' ? undefined : size}
+    >
+      {title && (
+        <Modal.Header closeButton>
+          <Modal.Title>{title}</Modal.Title>
+        </Modal.Header>
+      )}
+      <Modal.Body>{children}</Modal.Body>
+    </Modal>
   );
 }
 
@@ -116,7 +56,7 @@ export function ConfirmModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm" closeOnBackdrop={!isLoading}>
+    <CustomModal isOpen={isOpen} onClose={onClose} title={title} size="sm" closeOnBackdrop={!isLoading}>
       <div className="mb-4">
         <p className="mb-0">{message}</p>
       </div>
@@ -146,6 +86,6 @@ export function ConfirmModal({
           )}
         </button>
       </div>
-    </Modal>
+    </CustomModal>
   );
 }
