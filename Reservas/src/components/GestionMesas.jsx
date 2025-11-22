@@ -19,6 +19,7 @@ export default function GestionMesas() {
   const [horaFiltro, setHoraFiltro] = useState('');
   const [reservasPorFecha, setReservasPorFecha] = useState([]);
   const [bloqueosPorFecha, setBloqueosPorFecha] = useState([]);
+  const [bloqueosHoy, setBloqueosHoy] = useState([]); // Bloqueos activos HOY (fecha/hora actual)
   const [mostrarDisponibilidad, setMostrarDisponibilidad] = useState(true);
 
   // Estado para modal de detalle de reserva
@@ -38,6 +39,13 @@ export default function GestionMesas() {
       cargarBloqueosPorFecha();
     }
   }, [fechaFiltro, mostrarDisponibilidad]);
+
+  // Cargar bloqueos activos HOY y actualizar cada 30 segundos
+  useEffect(() => {
+    cargarBloqueosHoy();
+    const interval = setInterval(cargarBloqueosHoy, 30000); // Actualizar cada 30s
+    return () => clearInterval(interval);
+  }, []);
 
   const cargarMesas = async () => {
     try {
@@ -73,6 +81,17 @@ export default function GestionMesas() {
     } catch (err) {
       console.error('Error al cargar bloqueos:', err);
       setBloqueosPorFecha([]);
+    }
+  };
+
+  const cargarBloqueosHoy = async () => {
+    try {
+      const fechaHoy = new Date().toISOString().slice(0, 10);
+      const bloqueos = await listarBloqueos({ activos_en_fecha: fechaHoy, solo_activos: true });
+      setBloqueosHoy(Array.isArray(bloqueos) ? bloqueos : []);
+    } catch (err) {
+      console.error('Error al cargar bloqueos activos hoy:', err);
+      setBloqueosHoy([]);
     }
   };
 
@@ -186,6 +205,56 @@ export default function GestionMesas() {
       // Verificar si la hora está dentro del rango del bloqueo
       return hora >= bloqueo.hora_inicio.substring(0, 5) && hora <= bloqueo.hora_fin.substring(0, 5);
     });
+  };
+
+  // Función para verificar si una mesa está bloqueada AHORA (fecha/hora actual del sistema)
+  const estaBloqueadaAhora = (numeroMesa) => {
+    const ahora = new Date();
+    const fechaActual = ahora.toISOString().slice(0, 10);
+    const horaActual = ahora.toTimeString().slice(0, 5);
+
+    return bloqueosHoy.some(bloqueo => {
+      // Verificar que el bloqueo esté activo
+      if (!bloqueo.activo) return false;
+
+      // Verificar que sea de esta mesa
+      if (bloqueo.mesa_numero !== numeroMesa) return false;
+
+      // Verificar que la fecha actual esté dentro del rango
+      if (bloqueo.fecha_inicio > fechaActual || bloqueo.fecha_fin < fechaActual) {
+        return false;
+      }
+
+      // Si es bloqueo de día completo, está bloqueada
+      if (!bloqueo.hora_inicio || !bloqueo.hora_fin) return true;
+
+      // Verificar que la hora actual esté dentro del rango
+      const horaInicio = bloqueo.hora_inicio.substring(0, 5);
+      const horaFin = bloqueo.hora_fin.substring(0, 5);
+      return horaActual >= horaInicio && horaActual <= horaFin;
+    });
+  };
+
+  // Función para obtener color de estado con prioridad de bloqueo
+  const getEstadoColorConBloqueo = (mesa) => {
+    // Prioridad 1: Si está bloqueada AHORA, color de bloqueo
+    if (estaBloqueadaAhora(mesa.numero)) {
+      return 'danger'; // Rojo para indicar bloqueo activo
+    }
+
+    // Prioridad 2: Color del estado normal
+    return getEstadoColor(mesa.estado);
+  };
+
+  // Función para obtener icono de estado con prioridad de bloqueo
+  const getEstadoIconConBloqueo = (mesa) => {
+    // Prioridad 1: Si está bloqueada AHORA, icono de candado
+    if (estaBloqueadaAhora(mesa.numero)) {
+      return 'bi-lock-fill';
+    }
+
+    // Prioridad 2: Icono del estado normal
+    return getEstadoIcon(mesa.estado);
   };
 
   // Función para formatear hora a formato militar 24 horas (HH:MM)
@@ -463,18 +532,12 @@ export default function GestionMesas() {
         <div className="row">
           {mesasFiltradas.map(mesa => (
             <div key={mesa.id} className="col-md-6 col-lg-4 col-xl-3 mb-3">
-              <div className={`card h-100 shadow-sm border-${getEstadoColor(mesa.estado)}`}>
-                <div className={`card-header bg-${getEstadoColor(mesa.estado)} text-white d-flex justify-content-between align-items-center`}>
+              <div className={`card h-100 shadow-sm border-${getEstadoColorConBloqueo(mesa)}`}>
+                <div className={`card-header bg-${getEstadoColorConBloqueo(mesa)} text-white d-flex justify-content-between align-items-center`}>
                   <h5 className="mb-0">
-                    <i className={`bi ${getEstadoIcon(mesa.estado)} me-2`}></i>
+                    <i className={`bi ${getEstadoIconConBloqueo(mesa)} me-2`}></i>
                     Mesa {mesa.numero}
                   </h5>
-                  {mostrarDisponibilidad && tieneBloqueos(mesa.numero) && (
-                    <span className="badge bg-danger">
-                      <i className="bi bi-lock-fill me-1"></i>
-                      Bloqueada
-                    </span>
-                  )}
                 </div>
                 <div className="card-body">
                   <div className="mb-2">
@@ -482,8 +545,8 @@ export default function GestionMesas() {
                     <strong>Capacidad:</strong> {mesa.capacidad} personas
                   </div>
                   <div className="mb-3 d-flex align-items-center gap-2 flex-wrap">
-                    <span className={`badge bg-${getEstadoColor(mesa.estado)}`}>
-                      {mesa.estado.toUpperCase()}
+                    <span className={`badge bg-${getEstadoColorConBloqueo(mesa)}`}>
+                      {estaBloqueadaAhora(mesa.numero) ? 'BLOQUEADA' : mesa.estado.toUpperCase()}
                     </span>
                     {mostrarDisponibilidad && (
                       <span className="badge bg-light text-muted border">
@@ -599,36 +662,47 @@ export default function GestionMesas() {
 
                   {mesaEditando === mesa.id ? (
                     <div>
-                      <p className="mb-2"><strong>Cambiar estado a:</strong></p>
-                      <div className="d-grid gap-2">
-                        <button
-                          className="btn btn-sm btn-success"
-                          onClick={() => handleCambiarEstado(mesa.id, 'disponible')}
-                          disabled={mesa.estado === 'disponible'}
-                        >
-                          Disponible
-                        </button>
-                        <button
-                          className="btn btn-sm btn-warning"
-                          onClick={() => handleCambiarEstado(mesa.id, 'reservada')}
-                          disabled={mesa.estado === 'reservada'}
-                        >
-                          Reservada
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => handleCambiarEstado(mesa.id, 'ocupada')}
-                          disabled={mesa.estado === 'ocupada'}
-                        >
-                          Ocupada
-                        </button>
-                        <button
-                          className="btn btn-sm btn-info"
-                          onClick={() => handleCambiarEstado(mesa.id, 'limpieza')}
-                          disabled={mesa.estado === 'limpieza'}
-                        >
-                          En Limpieza
-                        </button>
+                      {estaBloqueadaAhora(mesa.numero) ? (
+                        <div className="alert alert-danger py-2 mb-2 small">
+                          <i className="bi bi-lock-fill me-2"></i>
+                          <strong>Mesa bloqueada.</strong> No se puede cambiar el estado mientras esté activo el bloqueo.
+                        </div>
+                      ) : (
+                        <>
+                          <p className="mb-2"><strong>Cambiar estado a:</strong></p>
+                          <div className="d-grid gap-2">
+                            <button
+                              className="btn btn-sm btn-success"
+                              onClick={() => handleCambiarEstado(mesa.id, 'disponible')}
+                              disabled={mesa.estado === 'disponible'}
+                            >
+                              Disponible
+                            </button>
+                            <button
+                              className="btn btn-sm btn-warning"
+                              onClick={() => handleCambiarEstado(mesa.id, 'reservada')}
+                              disabled={mesa.estado === 'reservada'}
+                            >
+                              Reservada
+                            </button>
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => handleCambiarEstado(mesa.id, 'ocupada')}
+                              disabled={mesa.estado === 'ocupada'}
+                            >
+                              Ocupada
+                            </button>
+                            <button
+                              className="btn btn-sm btn-info"
+                              onClick={() => handleCambiarEstado(mesa.id, 'limpieza')}
+                              disabled={mesa.estado === 'limpieza'}
+                            >
+                              En Limpieza
+                            </button>
+                          </div>
+                        </>
+                      )}
+                      <div className="d-grid mt-2">
                         <button
                           className="btn btn-sm btn-secondary"
                           onClick={() => setMesaEditando(null)}
@@ -642,6 +716,7 @@ export default function GestionMesas() {
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={() => setMesaEditando(mesa.id)}
+                        disabled={estaBloqueadaAhora(mesa.numero)}
                       >
                         <i className="bi bi-pencil me-1"></i>
                         Cambiar Estado
