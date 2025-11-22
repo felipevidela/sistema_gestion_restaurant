@@ -98,11 +98,7 @@ body {
 }
 
 .summary-item {
-    transition: transform 0.2s ease;
-}
-
-.summary-item:hover {
-    transform: translateY(-2px);
+    transition: background-color 0.2s ease;
 }
 
 .info-item {
@@ -204,23 +200,18 @@ body {
 
 /* Cards con efecto hover elevado */
 .card {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease;
     border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .card:hover {
-    transform: translateY(-4px);
     box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* Botones con mejores transiciones */
 .btn {
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     font-weight: 500;
-}
-
-.btn:active {
-    transform: scale(0.98);
 }
 
 /* Form controls modernos */

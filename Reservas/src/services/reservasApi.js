@@ -683,10 +683,12 @@ export async function listarBloqueos(filters = {}) {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Error al listar bloqueos');
+    throw new Error(error.error || error.detail || 'Error al listar bloqueos');
   }
 
-  return response.json();
+  const data = await response.json();
+  // El backend retorna un objeto de paginación, extraer el array de results
+  return data.results || data;
 }
 
 /**

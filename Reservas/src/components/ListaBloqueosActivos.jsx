@@ -66,10 +66,12 @@ export default function ListaBloqueosActivos() {
       }
 
       const data = await listarBloqueos(filters);
-      setBloqueos(data);
+      // Asegurar que siempre sea un array
+      setBloqueos(Array.isArray(data) ? data : []);
       setError('');
     } catch (err) {
       setError('Error al cargar bloqueos: ' + err.message);
+      setBloqueos([]); // Resetear a array vacío en caso de error
       console.error(err);
     } finally {
       setLoading(false);
@@ -260,7 +262,7 @@ export default function ListaBloqueosActivos() {
       </Row>
 
       {/* Tabla de Bloqueos */}
-      {bloqueos.length === 0 ? (
+      {!Array.isArray(bloqueos) || bloqueos.length === 0 ? (
         <Alert variant="info">
           <i className="bi bi-info-circle me-2"></i>
           No hay bloqueos {filtroActivo === 'activos' ? 'activos' : filtroActivo === 'inactivos' ? 'inactivos' : ''}.
