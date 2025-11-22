@@ -332,7 +332,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     useEffect(() => {
         if (!isBrowser) return;
         const handleResize = () => {
-            setIsMobileView(window.innerWidth < 768);
+            setIsMobileView(window.innerWidth < 992); // Cambiar de 768px (md) a 992px (lg)
         };
 
         handleResize();
@@ -1606,7 +1606,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                         <>
                             {/* Mobile card view */}
                             {isMobileView ? (
-                        <div className="d-block d-md-none">
+                        <div className="d-block d-lg-none">
                             {reservasPaginadas.map((reserva, index) => {
                                 const numeroGlobal = (currentPage - 1) * itemsPerPage + index + 1;
                                 const isLoading = loadingRows[reserva.id];
@@ -1666,7 +1666,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                         </div>
                     ) : (
                         /* Desktop table view */
-                        <div className="table-responsive d-none d-md-block" style={{ overflowX: 'auto', overflowY: 'visible' }}>
+                        <div className="table-responsive d-none d-lg-block" style={{ overflowX: 'auto', overflowY: 'visible' }}>
                             <table className="table table-hover align-middle" style={{ marginBottom: 0 }}>
                                 <thead>
                                     <tr>
