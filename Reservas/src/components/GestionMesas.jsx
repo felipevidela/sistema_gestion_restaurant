@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Tabs, Tab } from 'react-bootstrap';
+import { Tabs, Tab, Badge } from 'react-bootstrap';
 import { getMesas, updateEstadoMesa, getReservas, listarBloqueos } from '../services/reservasApi';
 import { handleError } from '../utils/errorHandler';
 import Modal from './ui/Modal';
@@ -307,20 +307,41 @@ export default function GestionMesas() {
   return (
     <div className="container-fluid">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">Gestión de Mesas</h2>
+        <div>
+          <p className="text-muted text-uppercase small mb-1">Piso y disponibilidad</p>
+          <h2 className="mb-0">Gestión de Mesas</h2>
+          <small className="text-muted">Controla estados, bloqueos y reservas activas en un panel.</small>
+        </div>
+        <div className="d-flex align-items-center gap-2">
+          <Badge bg="success" className="rounded-pill text-uppercase">Activas</Badge>
+          <Badge bg="danger" className="rounded-pill text-uppercase">Bloqueos</Badge>
+        </div>
       </div>
 
       <Tabs
         activeKey={activeTab}
         onSelect={(k) => setActiveTab(k)}
-        className="mb-4"
+        className="mb-4 modern-tabs"
       >
         <Tab eventKey="gestion" title={<><i className="bi bi-grid-3x3 me-2"></i>Gestión de Mesas</>}>
-          <div className="d-flex justify-content-end mb-4">
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+            <div className="d-flex flex-wrap gap-2">
+              <div className="badge bg-light text-dark border">
+                <i className="bi bi-calendar-check me-1"></i>
+                {new Date(fechaFiltro + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+              </div>
+              {horaFiltro && (
+                <div className="badge bg-info text-white">
+                  <i className="bi bi-clock me-1"></i>
+                  {horaFiltro}
+                </div>
+              )}
+            </div>
             <button
               className="btn btn-outline-primary btn-sm"
               onClick={cargarMesas}
               disabled={loading}
+              aria-label="Actualizar mesas"
             >
               {loading ? (
                 <>
@@ -351,48 +372,39 @@ export default function GestionMesas() {
       )}
 
       {/* Filtros */}
-      <div className="card border-0 shadow-sm mb-4">
+      <div className="card border-0 shadow-sm mb-4 glass-panel">
         <div className="card-body">
           <div className="row g-3">
             {/* Filtro de Estado */}
             <div className="col-12">
               <label className="form-label small fw-bold">Filtrar por Estado Actual:</label>
-              <div className="btn-group d-flex flex-wrap" role="group">
-                <button
-                  type="button"
-                  className={`btn ${filtroEstado === 'TODOS' ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => setFiltroEstado('TODOS')}
-                >
-                  TODOS
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${filtroEstado === 'DISPONIBLE' ? 'btn-success' : 'btn-outline-success'}`}
-                  onClick={() => setFiltroEstado('DISPONIBLE')}
-                >
-                  DISPONIBLE
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${filtroEstado === 'RESERVADA' ? 'btn-warning' : 'btn-outline-warning'}`}
-                  onClick={() => setFiltroEstado('RESERVADA')}
-                >
-                  RESERVADA
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${filtroEstado === 'OCUPADA' ? 'btn-danger' : 'btn-outline-danger'}`}
-                  onClick={() => setFiltroEstado('OCUPADA')}
-                >
-                  OCUPADA
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${filtroEstado === 'LIMPIEZA' ? 'btn-info' : 'btn-outline-info'}`}
-                  onClick={() => setFiltroEstado('LIMPIEZA')}
-                >
-                  EN LIMPIEZA
-                </button>
+              <div className="d-flex flex-wrap gap-2">
+                {['TODOS','DISPONIBLE','RESERVADA','OCUPADA','LIMPIEZA'].map(estado => {
+                  const tones = {
+                    TODOS: 'secondary',
+                    DISPONIBLE: 'success',
+                    RESERVADA: 'warning',
+                    OCUPADA: 'danger',
+                    LIMPIEZA: 'info'
+                  };
+                  return (
+                    <button
+                      key={estado}
+                      type="button"
+                      className={`filter-chip ${filtroEstado === estado ? 'filter-chip--active' : ''}`}
+                      onClick={() => setFiltroEstado(estado)}
+                      aria-label={`Filtrar ${estado.toLowerCase()}`}
+                    >
+                      <i className={`bi ${
+                        estado === 'DISPONIBLE' ? 'bi-check-circle' :
+                        estado === 'RESERVADA' ? 'bi-clock' :
+                        estado === 'OCUPADA' ? 'bi-people-fill' :
+                        estado === 'LIMPIEZA' ? 'bi-droplet' : 'bi-ui-checks'
+                      } me-1 text-${tones[estado]}`}></i>
+                      {estado}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -479,53 +491,44 @@ export default function GestionMesas() {
       </div>
 
       {/* Estadísticas Rápidas */}
-      <div className="row mb-4">
-        <div className={mostrarDisponibilidad && bloqueosPorFecha.length > 0 ? "col-md-3 col-lg-2" : "col-md-3"}>
-          <div className="card border-success">
-            <div className="card-body text-center">
-              <h5 className="text-success">{mesas.filter(m => m.estado === 'disponible').length}</h5>
-              <small className="text-muted">Disponibles</small>
+      <div className="row mb-4 g-3">
+        {[
+          { label: 'Disponibles', color: 'success', value: mesas.filter(m => m.estado === 'disponible').length, icon: 'bi-check-circle' },
+          { label: 'Reservadas', color: 'warning', value: mesas.filter(m => m.estado === 'reservada').length, icon: 'bi-clock-history' },
+          { label: 'Ocupadas', color: 'danger', value: mesas.filter(m => m.estado === 'ocupada').length, icon: 'bi-people-fill' },
+          { label: 'Limpieza', color: 'info', value: mesas.filter(m => m.estado === 'limpieza').length, icon: 'bi-droplet' }
+        ].map(card => (
+          <div className="col-6 col-md-3" key={card.label}>
+            <div className="card border-0 shadow-sm resumen-card">
+              <div className="card-body d-flex align-items-center gap-3">
+                <div className={`resumen-card__icon text-${card.color}`}>
+                  <i className={`bi ${card.icon}`}></i>
+                </div>
+                <div>
+                  <span className="text-muted small d-block">{card.label}</span>
+                  <span className={`h4 mb-0 fw-bold text-${card.color}`}>{card.value}</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <div className={mostrarDisponibilidad && bloqueosPorFecha.length > 0 ? "col-md-3 col-lg-2" : "col-md-3"}>
-          <div className="card border-warning">
-            <div className="card-body text-center">
-              <h5 className="text-warning">{mesas.filter(m => m.estado === 'reservada').length}</h5>
-              <small className="text-muted">Reservadas</small>
-            </div>
-          </div>
-        </div>
-        <div className={mostrarDisponibilidad && bloqueosPorFecha.length > 0 ? "col-md-3 col-lg-2" : "col-md-3"}>
-          <div className="card border-danger">
-            <div className="card-body text-center">
-              <h5 className="text-danger">{mesas.filter(m => m.estado === 'ocupada').length}</h5>
-              <small className="text-muted">Ocupadas</small>
-            </div>
-          </div>
-        </div>
-        <div className={mostrarDisponibilidad && bloqueosPorFecha.length > 0 ? "col-md-3 col-lg-2" : "col-md-3"}>
-          <div className="card border-info">
-            <div className="card-body text-center">
-              <h5 className="text-info">{mesas.filter(m => m.estado === 'limpieza').length}</h5>
-              <small className="text-muted">En Limpieza</small>
-            </div>
-          </div>
-        </div>
+        ))}
         {mostrarDisponibilidad && bloqueosPorFecha.length > 0 && (
-          <div className="col-md-12 col-lg-4">
-            <div className="card border-danger bg-danger bg-opacity-10">
-              <div className="card-body text-center">
-                <div className="d-flex align-items-center justify-content-center gap-2">
-                  <i className="bi bi-lock-fill text-danger fs-4"></i>
-                  <div>
-                    <h5 className="text-danger mb-0">
-                      {bloqueosPorFecha.length} {bloqueosPorFecha.length === 1 ? 'Mesa' : 'Mesas'}
-                    </h5>
-                    <small className="text-danger fw-bold">
-                      Bloqueada{bloqueosPorFecha.length > 1 ? 's' : ''} el {new Date(fechaFiltro + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                    </small>
+          <div className="col-12 col-md-6">
+            <div className="card border-danger bg-danger bg-opacity-10 shadow-sm h-100">
+              <div className="card-body d-flex align-items-center justify-content-between">
+                <div className="d-flex align-items-center gap-3">
+                  <div className="resumen-card__icon text-danger">
+                    <i className="bi bi-lock-fill"></i>
                   </div>
+                  <div>
+                    <span className="text-danger small d-block">Bloqueos en fecha</span>
+                    <span className="h5 mb-0 text-danger fw-bold">{bloqueosPorFecha.length} mesa(s)</span>
+                  </div>
+                </div>
+                <div className="text-end">
+                  <small className="text-danger">
+                    {new Date(fechaFiltro + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                  </small>
                 </div>
               </div>
             </div>
@@ -540,33 +543,37 @@ export default function GestionMesas() {
           No hay mesas {filtroEstado !== 'TODOS' ? `en estado ${filtroEstado.toLowerCase()}` : ''}.
         </div>
       ) : (
-        <div className="row">
+        <div className="row g-3">
           {mesasFiltradas.map(mesa => (
-            <div key={mesa.id} className="col-md-6 col-lg-4 col-xl-3 mb-3">
-              <div className={`card h-100 shadow-sm border-${getEstadoColorConBloqueo(mesa)}`}>
-                <div className={`card-header bg-${getEstadoColorConBloqueo(mesa)} text-white d-flex justify-content-between align-items-center`}>
-                  <h5 className="mb-0">
-                    <i className={`bi ${getEstadoIconConBloqueo(mesa)} me-2`}></i>
-                    Mesa {mesa.numero}
-                  </h5>
-                </div>
-                <div className="card-body">
-                  <div className="mb-2">
-                    <i className="bi bi-people me-2 text-primary"></i>
-                    <strong>Capacidad:</strong> {mesa.capacidad} personas
-                  </div>
-                  <div className="mb-3 d-flex align-items-center gap-2 flex-wrap">
+            <div key={mesa.id} className="col-md-6 col-lg-4 col-xl-3">
+              <div className={`card h-100 shadow-sm mesa-card mesa-card--${getEstadoColorConBloqueo(mesa)}`}>
+                <div className="card-body p-3 d-flex flex-column h-100">
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <div className="small text-muted">Mesa</div>
+                      <h5 className="mb-0">#{mesa.numero}</h5>
+                    </div>
                     <span className={`badge bg-${getEstadoColorConBloqueo(mesa)}`}>
                       {estaBloqueada(mesa.numero) ? 'BLOQUEADA' : mesa.estado.toUpperCase()}
                     </span>
-                    {mostrarDisponibilidad && (
-                      <span className="badge bg-light text-muted border">
-                        <i className="bi bi-calendar3 me-1"></i>
-                        {new Date(fechaFiltro + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                        {horaFiltro && <> · {horaFiltro}</>}
-                      </span>
-                    )}
                   </div>
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <span className="mesa-icon"><i className="bi bi-people"></i></span>
+                    <div>
+                      <small className="text-muted d-block">Capacidad</small>
+                      <strong>{mesa.capacidad} personas</strong>
+                    </div>
+                  </div>
+                  {mostrarDisponibilidad && (
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <span className="mesa-icon mesa-icon--calendar"><i className="bi bi-calendar3"></i></span>
+                      <div>
+                        <small className="text-muted d-block">Fecha</small>
+                        <strong>{new Date(fechaFiltro + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</strong>
+                        {horaFiltro && <div className="text-muted small">{horaFiltro}</div>}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Mostrar bloqueos si está activo el modo de disponibilidad */}
                   {mostrarDisponibilidad && (() => {
@@ -618,49 +625,45 @@ export default function GestionMesas() {
 
                   {/* Mostrar reservas si está activo el modo de disponibilidad */}
                   {mostrarDisponibilidad && (
-                    <div className="mb-3 border-top pt-2">
+                    <div className="mb-3">
                       {(() => {
                         const reservas = getReservasMesa(mesa.numero);
                         const hayReservaEnHora = horaFiltro
                           ? reservas.some(r => r.hora && r.hora.startsWith(horaFiltro))
                           : reservas.length > 0;
                         return reservas.length > 0 ? (
-                          <>
-                            <div className="d-flex align-items-center mb-2">
-                              <i className="bi bi-calendar-event me-2 text-warning"></i>
-                              <strong className="small">
-                                Reservas para {new Date(fechaFiltro + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                                {horaFiltro && ` a las ${horaFiltro}`}
-                              </strong>
+                          <div className="mesa-reservas">
+                            <div className="d-flex align-items-center justify-content-between">
+                              <div className="d-flex align-items-center gap-2">
+                                <span className="mesa-icon mesa-icon--warning"><i className="bi bi-calendar-event"></i></span>
+                                <div>
+                                  <small className="text-muted d-block">Reservas</small>
+                                  <strong>{reservas.length} reserva(s)</strong>
+                                </div>
+                              </div>
+                              <span className="badge bg-light text-muted border">{horaFiltro || 'Todo el día'}</span>
                             </div>
-                            <div className="list-group list-group-flush small">
+                            <div className="list-group list-group-flush small mt-2">
                               {reservas.map((reserva, idx) => (
-                                <div
+                                <button
                                   key={idx}
-                                  className="list-group-item px-0 py-1 border-0"
+                                  type="button"
+                                  className="list-group-item list-group-item-action px-0 py-1 border-0"
                                   onClick={() => handleVerDetalleReserva(reserva)}
-                                  style={{
-                                    cursor: 'pointer',
-                                    transition: 'background-color 0.2s',
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
-                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                  title="Click para ver detalle completo"
+                                  title="Ver detalle de reserva"
                                 >
                                   <i className="bi bi-clock text-muted me-1"></i>
                                   <strong>{reserva.hora}</strong> - {reserva.personas} pers.
-                                  <span className={`badge bg-${
+                                  <span className={`badge ms-1 bg-${
                                     reserva.estado === 'ACTIVA' ? 'success' :
                                     reserva.estado === 'PENDIENTE' ? 'warning' :
                                     reserva.estado === 'COMPLETADA' ? 'info' : 'secondary'
-                                  } ms-1 small`}>
-                                    {reserva.estado}
-                                  </span>
+                                  }`}>{reserva.estado}</span>
                                   <i className="bi bi-eye ms-2 text-primary small"></i>
-                                </div>
+                                </button>
                               ))}
                             </div>
-                          </>
+                          </div>
                         ) : (
                           <div className={`alert ${hayReservaEnHora ? 'alert-warning' : 'alert-success'} py-2 mb-0 small`}>
                             <i className="bi bi-check-circle me-1"></i>
@@ -723,7 +726,7 @@ export default function GestionMesas() {
                       </div>
                     </div>
                   ) : (
-                    <div className="d-grid">
+                    <div className="d-grid mt-auto">
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={() => setMesaEditando(mesa.id)}

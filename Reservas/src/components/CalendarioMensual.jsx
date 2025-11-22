@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getReservas } from '../services/reservasApi';
 
-export default function CalendarioMensual({ fechaSeleccionada, onDiaClick }) {
+export default function CalendarioMensual({ fechaSeleccionada, onDiaClick, onCrearReserva }) {
     const [mesActual, setMesActual] = useState(() => {
         const fecha = new Date(fechaSeleccionada + 'T00:00:00');
         return new Date(fecha.getFullYear(), fecha.getMonth(), 1);
@@ -191,30 +191,50 @@ export default function CalendarioMensual({ fechaSeleccionada, onDiaClick }) {
                         const dotCount = Math.min(3, Math.max(0, Math.ceil(totalReservas / 6)));
 
                         return (
-                            <button
-                                key={index}
-                                className={`calendar-day
-                                    ${dia.esOtroMes ? 'other-month' : ''}
-                                    ${esHoy(dia.fechaStr) ? 'today' : ''}
-                                    ${esFechaSeleccionada(dia.fechaStr) ? 'selected' : ''}
-                                    ${nivelOcupacion !== 'none' ? `occupied-${nivelOcupacion}` : ''}
-                                `}
-                                onClick={() => onDiaClick(dia.fechaStr)}
-                                disabled={dia.esOtroMes}
-                                title={!dia.esOtroMes && totalReservas > 0 ? `${totalReservas} reservas activas/pendientes` : undefined}
-                            >
-                                <span className="day-number">{dia.fecha.getDate()}</span>
+                            <div className="calendar-cell" key={index}>
+                                <button
+                                    className={`calendar-day
+                                        ${dia.esOtroMes ? 'other-month' : ''}
+                                        ${esHoy(dia.fechaStr) ? 'today' : ''}
+                                        ${esFechaSeleccionada(dia.fechaStr) ? 'selected' : ''}
+                                        ${nivelOcupacion !== 'none' ? `occupied-${nivelOcupacion}` : ''}
+                                    `}
+                                    onClick={() => onDiaClick(dia.fechaStr)}
+                                    disabled={dia.esOtroMes}
+                                    title={!dia.esOtroMes && totalReservas > 0 ? `${totalReservas} reservas activas/pendientes` : undefined}
+                                >
+                                    <span className="day-number">{dia.fecha.getDate()}</span>
+                                    {!dia.esOtroMes && totalReservas > 0 && (
+                                        <span className="reservas-badge">{totalReservas}</span>
+                                    )}
+                                    {!dia.esOtroMes && dotCount > 0 && (
+                                        <div className="calendar-dots mt-1">
+                                            {Array.from({ length: dotCount }).map((_, dotIndex) => (
+                                                <span key={dotIndex} className="calendar-dot"></span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </button>
                                 {!dia.esOtroMes && totalReservas > 0 && (
-                                    <span className="reservas-badge">{totalReservas}</span>
-                                )}
-                                {!dia.esOtroMes && dotCount > 0 && (
-                                    <div className="calendar-dots mt-1">
-                                        {Array.from({ length: dotCount }).map((_, dotIndex) => (
-                                            <span key={dotIndex} className="calendar-dot"></span>
-                                        ))}
+                                    <div className="calendar-popover">
+                                        <div className="d-flex justify-content-between align-items-center mb-2">
+                                            <strong>{totalReservas} reserva(s)</strong>
+                                            {onCrearReserva && (
+                                                <button
+                                                    className="btn btn-primary btn-sm"
+                                                    type="button"
+                                                    onClick={() => onCrearReserva(dia.fechaStr)}
+                                                >
+                                                    Crear
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="small text-muted">
+                                            Ocupación {nivelOcupacion === 'high' ? 'alta' : nivelOcupacion === 'medium' ? 'media' : 'baja'}
+                                        </div>
                                     </div>
                                 )}
-                            </button>
+                            </div>
                         );
                     })}
                 </div>
@@ -242,6 +262,7 @@ export default function CalendarioMensual({ fechaSeleccionada, onDiaClick }) {
                     border-radius: 8px;
                     overflow: hidden;
                     border: 1px solid #dee2e6;
+                    max-width: 100%;
                 }
 
                 .calendar-header {
@@ -264,6 +285,12 @@ export default function CalendarioMensual({ fechaSeleccionada, onDiaClick }) {
                     grid-template-columns: repeat(7, 1fr);
                     gap: 1px;
                     background: #dee2e6;
+                    width: 100%;
+                }
+
+                .calendar-cell {
+                    position: relative;
+                    min-width: 0;
                 }
 
                 .calendar-day {
@@ -309,6 +336,29 @@ export default function CalendarioMensual({ fechaSeleccionada, onDiaClick }) {
                 .calendar-day.selected .day-number,
                 .calendar-day.selected .reservas-badge {
                     color: white;
+                }
+
+                .calendar-cell:hover .calendar-popover {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateY(0);
+                }
+
+                .calendar-popover {
+                    position: absolute;
+                    z-index: 2;
+                    top: 8px;
+                    right: 4px;
+                    background: #fff;
+                    border: 1px solid #dee2e6;
+                    border-radius: 0.75rem;
+                    padding: 0.75rem;
+                    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+                    width: 200px;
+                    opacity: 0;
+                    visibility: hidden;
+                    transform: translateY(6px);
+                    transition: all 0.15s ease;
                 }
 
                 .calendar-day.occupied-low {

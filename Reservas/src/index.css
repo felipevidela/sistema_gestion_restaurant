@@ -12,6 +12,7 @@ body {
     background-color: var(--brand-surface);
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     color: #1b1f24;
+    overflow-x: hidden;
 }
 
 .app-navbar {
@@ -490,6 +491,66 @@ body {
     vertical-align: middle;
 }
 
+.modern-tabs .nav-link {
+    font-weight: 600;
+}
+
+.mesa-card {
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 1rem;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.mesa-card:hover {
+    box-shadow: 0 12px 28px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.mesa-card .mesa-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(13, 110, 253, 0.08);
+    color: #0d6efd;
+}
+
+.mesa-icon--calendar {
+    background: rgba(13, 202, 240, 0.12);
+    color: #0dcaf0;
+}
+
+.mesa-icon--warning {
+    background: rgba(255, 193, 7, 0.16);
+    color: #d39e00;
+}
+
+.mesa-card--danger {
+    border-color: rgba(220, 53, 69, 0.35);
+    background: linear-gradient(180deg, #fff 0%, rgba(220, 53, 69, 0.06) 100%);
+}
+
+.mesa-card--success {
+    border-color: rgba(25, 135, 84, 0.3);
+    background: linear-gradient(180deg, #fff 0%, rgba(25, 135, 84, 0.05) 100%);
+}
+
+.mesa-card--warning {
+    border-color: rgba(255, 193, 7, 0.3);
+    background: linear-gradient(180deg, #fff 0%, rgba(255, 193, 7, 0.08) 100%);
+}
+
+.mesa-card--info {
+    border-color: rgba(13, 202, 240, 0.3);
+    background: linear-gradient(180deg, #fff 0%, rgba(13, 202, 240, 0.06) 100%);
+}
+
+.mesa-reservas .list-group-item {
+    border-radius: 0.5rem;
+}
+
 /* Scrollbar personalizado */
 ::-webkit-scrollbar {
     width: 10px;
@@ -525,6 +586,10 @@ body {
     background-size: 200px 100%;
 }
 
+.skeleton-card .placeholder {
+    background-color: #e9ecef;
+}
+
 /* Responsive mejoras */
 @media (max-width: 768px) {
     .card {
@@ -537,5 +602,36 @@ body {
 
     .modal-dialog {
         margin: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .app-hero {
+        padding: 0.75rem 0;
+    }
+
+    .app-hero__card {
+        width: 100%;
+    }
+
+    .panel-controls .btn-group.btn-group-sm {
+        width: 100%;
+    }
+
+    .panel-controls .btn-group.btn-group-sm .btn {
+        flex: 1;
+    }
+
+    .auto-refresh-pill {
+        width: 100%;
+    }
+
+    .filter-chip {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .calendar-popover {
+        display: none;
     }
 }

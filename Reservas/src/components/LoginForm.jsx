@@ -600,6 +600,10 @@ export default function LoginForm({ onLoginSuccess }) {
                   <div className="mt-3 text-center">
                     <small className="text-muted">
                       Sistema de Gestión de Reservas - Restaurante
+                      <span className="mx-2">•</span>
+                      <a href="mailto:soporte@reservas.local" className="text-decoration-none">Soporte</a>
+                      <span className="mx-2">•</span>
+                      <a href="#" className="text-decoration-none">Política de privacidad</a>
                     </small>
                   </div>
                 </Card.Body>

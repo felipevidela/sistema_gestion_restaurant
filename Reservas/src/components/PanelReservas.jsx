@@ -1018,6 +1018,12 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     const lastUpdatedText = lastUpdatedLabel
         ? `Actualizado a las ${lastUpdatedLabel}`
         : 'Aún sin actualización manual';
+    const puedeCrearReserva = rolActual === 'admin' || rolActual === 'cajero' || rolActual === 'mesero';
+    const tituloSeccion = viewMode === 'calendar'
+        ? 'Calendario de reservas'
+        : showAllReservations
+            ? 'Historial de reservas'
+            : 'Reservas del día';
 
     return (
         <div className="container py-4">
@@ -1648,9 +1654,28 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             {/* Tabla de reservas */}
             <div className="card border-0 shadow-sm">
                 <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                        <h2 className="h6 mb-0">Reservas del día</h2>
-                        <div className="d-flex align-items-center gap-2">
+                    <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-2">
+                        <div>
+                            <h2 className="h6 mb-0">{tituloSeccion}</h2>
+                            <small className="text-muted">
+                                {showAllReservations
+                                    ? 'Mostrando según los filtros aplicados'
+                                    : fechaLegible}
+                            </small>
+                        </div>
+                        <div className="d-flex align-items-center gap-2 flex-wrap">
+                            {puedeCrearReserva && (
+                                <button
+                                    type="button"
+                                    className="btn btn-primary btn-sm"
+                                    aria-label="Crear nueva reserva"
+                                    title="Crear nueva reserva"
+                                    onClick={() => setActiveTab('nueva-reserva')}
+                                >
+                                    <i className="bi bi-plus-circle me-1"></i>
+                                    Crear reserva
+                                </button>
+                            )}
                             {loading && (
                                 <div className="spinner-border spinner-border-sm text-primary" role="status">
                                     <span className="visually-hidden">Cargando...</span>
@@ -1683,276 +1708,297 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                         <CalendarioMensual
                             fechaSeleccionada={fecha}
                             onDiaClick={handleDiaClick}
+                            onCrearReserva={() => puedeCrearReserva && setActiveTab('nueva-reserva')}
                         />
                     ) : (
                         /* List View */
                         <>
-                            {(isMobileView || listLayout === 'cards') ? (
+                            {loading ? (
                                 <div className="row g-3">
-                                    {reservasPaginadas.map((reserva, index) => {
-                                        const numeroGlobal = (currentPage - 1) * itemsPerPage + index + 1;
-                                        const isLoading = loadingRows[reserva.id];
-                                        const isSelected = selectedReservations.includes(reserva.id);
-                                        const estadoClass = (reserva.estado || '').toLowerCase();
+                                    {Array.from({ length: 4 }).map((_, idx) => (
+                                        <div className="col-12 col-lg-6" key={idx}>
+                                            <div className="card p-3 skeleton-card">
+                                                <div className="placeholder-glow">
+                                                    <span className="placeholder col-4"></span>
+                                                </div>
+                                                <div className="placeholder-glow mt-2">
+                                                    <span className="placeholder col-8"></span>
+                                                </div>
+                                                <div className="placeholder-glow mt-3">
+                                                    <span className="placeholder col-12"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                (isMobileView || listLayout === 'cards') ? (
+                                    <div className="row g-3">
+                                        {reservasPaginadas.map((reserva, index) => {
+                                            const numeroGlobal = (currentPage - 1) * itemsPerPage + index + 1;
+                                            const isLoading = loadingRows[reserva.id];
+                                            const isSelected = selectedReservations.includes(reserva.id);
+                                            const estadoClass = (reserva.estado || '').toLowerCase();
 
-                                        return (
-                                            <div className="col-12 col-lg-6" key={reserva.id}>
-                                                <div className={`card reserva-card h-100 border-0 shadow-sm reserva-card--${estadoClass} ${isSelected ? 'reserva-card--selected' : ''}`}>
-                                                    <div className="card-body p-3">
-                                                        <div className="d-flex justify-content-between align-items-start">
-                                                            <div className="d-flex align-items-start gap-2">
-                                                                {(rolActual === "admin" || rolActual === "cajero") && (
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        className="form-check-input mt-1"
-                                                                        checked={isSelected}
-                                                                        onChange={() => handleSelectReservation(reserva.id)}
-                                                                    />
-                                                                )}
-                                                                <div>
-                                                                    <div className="small text-muted text-uppercase mb-1">
-                                                                        #{numeroGlobal} • {formatearFechaCorta(reserva.fecha)}
-                                                                    </div>
-                                                                    <h6 className="mb-0">{reserva.cliente}</h6>
-                                                                    {(reserva.cliente_email || reserva.cliente_telefono) && (
-                                                                        <small className="text-muted">
-                                                                            {reserva.cliente_email || reserva.cliente_telefono}
-                                                                        </small>
+                                            return (
+                                                <div className="col-12 col-lg-6" key={reserva.id}>
+                                                    <div className={`card reserva-card h-100 border-0 shadow-sm reserva-card--${estadoClass} ${isSelected ? 'reserva-card--selected' : ''}`}>
+                                                        <div className="card-body p-3">
+                                                            <div className="d-flex justify-content-between align-items-start">
+                                                                <div className="d-flex align-items-start gap-2">
+                                                                    {(rolActual === "admin" || rolActual === "cajero") && (
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            className="form-check-input mt-1"
+                                                                            checked={isSelected}
+                                                                            onChange={() => handleSelectReservation(reserva.id)}
+                                                                        />
                                                                     )}
+                                                                    <div>
+                                                                        <div className="small text-muted text-uppercase mb-1">
+                                                                            #{numeroGlobal} • {formatearFechaCorta(reserva.fecha)}
+                                                                        </div>
+                                                                        <h6 className="mb-0">{reserva.cliente}</h6>
+                                                                        {(reserva.cliente_email || reserva.cliente_telefono) && (
+                                                                            <small className="text-muted">
+                                                                                {reserva.cliente_email || reserva.cliente_telefono}
+                                                                            </small>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
+                                                                {renderEstadoBadge(reserva)}
                                                             </div>
-                                                            {renderEstadoBadge(reserva)}
-                                                        </div>
 
-                                                        <div className="reserva-card__timeline mt-3">
-                                                            <div className="timeline-point">
-                                                                <span className="timeline-dot timeline-dot--time">
-                                                                    <i className="bi bi-clock"></i>
-                                                                </span>
-                                                                <div>
-                                                                    <small className="text-muted d-block">Hora</small>
-                                                                    <div className="fw-semibold">{formatearHora(reserva.hora)} hrs</div>
+                                                            <div className="reserva-card__timeline mt-3">
+                                                                <div className="timeline-point">
+                                                                    <span className="timeline-dot timeline-dot--time">
+                                                                        <i className="bi bi-clock"></i>
+                                                                    </span>
+                                                                    <div>
+                                                                        <small className="text-muted d-block">Hora</small>
+                                                                        <div className="fw-semibold">{formatearHora(reserva.hora)} hrs</div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="timeline-point">
+                                                                    <span className="timeline-dot timeline-dot--table">
+                                                                        <i className="bi bi-table"></i>
+                                                                    </span>
+                                                                    <div>
+                                                                        <small className="text-muted d-block">Mesa</small>
+                                                                        <div className="fw-semibold">{reserva.mesa}</div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="timeline-point">
+                                                                    <span className="timeline-dot timeline-dot--people">
+                                                                        <i className="bi bi-people"></i>
+                                                                    </span>
+                                                                    <div>
+                                                                        <small className="text-muted d-block">Personas</small>
+                                                                        <div className="fw-semibold">{reserva.personas}</div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="timeline-point">
-                                                                <span className="timeline-dot timeline-dot--table">
-                                                                    <i className="bi bi-table"></i>
-                                                                </span>
-                                                                <div>
-                                                                    <small className="text-muted d-block">Mesa</small>
-                                                                    <div className="fw-semibold">{reserva.mesa}</div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="timeline-point">
-                                                                <span className="timeline-dot timeline-dot--people">
-                                                                    <i className="bi bi-people"></i>
-                                                                </span>
-                                                                <div>
-                                                                    <small className="text-muted d-block">Personas</small>
-                                                                    <div className="fw-semibold">{reserva.personas}</div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
 
-                                                        {reserva.notas && (
-                                                            <div className="alert alert-light py-2 px-3 mb-2 border-start border-primary small bg-opacity-50">
-                                                                <i className="bi bi-chat-left-text me-2"></i>
-                                                                {reserva.notas}
-                                                            </div>
-                                                        )}
-
-                                                        <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                                                            <div className="small text-muted">
-                                                                <i className="bi bi-calendar4-week me-1"></i>
-                                                                {formatearFechaCorta(reserva.fecha)} · Mesa {reserva.mesa}
-                                                            </div>
-                                                            {isLoading ? (
-                                                                <button className="btn btn-outline-primary btn-sm" disabled>
-                                                                    <span className="spinner-border spinner-border-sm me-1"></span>
-                                                                    Procesando...
-                                                                </button>
-                                                            ) : (
-                                                                renderAcciones(reserva)
+                                                            {reserva.notas && (
+                                                                <div className="alert alert-light py-2 px-3 mb-2 border-start border-primary small bg-opacity-50">
+                                                                    <i className="bi bi-chat-left-text me-2"></i>
+                                                                    {reserva.notas}
+                                                                </div>
                                                             )}
+
+                                                            <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                                                                <div className="small text-muted">
+                                                                    <i className="bi bi-calendar4-week me-1"></i>
+                                                                    {formatearFechaCorta(reserva.fecha)} · Mesa {reserva.mesa}
+                                                                </div>
+                                                                {isLoading ? (
+                                                                    <button className="btn btn-outline-primary btn-sm" disabled>
+                                                                        <span className="spinner-border spinner-border-sm me-1"></span>
+                                                                        Procesando...
+                                                                    </button>
+                                                                ) : (
+                                                                    renderAcciones(reserva)
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                /* Desktop table view */
-                                <div className="table-responsive d-none d-lg-block" style={{ overflowX: 'auto', overflowY: 'visible' }}>
-                                    <table className="table table-hover align-middle" style={{ marginBottom: 0 }}>
-                                        <thead>
-                                            <tr>
-                                                {(rolActual === "admin" || rolActual === "cajero") && (
-                                                    <th style={{ width: '40px' }}>
-                                                        <input
-                                                            type="checkbox"
-                                                            className="form-check-input"
-                                                            checked={reservasPaginadas.length > 0 && selectedReservations.length === reservasPaginadas.length}
-                                                            onChange={(e) => handleSelectAll(e.target.checked)}
-                                                            title="Seleccionar todas las reservas en esta página"
-                                                        />
-                                                    </th>
-                                                )}
-                                                <th>#</th>
-                                                <th
-                                                    role="button"
-                                                    onClick={() => handleSort('cliente')}
-                                                    className="user-select-none"
-                                                >
-                                                    Cliente
-                                                    {sortField === 'cliente' && (
-                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                                    )}
-                                                </th>
-                                                <th
-                                                    role="button"
-                                                    onClick={() => handleSort('mesa')}
-                                                    className="user-select-none"
-                                                >
-                                                    Mesa
-                                                    {sortField === 'mesa' && (
-                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                                    )}
-                                                </th>
-                                                <th
-                                                    role="button"
-                                                    onClick={() => handleSort('fecha')}
-                                                    className="user-select-none"
-                                                >
-                                                    Fecha
-                                                    {sortField === 'fecha' && (
-                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                                    )}
-                                                </th>
-                                                <th
-                                                    role="button"
-                                                    onClick={() => handleSort('hora')}
-                                                    className="user-select-none"
-                                                >
-                                                    Hora
-                                                    {sortField === 'hora' && (
-                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                                    )}
-                                                </th>
-                                                <th
-                                                    role="button"
-                                                    onClick={() => handleSort('personas')}
-                                                    className="user-select-none"
-                                                >
-                                                    Personas
-                                                    {sortField === 'personas' && (
-                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                                    )}
-                                                </th>
-                                                <th
-                                                    role="button"
-                                                    onClick={() => handleSort('estado')}
-                                                    className="user-select-none"
-                                                >
-                                                    Estado
-                                                    {sortField === 'estado' && (
-                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                                    )}
-                                                </th>
-                                                <th className="text-end">Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {reservasPaginadas.map((reserva, index) => {
-                                            const numeroGlobal = (currentPage - 1) * itemsPerPage + index + 1;
-                                            const isSelected = selectedReservations.includes(reserva.id);
-                                            return (
-                                                <tr
-                                                    key={reserva.id}
-                                                    className={isSelected ? 'table-active' : ''}
-                                                    style={{ position: 'relative', isolation: 'isolate' }}
-                                                >
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    /* Desktop table view */
+                                    <div className="table-responsive d-none d-lg-block" style={{ overflowX: 'auto', overflowY: 'visible' }}>
+                                        <table className="table table-hover align-middle" style={{ marginBottom: 0 }}>
+                                            <thead>
+                                                <tr>
                                                     {(rolActual === "admin" || rolActual === "cajero") && (
-                                                        <td>
+                                                        <th style={{ width: '40px' }}>
                                                             <input
                                                                 type="checkbox"
                                                                 className="form-check-input"
-                                                                checked={isSelected}
-                                                                onChange={() => handleSelectReservation(reserva.id)}
+                                                                checked={reservasPaginadas.length > 0 && selectedReservations.length === reservasPaginadas.length}
+                                                                onChange={(e) => handleSelectAll(e.target.checked)}
+                                                                title="Seleccionar todas las reservas en esta página"
                                                             />
-                                                        </td>
+                                                        </th>
                                                     )}
-                                                    <td>{numeroGlobal}</td>
-                                                    <td>{reserva.cliente}</td>
-                                                    <td>{reserva.mesa}</td>
-                                                    <td>{formatearFechaCorta(reserva.fecha)}</td>
-                                                    <td>{formatearHora(reserva.hora)} hrs</td>
-                                                    <td>{reserva.personas}</td>
-                                                    <td>
-                                                        {renderEstadoBadge(reserva)}
-                                                    </td>
-                                                    <td className="text-end">
-                                                        {renderAcciones(reserva)}
-                                                    </td>
+                                                    <th>#</th>
+                                                    <th
+                                                        role="button"
+                                                        onClick={() => handleSort('cliente')}
+                                                        className="user-select-none"
+                                                    >
+                                                        Cliente
+                                                        {sortField === 'cliente' && (
+                                                            <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                        )}
+                                                    </th>
+                                                    <th
+                                                        role="button"
+                                                        onClick={() => handleSort('mesa')}
+                                                        className="user-select-none"
+                                                    >
+                                                        Mesa
+                                                        {sortField === 'mesa' && (
+                                                            <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                        )}
+                                                    </th>
+                                                    <th
+                                                        role="button"
+                                                        onClick={() => handleSort('fecha')}
+                                                        className="user-select-none"
+                                                    >
+                                                        Fecha
+                                                        {sortField === 'fecha' && (
+                                                            <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                        )}
+                                                    </th>
+                                                    <th
+                                                        role="button"
+                                                        onClick={() => handleSort('hora')}
+                                                        className="user-select-none"
+                                                    >
+                                                        Hora
+                                                        {sortField === 'hora' && (
+                                                            <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                        )}
+                                                    </th>
+                                                    <th
+                                                        role="button"
+                                                        onClick={() => handleSort('personas')}
+                                                        className="user-select-none"
+                                                    >
+                                                        Personas
+                                                        {sortField === 'personas' && (
+                                                            <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                        )}
+                                                    </th>
+                                                    <th
+                                                        role="button"
+                                                        onClick={() => handleSort('estado')}
+                                                        className="user-select-none"
+                                                    >
+                                                        Estado
+                                                        {sortField === 'estado' && (
+                                                            <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                        )}
+                                                    </th>
+                                                    <th className="text-end">Acciones</th>
                                                 </tr>
-                                            );
-                                        })}
+                                            </thead>
+                                            <tbody>
+                                                {reservasPaginadas.map((reserva, index) => {
+                                                const numeroGlobal = (currentPage - 1) * itemsPerPage + index + 1;
+                                                const isSelected = selectedReservations.includes(reserva.id);
+                                                return (
+                                                    <tr
+                                                        key={reserva.id}
+                                                        className={isSelected ? 'table-active' : ''}
+                                                        style={{ position: 'relative', isolation: 'isolate' }}
+                                                    >
+                                                        {(rolActual === "admin" || rolActual === "cajero") && (
+                                                            <td>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="form-check-input"
+                                                                    checked={isSelected}
+                                                                    onChange={() => handleSelectReservation(reserva.id)}
+                                                                />
+                                                            </td>
+                                                        )}
+                                                        <td>{numeroGlobal}</td>
+                                                        <td>{reserva.cliente}</td>
+                                                        <td>{reserva.mesa}</td>
+                                                        <td>{formatearFechaCorta(reserva.fecha)}</td>
+                                                        <td>{formatearHora(reserva.hora)} hrs</td>
+                                                        <td>{reserva.personas}</td>
+                                                        <td>
+                                                            {renderEstadoBadge(reserva)}
+                                                        </td>
+                                                        <td className="text-end">
+                                                            {renderAcciones(reserva)}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
 
-                                            {reservasFiltradas.length === 0 && !loading && (
-                                                <tr>
-                                                    <td colSpan={(rolActual === "admin" || rolActual === "cajero") ? "9" : "8"} className="text-center text-muted py-4">
-                                                        No hay reservas para los filtros seleccionados.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
+                                                {reservasFiltradas.length === 0 && !loading && (
+                                                    <tr>
+                                                        <td colSpan={(rolActual === "admin" || rolActual === "cajero") ? "9" : "8"} className="text-center text-muted py-4">
+                                                            No hay reservas para los filtros seleccionados.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )
+                            )}
+
+                            {/* Empty state for mobile */}
+                            {isMobileView && reservasFiltradas.length === 0 && !loading && (
+                                <div className="text-center text-muted py-4">
+                                    <i className="bi bi-inbox display-4 d-block mb-2"></i>
+                                    <p>No hay reservas para los filtros seleccionados.</p>
                                 </div>
                             )}
 
-                    {/* Empty state for mobile */}
-                    {isMobileView && reservasFiltradas.length === 0 && !loading && (
-                        <div className="text-center text-muted py-4">
-                            <i className="bi bi-inbox display-4 d-block mb-2"></i>
-                            <p>No hay reservas para los filtros seleccionados.</p>
-                        </div>
-                    )}
-
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                        <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                            <div className="text-muted small">
-                                Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, reservasFiltradas.length)} de {reservasFiltradas.length} reservas
-                            </div>
-                            <nav aria-label="Paginación de reservas">
-                                <ul className="pagination pagination-sm mb-0">
-                                    {/* Page numbers */}
-                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                        let pageNum;
-                                        if (totalPages <= 5) {
-                                            pageNum = i + 1;
-                                        } else if (currentPage <= 3) {
-                                            pageNum = i + 1;
-                                        } else if (currentPage >= totalPages - 2) {
-                                            pageNum = totalPages - 4 + i;
-                                        } else {
-                                            pageNum = currentPage - 2 + i;
-                                        }
-                                        return (
-                                            <li key={pageNum} className={`page-item ${currentPage === pageNum ? 'active' : ''}`}>
-                                                <button
-                                                    className="page-link"
-                                                    onClick={() => setCurrentPage(pageNum)}
-                                                >
-                                                    {pageNum}
-                                                </button>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            </nav>
-                        </div>
-                    )}
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                                    <div className="text-muted small">
+                                        Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, reservasFiltradas.length)} de {reservasFiltradas.length} reservas
+                                    </div>
+                                    <nav aria-label="Paginación de reservas">
+                                        <ul className="pagination pagination-sm mb-0">
+                                            {/* Page numbers */}
+                                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                                let pageNum;
+                                                if (totalPages <= 5) {
+                                                    pageNum = i + 1;
+                                                } else if (currentPage <= 3) {
+                                                    pageNum = i + 1;
+                                                } else if (currentPage >= totalPages - 2) {
+                                                    pageNum = totalPages - 4 + i;
+                                                } else {
+                                                    pageNum = currentPage - 2 + i;
+                                                }
+                                                return (
+                                                    <li key={pageNum} className={`page-item ${currentPage === pageNum ? 'active' : ''}`}>
+                                                        <button
+                                                            className="page-link"
+                                                            onClick={() => setCurrentPage(pageNum)}
+                                                        >
+                                                            {pageNum}
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    </nav>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
