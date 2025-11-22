@@ -176,11 +176,17 @@ function App() {
 
   // Vista logueada (staff o cliente)
   const tabs = getTabs();
+  const todayLabel = new Date().toLocaleDateString('es-CL', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  });
+  const activeTabLabel = tabs.find(t => t.id === activeTab)?.label || 'Panel';
 
   return (
     <div className="bg-light min-vh-100">
       {/* Header */}
-      <Navbar bg="primary" variant="dark" className="shadow-sm">
+      <Navbar bg="primary" variant="dark" className="shadow-sm app-navbar">
         <Container fluid>
           <Navbar.Brand className="mb-0 h1">
             <i className="bi bi-calendar-check me-2"></i>
@@ -205,6 +211,40 @@ function App() {
           </div>
         </Container>
       </Navbar>
+
+      {/* Hero bar */}
+      <div className="app-hero">
+        <Container fluid>
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+            <div>
+              <div className="text-white-50 small text-uppercase mb-1">Hoy</div>
+              <h2 className="text-white fw-semibold mb-1">{todayLabel}</h2>
+              <div className="d-flex flex-wrap gap-2 align-items-center">
+                <Badge bg="light" text="primary" className="rounded-pill">
+                  {user?.rol_display}
+                </Badge>
+                <span className="text-white-50 small">
+                  Vista actual: <span className="text-white fw-semibold">{activeTabLabel}</span>
+                </span>
+              </div>
+            </div>
+            <div className="d-flex flex-wrap gap-2">
+              <div className="app-hero__card">
+                <div className="small text-white-50">Usuario</div>
+                <div className="text-white fw-semibold">{user?.username}</div>
+              </div>
+              <div className="app-hero__card">
+                <div className="small text-white-50">Pestañas habilitadas</div>
+                <div className="text-white fw-semibold">{tabs.length}</div>
+              </div>
+              <div className="app-hero__card">
+                <div className="small text-white-50">Sesión</div>
+                <div className="text-white fw-semibold">Activa</div>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </div>
 
       {/* Tabs Navigation */}
       <div className="bg-white border-bottom">

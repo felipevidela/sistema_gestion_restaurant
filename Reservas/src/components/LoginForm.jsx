@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner, InputGroup } from 'react-bootstrap';
 import { register } from '../services/reservasApi';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -236,400 +236,376 @@ export default function LoginForm({ onLoginSuccess }) {
   };
 
   return (
-    <Container>
+    <Container className="py-5">
       <Row className="justify-content-center align-items-center min-vh-100">
-        <Col md={6} lg={5}>
-          <Card className="shadow">
-            <Card.Body className="p-4">
-              <div className="text-center mb-4">
-                <h3 className="fw-bold text-primary">Sistema de Reservas</h3>
-                <p className="text-muted">
-                  {modo === 'login' ? 'Inicia sesión para continuar' : 'Crea tu cuenta'}
+        <Col lg={10}>
+          <Row className="g-4 align-items-stretch">
+            <Col lg={5}>
+              <div className="auth-hero h-100 rounded-4 shadow-sm p-4">
+                <div className="auth-hero__pill text-uppercase small">Plataforma</div>
+                <h3 className="text-white fw-bold mt-3">Gestiona tus reservas sin fricción</h3>
+                <p className="text-white-50 mb-4">
+                  Centraliza tus turnos, confirma asistentes y da una bienvenida más rápida a tus clientes.
                 </p>
+                <ul className="list-unstyled auth-checklist mb-4">
+                    <li><i className="bi bi-check-circle-fill me-2"></i>Confirmaciones en segundos</li>
+                    <li><i className="bi bi-check-circle-fill me-2"></i>Visión diaria y mensual</li>
+                    <li><i className="bi bi-check-circle-fill me-2"></i>Usuarios y roles listos</li>
+                </ul>
+                <div className="d-flex align-items-center gap-2 text-white-50 small">
+                  <i className="bi bi-shield-lock"></i> Datos protegidos y sesión segura
+                </div>
               </div>
-
-              {/* Mensajes de error y éxito */}
-              {error && (
-                <Alert variant="danger">
-                  <i className="bi bi-exclamation-triangle me-2"></i>
-                  {error.split('\n').map((line, i) => (
-                    <div key={i}>{line}</div>
-                  ))}
-                </Alert>
-              )}
-
-              {success && (
-                <Alert variant="success">
-                  <i className="bi bi-check-circle me-2"></i>
-                  {success}
-                </Alert>
-              )}
-
-              {/* FORMULARIO DE LOGIN */}
-              {modo === 'login' && (
-                <Form onSubmit={handleLoginSubmit}>
-                  <Form.Group className="mb-3">
-                    <Form.Label htmlFor="username">Email o Usuario</Form.Label>
-                    <Form.Control
-                      type="text"
-                      id="username"
-                      name="username"
-                      value={loginData.username}
-                      onChange={handleLoginChange}
-                      placeholder="tu@email.com o usuario"
-                      required
-                      autoFocus
-                    />
-                  </Form.Group>
-
-                  <Form.Group className="mb-3">
-                    <Form.Label htmlFor="password">Contraseña</Form.Label>
-                    <div style={{ position: 'relative' }}>
-                      <Form.Control
-                        type={showPassword ? "text" : "password"}
-                        id="password"
-                        name="password"
-                        value={loginData.password}
-                        onChange={handleLoginChange}
-                        required
-                        style={{ paddingRight: '70px' }}
-                      />
-                      <span
-                        onClick={() => setShowPassword(!showPassword)}
-                        style={{
-                          position: 'absolute',
-                          right: '40px',
-                          top: '10px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          color: '#6c757d',
-                          zIndex: 10
-                        }}
-                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                        role="button"
-                        tabIndex="-1"
-                      >
-                        {showPassword ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z"/>
-                            <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/>
-                            <path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12-.708.708z"/>
-                          </svg>
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-                            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
-                          </svg>
-                        )}
-                      </span>
+            </Col>
+            <Col lg={7}>
+              <Card className="shadow auth-card h-100 border-0">
+                <Card.Body className="p-4">
+                  <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                      <h3 className="fw-bold text-primary mb-0">Sistema de Reservas</h3>
+                      <small className="text-muted">
+                        {modo === 'login' ? 'Ingresa para gestionar tus reservas' : 'Crea tu cuenta y reserva en minutos'}
+                      </small>
                     </div>
-                  </Form.Group>
-
-                  <div className="d-grid mb-3">
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <Spinner animation="border" size="sm" className="me-2" />
-                          Iniciando sesión...
-                        </>
-                      ) : (
-                        'Iniciar Sesión'
-                      )}
-                    </Button>
+                    <div className="btn-group btn-group-sm" role="group">
+                      <Button
+                        type="button"
+                        variant={modo === 'login' ? 'primary' : 'outline-primary'}
+                        onClick={() => setModo('login')}
+                      >
+                        Ingresar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={modo === 'register' ? 'success' : 'outline-success'}
+                        onClick={() => setModo('register')}
+                      >
+                        Registrarse
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="text-center">
-                    <Button
-                      variant="link"
-                      className="text-decoration-none"
-                      onClick={toggleModo}
-                    >
-                      ¿No tienes cuenta? Regístrate aquí
-                    </Button>
-                  </div>
-                </Form>
-              )}
+                  {/* Mensajes de error y éxito */}
+                  {error && (
+                    <Alert variant="danger">
+                      <i className="bi bi-exclamation-triangle me-2"></i>
+                      {error.split('\n').map((line, i) => (
+                        <div key={i}>{line}</div>
+                      ))}
+                    </Alert>
+                  )}
 
-              {/* FORMULARIO DE REGISTRO */}
-              {modo === 'register' && (
-                <Form onSubmit={handleRegisterSubmit}>
-                  <Row>
-                    <Col md={6} className="mb-3">
-                      <Form.Group>
-                        <Form.Label htmlFor="nombre">
-                          Nombre <span className="text-danger">*</span>
-                        </Form.Label>
-                        <Form.Control
-                          type="text"
-                          id="nombre"
-                          name="nombre"
-                          value={registerData.nombre}
-                          onChange={handleRegisterChange}
-                          isInvalid={!!validationErrors.nombre}
-                          required
-                          autoFocus
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          {validationErrors.nombre}
-                        </Form.Control.Feedback>
+                  {success && (
+                    <Alert variant="success">
+                      <i className="bi bi-check-circle me-2"></i>
+                      {success}
+                    </Alert>
+                  )}
+
+                  {/* FORMULARIO DE LOGIN */}
+                  {modo === 'login' && (
+                    <Form onSubmit={handleLoginSubmit}>
+                      <Form.Group className="mb-3">
+                        <Form.Label htmlFor="username">Email o Usuario</Form.Label>
+                        <InputGroup>
+                          <InputGroup.Text><i className="bi bi-person"></i></InputGroup.Text>
+                          <Form.Control
+                            type="text"
+                            id="username"
+                            name="username"
+                            value={loginData.username}
+                            onChange={handleLoginChange}
+                            placeholder="tu@email.com o usuario"
+                            required
+                            autoFocus
+                          />
+                        </InputGroup>
                       </Form.Group>
-                    </Col>
 
-                    <Col md={6} className="mb-3">
-                      <Form.Group>
-                        <Form.Label htmlFor="apellido">
-                          Apellido <span className="text-danger">*</span>
-                        </Form.Label>
-                        <Form.Control
-                          type="text"
-                          id="apellido"
-                          name="apellido"
-                          value={registerData.apellido}
-                          onChange={handleRegisterChange}
-                          isInvalid={!!validationErrors.apellido}
-                          required
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          {validationErrors.apellido}
-                        </Form.Control.Feedback>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
-                  <Row>
-                    <Col md={6} className="mb-3">
-                      <Form.Group>
-                        <Form.Label htmlFor="telefono">
-                          Teléfono <span className="text-danger">*</span>
-                        </Form.Label>
-                        <Form.Control
-                          type="text"
-                          id="telefono"
-                          name="telefono"
-                          value={registerData.telefono}
-                          onChange={handleRegisterChange}
-                          placeholder="+56 9 1234 5678"
-                          isInvalid={!!validationErrors.telefono}
-                          required
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          {validationErrors.telefono}
-                        </Form.Control.Feedback>
-                      </Form.Group>
-                    </Col>
-
-                    <Col md={6} className="mb-3">
-                      <Form.Group>
-                        <Form.Label htmlFor="rut">
-                          RUT <span className="text-danger">*</span>
-                        </Form.Label>
-                        <Form.Control
-                          type="text"
-                          id="rut"
-                          name="rut"
-                          value={registerData.rut}
-                          onChange={handleRegisterChange}
-                          placeholder="12.345.678-9"
-                          isInvalid={!!validationErrors.rut}
-                          required
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          {validationErrors.rut}
-                        </Form.Control.Feedback>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
-                  <Row>
-                    <Col md={6} className="mb-3">
-                      <Form.Group>
-                        <Form.Label htmlFor="register-username">
-                          Usuario <span className="text-danger">*</span>
-                        </Form.Label>
-                        <Form.Control
-                          type="text"
-                          id="register-username"
-                          name="username"
-                          value={registerData.username}
-                          onChange={handleRegisterChange}
-                          isInvalid={!!validationErrors.username}
-                          required
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          {validationErrors.username}
-                        </Form.Control.Feedback>
-                      </Form.Group>
-                    </Col>
-
-                    <Col md={6} className="mb-3">
-                      <Form.Group>
-                        <Form.Label htmlFor="register-email">
-                          Email <span className="text-danger">*</span>
-                        </Form.Label>
-                        <Form.Control
-                          type="email"
-                          id="register-email"
-                          name="email"
-                          value={registerData.email}
-                          onChange={handleRegisterChange}
-                          isInvalid={!!validationErrors.email}
-                          required
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          {validationErrors.email}
-                        </Form.Control.Feedback>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
-                  <Row>
-                    <Col md={6} className="mb-3">
-                      <Form.Group>
-                        <Form.Label htmlFor="register-password">
-                          Contraseña <span className="text-danger">*</span>
-                        </Form.Label>
-                        <div style={{ position: 'relative' }}>
+                      <Form.Group className="mb-3">
+                        <Form.Label htmlFor="password">Contraseña</Form.Label>
+                        <InputGroup>
+                          <InputGroup.Text><i className="bi bi-lock"></i></InputGroup.Text>
                           <Form.Control
                             type={showPassword ? "text" : "password"}
-                            id="register-password"
+                            id="password"
                             name="password"
-                            value={registerData.password}
-                            onChange={handleRegisterChange}
-                            isInvalid={!!validationErrors.password}
+                            value={loginData.password}
+                            onChange={handleLoginChange}
                             required
-                            style={{ paddingRight: '70px' }}
                           />
-                          <span
+                          <Button
+                            variant="outline-secondary"
                             onClick={() => setShowPassword(!showPassword)}
-                            style={{
-                              position: 'absolute',
-                              right: '40px',
-                              top: '10px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              color: '#6c757d',
-                              zIndex: 10
-                            }}
-                            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                            role="button"
-                            tabIndex="-1"
+                            type="button"
                           >
-                            {showPassword ? (
-                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z"/>
-                                <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/>
-                                <path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12-.708.708z"/>
-                              </svg>
-                            ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-                                <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
-                              </svg>
-                            )}
-                          </span>
-                          <Form.Control.Feedback type="invalid">
-                            {validationErrors.password}
-                          </Form.Control.Feedback>
-                        </div>
-                        <Form.Text className="text-muted">Mínimo 8 caracteres</Form.Text>
+                            <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                          </Button>
+                        </InputGroup>
                       </Form.Group>
-                    </Col>
 
-                    <Col md={6} className="mb-3">
-                      <Form.Group>
-                        <Form.Label htmlFor="password_confirm">
-                          Confirmar Contraseña <span className="text-danger">*</span>
-                        </Form.Label>
-                        <div style={{ position: 'relative' }}>
-                          <Form.Control
-                            type={showPasswordConfirm ? "text" : "password"}
-                            id="password_confirm"
-                            name="password_confirm"
-                            value={registerData.password_confirm}
-                            onChange={handleRegisterChange}
-                            isInvalid={!!validationErrors.password_confirm}
-                            required
-                            style={{ paddingRight: '70px' }}
-                          />
-                          <span
-                            onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                            style={{
-                              position: 'absolute',
-                              right: '40px',
-                              top: '10px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              color: '#6c757d',
-                              zIndex: 10
-                            }}
-                            aria-label={showPasswordConfirm ? "Ocultar contraseña" : "Mostrar contraseña"}
-                            role="button"
-                            tabIndex="-1"
-                          >
-                            {showPasswordConfirm ? (
-                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z"/>
-                                <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z"/>
-                                <path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12-.708.708z"/>
-                              </svg>
-                            ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-                                <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
-                              </svg>
-                            )}
-                          </span>
-                          <Form.Control.Feedback type="invalid">
-                            {validationErrors.password_confirm}
-                          </Form.Control.Feedback>
-                        </div>
-                      </Form.Group>
-                    </Col>
-                  </Row>
+                      <div className="d-grid mb-3">
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          disabled={loading}
+                        >
+                          {loading ? (
+                            <>
+                              <Spinner animation="border" size="sm" className="me-2" />
+                              Iniciando sesión...
+                            </>
+                          ) : (
+                            'Iniciar Sesión'
+                          )}
+                        </Button>
+                      </div>
 
-                  <div className="d-grid mb-3">
-                    <Button
-                      type="submit"
-                      variant="success"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <Spinner animation="border" size="sm" className="me-2" />
-                          Registrando...
-                        </>
-                      ) : (
-                        'Crear Cuenta'
-                      )}
-                    </Button>
+                      <div className="text-center">
+                        <Button
+                          variant="link"
+                          className="text-decoration-none"
+                          onClick={toggleModo}
+                        >
+                          ¿No tienes cuenta? Regístrate aquí
+                        </Button>
+                      </div>
+                    </Form>
+                  )}
+
+                  {/* FORMULARIO DE REGISTRO */}
+                  {modo === 'register' && (
+                    <Form onSubmit={handleRegisterSubmit}>
+                      <Row>
+                        <Col md={6} className="mb-3">
+                          <Form.Group>
+                            <Form.Label htmlFor="nombre">
+                              Nombre <span className="text-danger">*</span>
+                            </Form.Label>
+                            <Form.Control
+                              type="text"
+                              id="nombre"
+                              name="nombre"
+                              value={registerData.nombre}
+                              onChange={handleRegisterChange}
+                              isInvalid={!!validationErrors.nombre}
+                              required
+                              autoFocus
+                            />
+                            <Form.Control.Feedback type="invalid">
+                              {validationErrors.nombre}
+                            </Form.Control.Feedback>
+                          </Form.Group>
+                        </Col>
+
+                        <Col md={6} className="mb-3">
+                          <Form.Group>
+                            <Form.Label htmlFor="apellido">
+                              Apellido <span className="text-danger">*</span>
+                            </Form.Label>
+                            <Form.Control
+                              type="text"
+                              id="apellido"
+                              name="apellido"
+                              value={registerData.apellido}
+                              onChange={handleRegisterChange}
+                              isInvalid={!!validationErrors.apellido}
+                              required
+                            />
+                            <Form.Control.Feedback type="invalid">
+                              {validationErrors.apellido}
+                            </Form.Control.Feedback>
+                          </Form.Group>
+                        </Col>
+                      </Row>
+
+                      <Row>
+                        <Col md={6} className="mb-3">
+                          <Form.Group>
+                            <Form.Label htmlFor="telefono">
+                              Teléfono <span className="text-danger">*</span>
+                            </Form.Label>
+                            <Form.Control
+                              type="text"
+                              id="telefono"
+                              name="telefono"
+                              value={registerData.telefono}
+                              onChange={handleRegisterChange}
+                              placeholder="+56 9 1234 5678"
+                              isInvalid={!!validationErrors.telefono}
+                              required
+                            />
+                            <Form.Control.Feedback type="invalid">
+                              {validationErrors.telefono}
+                            </Form.Control.Feedback>
+                          </Form.Group>
+                        </Col>
+
+                        <Col md={6} className="mb-3">
+                          <Form.Group>
+                            <Form.Label htmlFor="rut">
+                              RUT <span className="text-danger">*</span>
+                            </Form.Label>
+                            <Form.Control
+                              type="text"
+                              id="rut"
+                              name="rut"
+                              value={registerData.rut}
+                              onChange={handleRegisterChange}
+                              placeholder="12.345.678-9"
+                              isInvalid={!!validationErrors.rut}
+                              required
+                            />
+                            <Form.Control.Feedback type="invalid">
+                              {validationErrors.rut}
+                            </Form.Control.Feedback>
+                          </Form.Group>
+                        </Col>
+                      </Row>
+
+                      <Row>
+                        <Col md={6} className="mb-3">
+                          <Form.Group>
+                            <Form.Label htmlFor="register-username">
+                              Usuario <span className="text-danger">*</span>
+                            </Form.Label>
+                            <Form.Control
+                              type="text"
+                              id="register-username"
+                              name="username"
+                              value={registerData.username}
+                              onChange={handleRegisterChange}
+                              isInvalid={!!validationErrors.username}
+                              required
+                            />
+                            <Form.Control.Feedback type="invalid">
+                              {validationErrors.username}
+                            </Form.Control.Feedback>
+                          </Form.Group>
+                        </Col>
+
+                        <Col md={6} className="mb-3">
+                          <Form.Group>
+                            <Form.Label htmlFor="register-email">
+                              Email <span className="text-danger">*</span>
+                            </Form.Label>
+                            <Form.Control
+                              type="email"
+                              id="register-email"
+                              name="email"
+                              value={registerData.email}
+                              onChange={handleRegisterChange}
+                              isInvalid={!!validationErrors.email}
+                              required
+                            />
+                            <Form.Control.Feedback type="invalid">
+                              {validationErrors.email}
+                            </Form.Control.Feedback>
+                          </Form.Group>
+                        </Col>
+                      </Row>
+
+                      <Row>
+                        <Col md={6} className="mb-3">
+                          <Form.Group>
+                            <Form.Label htmlFor="register-password">
+                              Contraseña <span className="text-danger">*</span>
+                            </Form.Label>
+                            <InputGroup>
+                              <InputGroup.Text><i className="bi bi-shield-lock"></i></InputGroup.Text>
+                              <Form.Control
+                                type={showPassword ? "text" : "password"}
+                                id="register-password"
+                                name="password"
+                                value={registerData.password}
+                                onChange={handleRegisterChange}
+                                isInvalid={!!validationErrors.password}
+                                required
+                              />
+                              <Button
+                                variant="outline-secondary"
+                                onClick={() => setShowPassword(!showPassword)}
+                                type="button"
+                              >
+                                <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                              </Button>
+                              <Form.Control.Feedback type="invalid">
+                                {validationErrors.password}
+                              </Form.Control.Feedback>
+                            </InputGroup>
+                            <Form.Text className="text-muted">Mínimo 8 caracteres</Form.Text>
+                          </Form.Group>
+                        </Col>
+
+                        <Col md={6} className="mb-3">
+                          <Form.Group>
+                            <Form.Label htmlFor="password_confirm">
+                              Confirmar Contraseña <span className="text-danger">*</span>
+                            </Form.Label>
+                            <InputGroup>
+                              <InputGroup.Text><i className="bi bi-lock-fill"></i></InputGroup.Text>
+                              <Form.Control
+                                type={showPasswordConfirm ? "text" : "password"}
+                                id="password_confirm"
+                                name="password_confirm"
+                                value={registerData.password_confirm}
+                                onChange={handleRegisterChange}
+                                isInvalid={!!validationErrors.password_confirm}
+                                required
+                              />
+                              <Button
+                                variant="outline-secondary"
+                                onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                                type="button"
+                              >
+                                <i className={`bi ${showPasswordConfirm ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                              </Button>
+                              <Form.Control.Feedback type="invalid">
+                                {validationErrors.password_confirm}
+                              </Form.Control.Feedback>
+                            </InputGroup>
+                          </Form.Group>
+                        </Col>
+                      </Row>
+
+                      <div className="d-grid mb-3">
+                        <Button
+                          type="submit"
+                          variant="success"
+                          disabled={loading}
+                        >
+                          {loading ? (
+                            <>
+                              <Spinner animation="border" size="sm" className="me-2" />
+                              Registrando...
+                            </>
+                          ) : (
+                            'Crear Cuenta'
+                          )}
+                        </Button>
+                      </div>
+
+                      <div className="text-center">
+                        <Button
+                          variant="link"
+                          className="text-decoration-none"
+                          onClick={toggleModo}
+                        >
+                          ¿Ya tienes cuenta? Inicia sesión
+                        </Button>
+                      </div>
+                    </Form>
+                  )}
+
+                  <div className="mt-3 text-center">
+                    <small className="text-muted">
+                      Sistema de Gestión de Reservas - Restaurante
+                    </small>
                   </div>
-
-                  <div className="text-center">
-                    <Button
-                      variant="link"
-                      className="text-decoration-none"
-                      onClick={toggleModo}
-                    >
-                      ¿Ya tienes cuenta? Inicia sesión
-                    </Button>
-                  </div>
-                </Form>
-              )}
-
-              <div className="mt-3 text-center">
-                <small className="text-muted">
-                  Sistema de Gestión de Reservas - Restaurante
-                </small>
-              </div>
-            </Card.Body>
-          </Card>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
         </Col>
       </Row>
     </Container>

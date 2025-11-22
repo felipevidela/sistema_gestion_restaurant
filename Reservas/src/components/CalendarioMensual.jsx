@@ -188,6 +188,7 @@ export default function CalendarioMensual({ fechaSeleccionada, onDiaClick }) {
                         const totalReservas = reservasDelDia.filter(
                             r => r.estado === 'ACTIVA' || r.estado === 'PENDIENTE'
                         ).length;
+                        const dotCount = Math.min(3, Math.max(0, Math.ceil(totalReservas / 6)));
 
                         return (
                             <button
@@ -200,10 +201,18 @@ export default function CalendarioMensual({ fechaSeleccionada, onDiaClick }) {
                                 `}
                                 onClick={() => onDiaClick(dia.fechaStr)}
                                 disabled={dia.esOtroMes}
+                                title={!dia.esOtroMes && totalReservas > 0 ? `${totalReservas} reservas activas/pendientes` : undefined}
                             >
                                 <span className="day-number">{dia.fecha.getDate()}</span>
                                 {!dia.esOtroMes && totalReservas > 0 && (
                                     <span className="reservas-badge">{totalReservas}</span>
+                                )}
+                                {!dia.esOtroMes && dotCount > 0 && (
+                                    <div className="calendar-dots mt-1">
+                                        {Array.from({ length: dotCount }).map((_, dotIndex) => (
+                                            <span key={dotIndex} className="calendar-dot"></span>
+                                        ))}
+                                    </div>
                                 )}
                             </button>
                         );
@@ -348,6 +357,19 @@ export default function CalendarioMensual({ fechaSeleccionada, onDiaClick }) {
                     height: 24px;
                     border-radius: 4px;
                     border: 1px solid #dee2e6;
+                }
+
+                .calendar-dots {
+                    display: inline-flex;
+                    gap: 4px;
+                }
+
+                .calendar-dot {
+                    width: 8px;
+                    height: 8px;
+                    background: #0d6efd;
+                    border-radius: 999px;
+                    opacity: 0.75;
                 }
 
                 @media (max-width: 768px) {

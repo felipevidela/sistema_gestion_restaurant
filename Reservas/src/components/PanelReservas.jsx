@@ -43,6 +43,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     const initialFecha = savedFilters?.fecha !== undefined
         ? savedFilters.fecha
         : (showAllReservations ? '' : new Date().toISOString().slice(0, 10));
+    const initialAutoRefresh = !showAllReservations && initialFecha === new Date().toISOString().slice(0, 10);
     const [fecha, setFecha] = useState(initialFecha);
     const defaultFechaInicio = () => {
         const today = new Date();
@@ -74,7 +75,8 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
     const [itemsPerPage, setItemsPerPage] = useState(savedFilters?.itemsPerPage || 10);
 
     // Auto-refresh state (automático para el día actual)
-    const [autoRefresh, setAutoRefresh] = useState(false);
+    const [autoRefresh, setAutoRefresh] = useState(initialAutoRefresh);
+    const [autoRefreshManuallyToggled, setAutoRefreshManuallyToggled] = useState(false);
     const [refreshInterval] = useState(30); // seconds - fijo en 30 segundos
     const intervalRef = useRef(null);
 
@@ -89,6 +91,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
 
     // Mobile view state
     const [isMobileView, setIsMobileView] = useState(false);
+    const [listLayout, setListLayout] = useState('table'); // 'table' or 'cards'
 
     // Calendar view state
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
@@ -278,14 +281,22 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
 
     // Auto-activar refresh para el día actual
     useEffect(() => {
-        if (!showAllReservations) {
-            const hoy = new Date().toISOString().slice(0, 10);
-            const esDiaActual = fecha === hoy;
-            setAutoRefresh(esDiaActual);
-        } else {
+        if (showAllReservations) {
             setAutoRefresh(false);
+            setAutoRefreshManuallyToggled(false);
+            return;
         }
-    }, [fecha, showAllReservations]);
+
+        const hoy = new Date().toISOString().slice(0, 10);
+        const esDiaActual = fecha === hoy;
+
+        if (!esDiaActual) {
+            setAutoRefresh(false);
+            setAutoRefreshManuallyToggled(false);
+        } else if (!autoRefreshManuallyToggled) {
+            setAutoRefresh(true);
+        }
+    }, [fecha, showAllReservations, autoRefreshManuallyToggled]);
 
     // Auto-refresh effect
     useEffect(() => {
@@ -339,6 +350,12 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, [isBrowser]);
+
+    useEffect(() => {
+        if (isMobileView) {
+            setListLayout('cards');
+        }
+    }, [isMobileView]);
 
     // Filtro por estado y búsqueda avanzada (búsqueda por cliente ahora en backend)
     const reservasFiltradas = useMemo(() => {
@@ -430,6 +447,11 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
         setSortField(null);
         setSortDirection('asc');
         setCurrentPage(1);
+    };
+
+    const toggleAutoRefresh = () => {
+        setAutoRefresh(prev => !prev);
+        setAutoRefreshManuallyToggled(true);
     };
 
     const handleSearchAllHistoryChange = (checked) => {
@@ -957,6 +979,14 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
         },
     ]), [resumen]);
 
+    const estadoChips = [
+        { value: 'TODOS', label: 'Todos', icon: 'bi-hypnotize', tone: 'secondary' },
+        { value: 'ACTIVA', label: 'Activa', icon: 'bi-lightning-charge', tone: 'success' },
+        { value: 'PENDIENTE', label: 'Pendiente', icon: 'bi-hourglass-split', tone: 'warning' },
+        { value: 'CANCELADA', label: 'Cancelada', icon: 'bi-x-octagon', tone: 'danger' },
+        { value: 'COMPLETADA', label: 'Completada', icon: 'bi-check2-circle', tone: 'info' }
+    ];
+
     const searchScope = useMemo(() => {
         if (!isSearchingByName) return null;
         if (historialActivo) return 'en todo el historial';
@@ -1034,7 +1064,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             </div>
 
             {/* Filtros de fecha, estado y búsqueda */}
-            <div className="card border-0 shadow-sm mb-4 panel-controls">
+            <div className="card border-0 shadow-sm mb-4 panel-controls glass-panel">
                 <div className="card-body">
                     {/* Date Navigation and View Toggle */}
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 pb-3 border-bottom gap-3">
@@ -1085,25 +1115,78 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                             )}
                         </div>
 
-                        {/* View Mode Toggle */}
-                        <div className="btn-group btn-group-sm" role="group">
-                            <button
-                                type="button"
-                                className={`btn ${viewMode === 'list' ? 'btn-primary' : 'btn-outline-primary'}`}
-                                onClick={() => setViewMode('list')}
-                            >
-                                <i className="bi bi-list-ul me-1"></i>
-                                Lista
-                            </button>
-                            <button
-                                type="button"
-                                className={`btn ${viewMode === 'calendar' ? 'btn-primary' : 'btn-outline-primary'}`}
-                                onClick={() => setViewMode('calendar')}
-                            >
-                                <i className="bi bi-calendar3 me-1"></i>
-                                Calendario
-                            </button>
+                        <div className="d-flex flex-wrap align-items-center gap-2">
+                            <div className={`auto-refresh-pill ${autoRefresh ? 'active' : ''}`}>
+                                <div className="form-check form-switch form-check-reverse small m-0">
+                                    <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        id="auto-refresh-switch"
+                                        checked={autoRefresh}
+                                        onChange={toggleAutoRefresh}
+                                    />
+                                    <label className="form-check-label" htmlFor="auto-refresh-switch">
+                                        Auto-refresh {autoRefresh ? '(on)' : '(off)'}
+                                    </label>
+                                </div>
+                                <small className="text-muted d-block">{lastUpdatedText}</small>
+                            </div>
+
+                            {/* View Mode Toggle */}
+                            <div className="btn-group btn-group-sm" role="group">
+                                <button
+                                    type="button"
+                                    className={`btn ${viewMode === 'list' ? 'btn-primary' : 'btn-outline-primary'}`}
+                                    onClick={() => setViewMode('list')}
+                                >
+                                    <i className="bi bi-list-ul me-1"></i>
+                                    Lista
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`btn ${viewMode === 'calendar' ? 'btn-primary' : 'btn-outline-primary'}`}
+                                    onClick={() => setViewMode('calendar')}
+                                >
+                                    <i className="bi bi-calendar3 me-1"></i>
+                                    Calendario
+                                </button>
+                            </div>
+
+                            {viewMode === 'list' && !isMobileView && (
+                                <div className="btn-group btn-group-sm" role="group">
+                                    <button
+                                        type="button"
+                                        className={`btn ${listLayout === 'cards' ? 'btn-primary' : 'btn-outline-primary'}`}
+                                        onClick={() => setListLayout('cards')}
+                                    >
+                                        <i className="bi bi-grid-3x3-gap me-1"></i>
+                                        Tarjetas
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`btn ${listLayout === 'table' ? 'btn-primary' : 'btn-outline-primary'}`}
+                                        onClick={() => setListLayout('table')}
+                                    >
+                                        <i className="bi bi-table me-1"></i>
+                                        Tabla
+                                    </button>
+                                </div>
+                            )}
                         </div>
+                    </div>
+
+                    <div className="d-flex flex-wrap gap-2 mb-3">
+                        {estadoChips.map((chip) => (
+                            <button
+                                key={chip.value}
+                                type="button"
+                                className={`filter-chip ${estadoFiltro === chip.value ? 'filter-chip--active' : ''}`}
+                                onClick={() => setEstadoFiltro(chip.value)}
+                            >
+                                <i className={`bi ${chip.icon} me-1`}></i>
+                                {chip.label}
+                            </button>
+                        ))}
                     </div>
 
                     <div className="row g-3 mb-3">
@@ -1604,194 +1687,228 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                     ) : (
                         /* List View */
                         <>
-                            {/* Mobile card view */}
-                            {isMobileView ? (
-                        <div className="d-block d-lg-none">
-                            {reservasPaginadas.map((reserva, index) => {
-                                const numeroGlobal = (currentPage - 1) * itemsPerPage + index + 1;
-                                const isLoading = loadingRows[reserva.id];
-                                const isSelected = selectedReservations.includes(reserva.id);
-                                return (
-                                    <div key={reserva.id} className={`card mb-2 shadow-sm ${isSelected ? 'border-primary border-2' : ''}`}>
-                                        <div className="card-body p-3">
-                                            <div className="d-flex justify-content-between align-items-start mb-2">
-                                                <div className="d-flex align-items-start gap-2">
-                                                    {(rolActual === "admin" || rolActual === "cajero") && (
-                                                        <input
-                                                            type="checkbox"
-                                                            className="form-check-input mt-1"
-                                                            checked={isSelected}
-                                                            onChange={() => handleSelectReservation(reserva.id)}
-                                                        />
-                                                    )}
-                                                    <div>
-                                                        <h6 className="mb-0">{reserva.cliente}</h6>
-                                                        <small className="text-muted">#{numeroGlobal}</small>
+                            {(isMobileView || listLayout === 'cards') ? (
+                                <div className="row g-3">
+                                    {reservasPaginadas.map((reserva, index) => {
+                                        const numeroGlobal = (currentPage - 1) * itemsPerPage + index + 1;
+                                        const isLoading = loadingRows[reserva.id];
+                                        const isSelected = selectedReservations.includes(reserva.id);
+                                        const estadoClass = (reserva.estado || '').toLowerCase();
+
+                                        return (
+                                            <div className="col-12 col-lg-6" key={reserva.id}>
+                                                <div className={`card reserva-card h-100 border-0 shadow-sm reserva-card--${estadoClass} ${isSelected ? 'reserva-card--selected' : ''}`}>
+                                                    <div className="card-body p-3">
+                                                        <div className="d-flex justify-content-between align-items-start">
+                                                            <div className="d-flex align-items-start gap-2">
+                                                                {(rolActual === "admin" || rolActual === "cajero") && (
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="form-check-input mt-1"
+                                                                        checked={isSelected}
+                                                                        onChange={() => handleSelectReservation(reserva.id)}
+                                                                    />
+                                                                )}
+                                                                <div>
+                                                                    <div className="small text-muted text-uppercase mb-1">
+                                                                        #{numeroGlobal} • {formatearFechaCorta(reserva.fecha)}
+                                                                    </div>
+                                                                    <h6 className="mb-0">{reserva.cliente}</h6>
+                                                                    {(reserva.cliente_email || reserva.cliente_telefono) && (
+                                                                        <small className="text-muted">
+                                                                            {reserva.cliente_email || reserva.cliente_telefono}
+                                                                        </small>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            {renderEstadoBadge(reserva)}
+                                                        </div>
+
+                                                        <div className="reserva-card__timeline mt-3">
+                                                            <div className="timeline-point">
+                                                                <span className="timeline-dot timeline-dot--time">
+                                                                    <i className="bi bi-clock"></i>
+                                                                </span>
+                                                                <div>
+                                                                    <small className="text-muted d-block">Hora</small>
+                                                                    <div className="fw-semibold">{formatearHora(reserva.hora)} hrs</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="timeline-point">
+                                                                <span className="timeline-dot timeline-dot--table">
+                                                                    <i className="bi bi-table"></i>
+                                                                </span>
+                                                                <div>
+                                                                    <small className="text-muted d-block">Mesa</small>
+                                                                    <div className="fw-semibold">{reserva.mesa}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="timeline-point">
+                                                                <span className="timeline-dot timeline-dot--people">
+                                                                    <i className="bi bi-people"></i>
+                                                                </span>
+                                                                <div>
+                                                                    <small className="text-muted d-block">Personas</small>
+                                                                    <div className="fw-semibold">{reserva.personas}</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {reserva.notas && (
+                                                            <div className="alert alert-light py-2 px-3 mb-2 border-start border-primary small bg-opacity-50">
+                                                                <i className="bi bi-chat-left-text me-2"></i>
+                                                                {reserva.notas}
+                                                            </div>
+                                                        )}
+
+                                                        <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                                                            <div className="small text-muted">
+                                                                <i className="bi bi-calendar4-week me-1"></i>
+                                                                {formatearFechaCorta(reserva.fecha)} · Mesa {reserva.mesa}
+                                                            </div>
+                                                            {isLoading ? (
+                                                                <button className="btn btn-outline-primary btn-sm" disabled>
+                                                                    <span className="spinner-border spinner-border-sm me-1"></span>
+                                                                    Procesando...
+                                                                </button>
+                                                            ) : (
+                                                                renderAcciones(reserva)
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                {renderEstadoBadge(reserva)}
                                             </div>
-                                            <div className="row g-2 mb-2">
-                                                <div className="col-6">
-                                                    <small className="text-muted d-block">Fecha</small>
-                                                    <strong>{formatearFechaCorta(reserva.fecha)}</strong>
-                                                </div>
-                                                <div className="col-6">
-                                                    <small className="text-muted d-block">Mesa</small>
-                                                    <strong>{reserva.mesa}</strong>
-                                                </div>
-                                                <div className="col-6">
-                                                    <small className="text-muted d-block">Hora</small>
-                                                    <strong>{formatearHora(reserva.hora)} hrs</strong>
-                                                </div>
-                                                <div className="col-6">
-                                                    <small className="text-muted d-block">Personas</small>
-                                                    <strong>{reserva.personas}</strong>
-                                                </div>
-                                            </div>
-                                            <div className="d-flex justify-content-end">
-                                                {isLoading ? (
-                                                    <button className="btn btn-outline-primary btn-sm" disabled>
-                                                        <span className="spinner-border spinner-border-sm me-1"></span>
-                                                        Procesando...
-                                                    </button>
-                                                ) : (
-                                                    renderAcciones(reserva)
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                /* Desktop table view */
+                                <div className="table-responsive d-none d-lg-block" style={{ overflowX: 'auto', overflowY: 'visible' }}>
+                                    <table className="table table-hover align-middle" style={{ marginBottom: 0 }}>
+                                        <thead>
+                                            <tr>
+                                                {(rolActual === "admin" || rolActual === "cajero") && (
+                                                    <th style={{ width: '40px' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            className="form-check-input"
+                                                            checked={reservasPaginadas.length > 0 && selectedReservations.length === reservasPaginadas.length}
+                                                            onChange={(e) => handleSelectAll(e.target.checked)}
+                                                            title="Seleccionar todas las reservas en esta página"
+                                                        />
+                                                    </th>
                                                 )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        /* Desktop table view */
-                        <div className="table-responsive d-none d-lg-block" style={{ overflowX: 'auto', overflowY: 'visible' }}>
-                            <table className="table table-hover align-middle" style={{ marginBottom: 0 }}>
-                                <thead>
-                                    <tr>
-                                        {(rolActual === "admin" || rolActual === "cajero") && (
-                                            <th style={{ width: '40px' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    className="form-check-input"
-                                                    checked={reservasPaginadas.length > 0 && selectedReservations.length === reservasPaginadas.length}
-                                                    onChange={(e) => handleSelectAll(e.target.checked)}
-                                                    title="Seleccionar todas las reservas en esta página"
-                                                />
-                                            </th>
-                                        )}
-                                        <th>#</th>
-                                        <th
-                                            role="button"
-                                            onClick={() => handleSort('cliente')}
-                                            className="user-select-none"
-                                        >
-                                            Cliente
-                                            {sortField === 'cliente' && (
-                                                <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                            )}
-                                        </th>
-                                        <th
-                                            role="button"
-                                            onClick={() => handleSort('mesa')}
-                                            className="user-select-none"
-                                        >
-                                            Mesa
-                                            {sortField === 'mesa' && (
-                                                <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                            )}
-                                        </th>
-                                        <th
-                                            role="button"
-                                            onClick={() => handleSort('fecha')}
-                                            className="user-select-none"
-                                        >
-                                            Fecha
-                                            {sortField === 'fecha' && (
-                                                <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                            )}
-                                        </th>
-                                        <th
-                                            role="button"
-                                            onClick={() => handleSort('hora')}
-                                            className="user-select-none"
-                                        >
-                                            Hora
-                                            {sortField === 'hora' && (
-                                                <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                            )}
-                                        </th>
-                                        <th
-                                            role="button"
-                                            onClick={() => handleSort('personas')}
-                                            className="user-select-none"
-                                        >
-                                            Personas
-                                            {sortField === 'personas' && (
-                                                <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                            )}
-                                        </th>
-                                        <th
-                                            role="button"
-                                            onClick={() => handleSort('estado')}
-                                            className="user-select-none"
-                                        >
-                                            Estado
-                                            {sortField === 'estado' && (
-                                                <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                            )}
-                                        </th>
-                                        <th className="text-end">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {reservasPaginadas.map((reserva, index) => {
-                                    const numeroGlobal = (currentPage - 1) * itemsPerPage + index + 1;
-                                    const isSelected = selectedReservations.includes(reserva.id);
-                                    return (
-                                        <tr
-                                            key={reserva.id}
-                                            className={isSelected ? 'table-active' : ''}
-                                            style={{ position: 'relative', isolation: 'isolate' }}
-                                        >
-                                            {(rolActual === "admin" || rolActual === "cajero") && (
-                                                <td>
-                                                    <input
-                                                        type="checkbox"
-                                                        className="form-check-input"
-                                                        checked={isSelected}
-                                                        onChange={() => handleSelectReservation(reserva.id)}
-                                                    />
-                                                </td>
-                                            )}
-                                            <td>{numeroGlobal}</td>
-                                            <td>{reserva.cliente}</td>
-                                            <td>{reserva.mesa}</td>
-                                            <td>{formatearFechaCorta(reserva.fecha)}</td>
-                                            <td>{formatearHora(reserva.hora)} hrs</td>
-                                            <td>{reserva.personas}</td>
-                                            <td>
-                                                {renderEstadoBadge(reserva)}
-                                            </td>
-                                            <td className="text-end">
-                                                {renderAcciones(reserva)}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                                <th>#</th>
+                                                <th
+                                                    role="button"
+                                                    onClick={() => handleSort('cliente')}
+                                                    className="user-select-none"
+                                                >
+                                                    Cliente
+                                                    {sortField === 'cliente' && (
+                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                    )}
+                                                </th>
+                                                <th
+                                                    role="button"
+                                                    onClick={() => handleSort('mesa')}
+                                                    className="user-select-none"
+                                                >
+                                                    Mesa
+                                                    {sortField === 'mesa' && (
+                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                    )}
+                                                </th>
+                                                <th
+                                                    role="button"
+                                                    onClick={() => handleSort('fecha')}
+                                                    className="user-select-none"
+                                                >
+                                                    Fecha
+                                                    {sortField === 'fecha' && (
+                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                    )}
+                                                </th>
+                                                <th
+                                                    role="button"
+                                                    onClick={() => handleSort('hora')}
+                                                    className="user-select-none"
+                                                >
+                                                    Hora
+                                                    {sortField === 'hora' && (
+                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                    )}
+                                                </th>
+                                                <th
+                                                    role="button"
+                                                    onClick={() => handleSort('personas')}
+                                                    className="user-select-none"
+                                                >
+                                                    Personas
+                                                    {sortField === 'personas' && (
+                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                    )}
+                                                </th>
+                                                <th
+                                                    role="button"
+                                                    onClick={() => handleSort('estado')}
+                                                    className="user-select-none"
+                                                >
+                                                    Estado
+                                                    {sortField === 'estado' && (
+                                                        <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                                                    )}
+                                                </th>
+                                                <th className="text-end">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {reservasPaginadas.map((reserva, index) => {
+                                            const numeroGlobal = (currentPage - 1) * itemsPerPage + index + 1;
+                                            const isSelected = selectedReservations.includes(reserva.id);
+                                            return (
+                                                <tr
+                                                    key={reserva.id}
+                                                    className={isSelected ? 'table-active' : ''}
+                                                    style={{ position: 'relative', isolation: 'isolate' }}
+                                                >
+                                                    {(rolActual === "admin" || rolActual === "cajero") && (
+                                                        <td>
+                                                            <input
+                                                                type="checkbox"
+                                                                className="form-check-input"
+                                                                checked={isSelected}
+                                                                onChange={() => handleSelectReservation(reserva.id)}
+                                                            />
+                                                        </td>
+                                                    )}
+                                                    <td>{numeroGlobal}</td>
+                                                    <td>{reserva.cliente}</td>
+                                                    <td>{reserva.mesa}</td>
+                                                    <td>{formatearFechaCorta(reserva.fecha)}</td>
+                                                    <td>{formatearHora(reserva.hora)} hrs</td>
+                                                    <td>{reserva.personas}</td>
+                                                    <td>
+                                                        {renderEstadoBadge(reserva)}
+                                                    </td>
+                                                    <td className="text-end">
+                                                        {renderAcciones(reserva)}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
 
-                                    {reservasFiltradas.length === 0 && !loading && (
-                                        <tr>
-                                            <td colSpan={(rolActual === "admin" || rolActual === "cajero") ? "9" : "8"} className="text-center text-muted py-4">
-                                                No hay reservas para los filtros seleccionados.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                                            {reservasFiltradas.length === 0 && !loading && (
+                                                <tr>
+                                                    <td colSpan={(rolActual === "admin" || rolActual === "cajero") ? "9" : "8"} className="text-center text-muted py-4">
+                                                        No hay reservas para los filtros seleccionados.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
 
                     {/* Empty state for mobile */}
                     {isMobileView && reservasFiltradas.length === 0 && !loading && (
