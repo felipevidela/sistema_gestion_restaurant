@@ -1073,8 +1073,8 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             <div className="card border-0 shadow-sm mb-4 panel-controls glass-panel">
                 <div className="card-body">
                     {/* Date Navigation and View Toggle */}
-                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 pb-3 border-bottom gap-3">
-                        <div className="d-flex align-items-center gap-2 flex-wrap">
+                    <div className="d-flex flex-column flex-md-row flex-wrap justify-content-md-between align-items-start align-items-md-center mb-3 pb-3 border-bottom gap-3">
+                        <div className="d-flex align-items-center gap-2 flex-wrap w-100 w-md-auto">
                             {!showAllReservations ? (
                                 <>
                                     <button
@@ -1121,7 +1121,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                             )}
                         </div>
 
-                        <div className="d-flex flex-wrap align-items-center gap-2">
+                        <div className="d-flex flex-wrap align-items-center gap-2 w-100 w-md-auto justify-content-start justify-content-md-end">
                             <div className={`auto-refresh-pill ${autoRefresh ? 'active' : ''}`}>
                                 <div className="form-check form-switch form-check-reverse small m-0">
                                     <input
