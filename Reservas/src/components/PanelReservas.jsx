@@ -10,6 +10,7 @@ import Modal, { ConfirmModal } from "./ui/Modal";
 import { useToast } from "../contexts/ToastContext";
 import { formatErrorMessage } from "../utils/errorMessages";
 import CalendarioMensual from "./CalendarioMensual";
+import { Dropdown } from 'react-bootstrap';
 
 function PanelReservas({ user, onLogout, showAllReservations = false }) {
     // Usar el rol real del usuario autenticado
@@ -740,41 +741,29 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             }
 
             return (
-                <div className="dropdown">
-                    <button
-                        className="btn btn-outline-primary btn-sm dropdown-toggle"
-                        type="button"
-                        id={`dropdown-${reserva.id}`}
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false"
-                    >
+                <Dropdown align="end">
+                    <Dropdown.Toggle variant="outline-primary" size="sm" id={`dropdown-${reserva.id}`}>
                         <i className="bi bi-gear me-1"></i>
                         Acciones
-                    </button>
-                    <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`dropdown-${reserva.id}`}>
+                    </Dropdown.Toggle>
+
+                    <Dropdown.Menu>
                         {estadosDisponibles.map((estado) => (
-                            <li key={estado.value}>
-                                <button
-                                    className="dropdown-item"
-                                    onClick={() => handleCambiarEstado(reserva.id, estado.value)}
-                                >
-                                    <i className={`bi ${estado.icon} me-2 text-${estado.color}`}></i>
-                                    Cambiar a {estado.label}
-                                </button>
-                            </li>
-                        ))}
-                        <li><hr className="dropdown-divider" /></li>
-                        <li>
-                            <button
-                                className="dropdown-item"
-                                onClick={() => setDetalleModal({ isOpen: true, reserva })}
+                            <Dropdown.Item
+                                key={estado.value}
+                                onClick={() => handleCambiarEstado(reserva.id, estado.value)}
                             >
-                                <i className="bi bi-eye me-2"></i>
-                                Ver detalle
-                            </button>
-                        </li>
-                    </ul>
-                </div>
+                                <i className={`bi ${estado.icon} me-2 text-${estado.color}`}></i>
+                                Cambiar a {estado.label}
+                            </Dropdown.Item>
+                        ))}
+                        <Dropdown.Divider />
+                        <Dropdown.Item onClick={() => setDetalleModal({ isOpen: true, reserva })}>
+                            <i className="bi bi-eye me-2"></i>
+                            Ver detalle
+                        </Dropdown.Item>
+                    </Dropdown.Menu>
+                </Dropdown>
             );
         }
 
