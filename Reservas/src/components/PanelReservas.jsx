@@ -1666,8 +1666,8 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                         </div>
                     ) : (
                         /* Desktop table view */
-                        <div className="table-responsive d-none d-md-block">
-                            <table className="table table-hover align-middle">
+                        <div className="table-responsive d-none d-md-block" style={{ overflowX: 'auto', overflowY: 'visible' }}>
+                            <table className="table table-hover align-middle" style={{ marginBottom: 0 }}>
                                 <thead>
                                     <tr>
                                         {(rolActual === "admin" || rolActual === "cajero") && (
@@ -1750,7 +1750,11 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                     const numeroGlobal = (currentPage - 1) * itemsPerPage + index + 1;
                                     const isSelected = selectedReservations.includes(reserva.id);
                                     return (
-                                        <tr key={reserva.id} className={isSelected ? 'table-active' : ''}>
+                                        <tr
+                                            key={reserva.id}
+                                            className={isSelected ? 'table-active' : ''}
+                                            style={{ position: 'relative', isolation: 'isolate' }}
+                                        >
                                             {(rolActual === "admin" || rolActual === "cajero") && (
                                                 <td>
                                                     <input

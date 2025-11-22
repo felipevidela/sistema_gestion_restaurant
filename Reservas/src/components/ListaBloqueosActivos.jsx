@@ -15,7 +15,7 @@ export default function ListaBloqueosActivos() {
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, bloqueoId: null, isLoading: false });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [formData, setFormData] = useState({
-    mesa: '',
+    mesas: [],
     fecha_inicio: '',
     fecha_fin: '',
     hora_inicio: '',
@@ -25,6 +25,7 @@ export default function ListaBloqueosActivos() {
     notas: '',
     dia_completo: false
   });
+  const [creatingBloqueos, setCreatingBloqueos] = useState(false);
   const [formErrors, setFormErrors] = useState({});
 
   const categorias = [
@@ -112,7 +113,7 @@ export default function ListaBloqueosActivos() {
 
   const handleOpenCreateModal = () => {
     setFormData({
-      mesa: '',
+      mesas: [],
       fecha_inicio: '',
       fecha_fin: '',
       hora_inicio: '',
@@ -134,33 +135,108 @@ export default function ListaBloqueosActivos() {
     }));
   };
 
+  const handleMesaToggle = (mesaId) => {
+    setFormData(prev => ({
+      ...prev,
+      mesas: prev.mesas.includes(mesaId)
+        ? prev.mesas.filter(id => id !== mesaId)
+        : [...prev.mesas, mesaId]
+    }));
+  };
+
+  const handleSelectAllMesas = () => {
+    setFormData(prev => ({
+      ...prev,
+      mesas: prev.mesas.length === mesas.length ? [] : mesas.map(m => m.id)
+    }));
+  };
+
   const handleCrearBloqueo = async (e) => {
     e.preventDefault();
     setFormErrors({});
 
+    // Validación: al menos una mesa debe estar seleccionada
+    if (formData.mesas.length === 0) {
+      setFormErrors({ mesas: 'Debe seleccionar al menos una mesa' });
+      toast.error('Debe seleccionar al menos una mesa');
+      return;
+    }
+
+    setCreatingBloqueos(true);
+    const bloqueosCreados = [];
+
     try {
-      const bloqueoData = {
-        mesa: parseInt(formData.mesa),
-        fecha_inicio: formData.fecha_inicio,
-        fecha_fin: formData.fecha_fin,
-        motivo: formData.motivo,
-        categoria: formData.categoria,
-        notas: formData.notas
-      };
+      // Crear promesas para cada mesa
+      const promises = formData.mesas.map(async (mesaId) => {
+        const bloqueoData = {
+          mesa: parseInt(mesaId),
+          fecha_inicio: formData.fecha_inicio,
+          fecha_fin: formData.fecha_fin,
+          motivo: formData.motivo,
+          categoria: formData.categoria,
+          notas: formData.notas
+        };
 
-      // Solo agregar horas si no es día completo
-      if (!formData.dia_completo) {
-        bloqueoData.hora_inicio = formData.hora_inicio;
-        bloqueoData.hora_fin = formData.hora_fin;
+        // Solo agregar horas si no es día completo
+        if (!formData.dia_completo) {
+          bloqueoData.hora_inicio = formData.hora_inicio;
+          bloqueoData.hora_fin = formData.hora_fin;
+        }
+
+        return crearBloqueo(bloqueoData);
+      });
+
+      // Ejecutar todas las creaciones y capturar resultados
+      const results = await Promise.allSettled(promises);
+
+      // Separar éxitos y fallos
+      const exitosos = results.filter(r => r.status === 'fulfilled');
+      const fallidos = results.filter(r => r.status === 'rejected');
+
+      // Guardar IDs de bloqueos creados exitosamente
+      exitosos.forEach(result => {
+        if (result.value && result.value.id) {
+          bloqueosCreados.push(result.value.id);
+        }
+      });
+
+      // Si alguno falló, hacer rollback completo
+      if (fallidos.length > 0) {
+        // Rollback: eliminar todos los bloqueos creados exitosamente
+        if (bloqueosCreados.length > 0) {
+          await Promise.all(
+            bloqueosCreados.map(id => eliminarBloqueo(id).catch(err => {
+              console.error(`Error al eliminar bloqueo ${id} durante rollback:`, err);
+            }))
+          );
+        }
+
+        // Mostrar error
+        const primerError = fallidos[0].reason;
+        toast.error(`Error: No se pudieron crear los bloqueos. ${primerError.message || 'Error desconocido'}`);
+        console.error('Errores al crear bloqueos:', fallidos);
+      } else {
+        // Todos exitosos
+        const cantidadMesas = formData.mesas.length;
+        toast.success(`${cantidadMesas} mesa${cantidadMesas > 1 ? 's' : ''} bloqueada${cantidadMesas > 1 ? 's' : ''} exitosamente`);
+        setShowCreateModal(false);
+        await cargarBloqueos();
       }
-
-      await crearBloqueo(bloqueoData);
-      toast.success('Bloqueo creado exitosamente');
-      setShowCreateModal(false);
-      await cargarBloqueos();
     } catch (err) {
-      toast.error('Error al crear bloqueo: ' + err.message);
+      // Error inesperado
+      toast.error('Error inesperado al crear bloqueos: ' + err.message);
       console.error(err);
+
+      // Intentar rollback de bloqueos creados
+      if (bloqueosCreados.length > 0) {
+        await Promise.all(
+          bloqueosCreados.map(id => eliminarBloqueo(id).catch(err => {
+            console.error(`Error al eliminar bloqueo ${id} durante rollback:`, err);
+          }))
+        );
+      }
+    } finally {
+      setCreatingBloqueos(false);
     }
   };
 
@@ -350,22 +426,54 @@ export default function ListaBloqueosActivos() {
         <Modal.Body>
           <Form onSubmit={handleCrearBloqueo}>
             <Row>
-              <Col md={6} className="mb-3">
+              <Col md={12} className="mb-3">
                 <Form.Group>
-                  <Form.Label>Mesa <span className="text-danger">*</span></Form.Label>
-                  <Form.Select
-                    name="mesa"
-                    value={formData.mesa}
-                    onChange={handleFormChange}
-                    required
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <Form.Label className="mb-0">
+                      Mesas <span className="text-danger">*</span>
+                      <Badge bg="primary" className="ms-2">
+                        {formData.mesas.length} seleccionada(s)
+                      </Badge>
+                    </Form.Label>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={handleSelectAllMesas}
+                      className="text-decoration-none"
+                    >
+                      {formData.mesas.length === mesas.length ? 'Deseleccionar todas' : 'Seleccionar todas'}
+                    </Button>
+                  </div>
+                  <div
+                    className="border rounded p-3"
+                    style={{ maxHeight: '200px', overflowY: 'auto', backgroundColor: '#f8f9fa' }}
                   >
-                    <option value="">Seleccionar mesa...</option>
-                    {mesas.map(mesa => (
-                      <option key={mesa.id} value={mesa.id}>
-                        Mesa {mesa.numero} (Capacidad: {mesa.capacidad})
-                      </option>
-                    ))}
-                  </Form.Select>
+                    {mesas.length === 0 ? (
+                      <div className="text-center text-muted py-3">
+                        <i className="bi bi-inbox"></i>
+                        <p className="mb-0 small">No hay mesas disponibles</p>
+                      </div>
+                    ) : (
+                      <Row>
+                        {mesas.map(mesa => (
+                          <Col md={6} key={mesa.id} className="mb-2">
+                            <Form.Check
+                              type="checkbox"
+                              id={`mesa-${mesa.id}`}
+                              label={`Mesa ${mesa.numero} (Cap: ${mesa.capacidad})`}
+                              checked={formData.mesas.includes(mesa.id)}
+                              onChange={() => handleMesaToggle(mesa.id)}
+                            />
+                          </Col>
+                        ))}
+                      </Row>
+                    )}
+                  </div>
+                  {formErrors.mesas && (
+                    <Form.Text className="text-danger">
+                      {formErrors.mesas}
+                    </Form.Text>
+                  )}
                 </Form.Group>
               </Col>
 
@@ -486,12 +594,29 @@ export default function ListaBloqueosActivos() {
             </Row>
 
             <div className="d-flex justify-content-end gap-2 mt-3">
-              <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
+              <Button
+                variant="secondary"
+                onClick={() => setShowCreateModal(false)}
+                disabled={creatingBloqueos}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" variant="primary">
-                <i className="bi bi-check-circle me-1"></i>
-                Crear Bloqueo
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={creatingBloqueos || formData.mesas.length === 0}
+              >
+                {creatingBloqueos ? (
+                  <>
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Creando {formData.mesas.length} bloqueo{formData.mesas.length > 1 ? 's' : ''}...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-check-circle me-1"></i>
+                    Crear {formData.mesas.length > 0 ? `${formData.mesas.length} ` : ''}Bloqueo{formData.mesas.length > 1 ? 's' : ''}
+                  </>
+                )}
               </Button>
             </div>
           </Form>
