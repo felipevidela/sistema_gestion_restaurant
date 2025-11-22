@@ -8,7 +8,6 @@ import MisReservas from "./components/MisReservas";
 import MiPerfil from "./components/MiPerfil";
 import GestionMesas from "./components/GestionMesas";
 import GestionUsuarios from "./components/GestionUsuarios";
-import ListaBloqueosActivos from "./components/ListaBloqueosActivos";
 import ReservaPublica from "./components/ReservaPublica";
 import AccesoReservaInvitado from "./components/AccesoReservaInvitado";
 import ActivarCuenta from "./components/ActivarCuenta";
@@ -83,8 +82,7 @@ function App() {
       admin: [
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
         { id: 'gestion-usuarios', label: 'Gestión de Usuarios', icon: 'bi-people' },
-        { id: 'gestion-mesas', label: 'Gestión de Mesas', icon: 'bi-grid-3x3' },
-        { id: 'bloqueos-mesas', label: 'Bloqueos de Mesas', icon: 'bi-lock' }
+        { id: 'gestion-mesas', label: 'Gestión de Mesas', icon: 'bi-grid-3x3' }
       ]
     };
 
@@ -108,8 +106,6 @@ function App() {
         return <GestionMesas />;
       case 'gestion-usuarios':
         return <GestionUsuarios />;
-      case 'bloqueos-mesas':
-        return <ListaBloqueosActivos />;
       default:
         return <Alert variant="warning">Sección no encontrada</Alert>;
     }

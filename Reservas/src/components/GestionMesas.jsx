@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { getMesas, updateEstadoMesa, getReservas } from '../services/reservasApi';
+import { Tabs, Tab } from 'react-bootstrap';
+import { getMesas, updateEstadoMesa, getReservas, listarBloqueos } from '../services/reservasApi';
 import { handleError } from '../utils/errorHandler';
 import Modal from './ui/Modal';
+import ListaBloqueosActivos from './ListaBloqueosActivos';
 
 export default function GestionMesas() {
+  const [activeTab, setActiveTab] = useState('gestion');
   const [mesas, setMesas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -15,6 +18,7 @@ export default function GestionMesas() {
   const [fechaFiltro, setFechaFiltro] = useState(() => new Date().toISOString().slice(0, 10));
   const [horaFiltro, setHoraFiltro] = useState('');
   const [reservasPorFecha, setReservasPorFecha] = useState([]);
+  const [bloqueosPorFecha, setBloqueosPorFecha] = useState([]);
   const [mostrarDisponibilidad, setMostrarDisponibilidad] = useState(true);
 
   // Estado para modal de detalle de reserva
@@ -27,10 +31,11 @@ export default function GestionMesas() {
     return () => clearInterval(interval);
   }, []);
 
-  // Cargar reservas cuando cambia la fecha
+  // Cargar reservas y bloqueos cuando cambia la fecha
   useEffect(() => {
     if (mostrarDisponibilidad) {
       cargarReservasPorFecha();
+      cargarBloqueosPorFecha();
     }
   }, [fechaFiltro, mostrarDisponibilidad]);
 
@@ -58,6 +63,16 @@ export default function GestionMesas() {
     } catch (err) {
       console.error('Error al cargar reservas:', err);
       setReservasPorFecha([]);
+    }
+  };
+
+  const cargarBloqueosPorFecha = async () => {
+    try {
+      const bloqueos = await listarBloqueos({ activos_en_fecha: fechaFiltro });
+      setBloqueosPorFecha(Array.isArray(bloqueos) ? bloqueos : []);
+    } catch (err) {
+      console.error('Error al cargar bloqueos:', err);
+      setBloqueosPorFecha([]);
     }
   };
 
@@ -148,6 +163,31 @@ export default function GestionMesas() {
     return getReservasMesa(numeroMesa).length > 0;
   };
 
+  // Función para obtener bloqueos de una mesa en la fecha seleccionada
+  const getBloqueosMesa = (numeroMesa) => {
+    if (!mostrarDisponibilidad) return [];
+    return bloqueosPorFecha.filter(b => b.mesa_numero === numeroMesa);
+  };
+
+  // Función para verificar si una mesa tiene bloqueos en la fecha
+  const tieneBloqueos = (numeroMesa) => {
+    return getBloqueosMesa(numeroMesa).length > 0;
+  };
+
+  // Función para verificar si una mesa está bloqueada en una hora específica
+  const estaBloqueadaEnHora = (numeroMesa, hora) => {
+    const bloqueos = getBloqueosMesa(numeroMesa);
+    if (!hora || bloqueos.length === 0) return bloqueos.length > 0;
+
+    return bloqueos.some(bloqueo => {
+      // Si el bloqueo es de día completo, está bloqueada
+      if (!bloqueo.hora_inicio || !bloqueo.hora_fin) return true;
+
+      // Verificar si la hora está dentro del rango del bloqueo
+      return hora >= bloqueo.hora_inicio.substring(0, 5) && hora <= bloqueo.hora_fin.substring(0, 5);
+    });
+  };
+
   // Función para formatear hora a formato militar 24 horas (HH:MM)
   const formatearHora = (hora) => {
     if (!hora) return '';
@@ -188,24 +228,33 @@ export default function GestionMesas() {
     <div className="container-fluid">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0">Gestión de Mesas</h2>
-        <button
-          className="btn btn-outline-primary btn-sm"
-          onClick={cargarMesas}
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <span className="spinner-border spinner-border-sm me-1"></span>
-              Actualizando...
-            </>
-          ) : (
-            <>
-              <i className="bi bi-arrow-clockwise me-1"></i>
-              Actualizar
-            </>
-          )}
-        </button>
       </div>
+
+      <Tabs
+        activeKey={activeTab}
+        onSelect={(k) => setActiveTab(k)}
+        className="mb-4"
+      >
+        <Tab eventKey="gestion" title={<><i className="bi bi-grid-3x3 me-2"></i>Gestión de Mesas</>}>
+          <div className="d-flex justify-content-end mb-4">
+            <button
+              className="btn btn-outline-primary btn-sm"
+              onClick={cargarMesas}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-1"></span>
+                  Actualizando...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-arrow-clockwise me-1"></i>
+                  Actualizar
+                </>
+              )}
+            </button>
+          </div>
 
       {error && (
         <div className="alert alert-danger alert-dismissible fade show" role="alert">
@@ -351,7 +400,7 @@ export default function GestionMesas() {
 
       {/* Estadísticas Rápidas */}
       <div className="row mb-4">
-        <div className="col-md-3">
+        <div className={mostrarDisponibilidad && bloqueosPorFecha.length > 0 ? "col-md-3 col-lg-2" : "col-md-3"}>
           <div className="card border-success">
             <div className="card-body text-center">
               <h5 className="text-success">{mesas.filter(m => m.estado === 'disponible').length}</h5>
@@ -359,7 +408,7 @@ export default function GestionMesas() {
             </div>
           </div>
         </div>
-        <div className="col-md-3">
+        <div className={mostrarDisponibilidad && bloqueosPorFecha.length > 0 ? "col-md-3 col-lg-2" : "col-md-3"}>
           <div className="card border-warning">
             <div className="card-body text-center">
               <h5 className="text-warning">{mesas.filter(m => m.estado === 'reservada').length}</h5>
@@ -367,7 +416,7 @@ export default function GestionMesas() {
             </div>
           </div>
         </div>
-        <div className="col-md-3">
+        <div className={mostrarDisponibilidad && bloqueosPorFecha.length > 0 ? "col-md-3 col-lg-2" : "col-md-3"}>
           <div className="card border-danger">
             <div className="card-body text-center">
               <h5 className="text-danger">{mesas.filter(m => m.estado === 'ocupada').length}</h5>
@@ -375,7 +424,7 @@ export default function GestionMesas() {
             </div>
           </div>
         </div>
-        <div className="col-md-3">
+        <div className={mostrarDisponibilidad && bloqueosPorFecha.length > 0 ? "col-md-3 col-lg-2" : "col-md-3"}>
           <div className="card border-info">
             <div className="card-body text-center">
               <h5 className="text-info">{mesas.filter(m => m.estado === 'limpieza').length}</h5>
@@ -383,6 +432,25 @@ export default function GestionMesas() {
             </div>
           </div>
         </div>
+        {mostrarDisponibilidad && bloqueosPorFecha.length > 0 && (
+          <div className="col-md-12 col-lg-4">
+            <div className="card border-danger bg-danger bg-opacity-10">
+              <div className="card-body text-center">
+                <div className="d-flex align-items-center justify-content-center gap-2">
+                  <i className="bi bi-lock-fill text-danger fs-4"></i>
+                  <div>
+                    <h5 className="text-danger mb-0">
+                      {bloqueosPorFecha.length} {bloqueosPorFecha.length === 1 ? 'Mesa' : 'Mesas'}
+                    </h5>
+                    <small className="text-danger fw-bold">
+                      Bloqueada{bloqueosPorFecha.length > 1 ? 's' : ''} el {new Date(fechaFiltro + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Grid de Mesas */}
@@ -401,6 +469,12 @@ export default function GestionMesas() {
                     <i className={`bi ${getEstadoIcon(mesa.estado)} me-2`}></i>
                     Mesa {mesa.numero}
                   </h5>
+                  {mostrarDisponibilidad && tieneBloqueos(mesa.numero) && (
+                    <span className="badge bg-danger">
+                      <i className="bi bi-lock-fill me-1"></i>
+                      Bloqueada
+                    </span>
+                  )}
                 </div>
                 <div className="card-body">
                   <div className="mb-2">
@@ -419,6 +493,54 @@ export default function GestionMesas() {
                       </span>
                     )}
                   </div>
+
+                  {/* Mostrar bloqueos si está activo el modo de disponibilidad */}
+                  {mostrarDisponibilidad && (() => {
+                    const bloqueos = getBloqueosMesa(mesa.numero);
+                    const bloqueadaEnHora = horaFiltro ? estaBloqueadaEnHora(mesa.numero, horaFiltro) : bloqueos.length > 0;
+
+                    return bloqueos.length > 0 && bloqueadaEnHora ? (
+                      <div className="mb-3 border-top pt-2">
+                        <div className="alert alert-danger py-2 mb-2 small">
+                          <i className="bi bi-lock-fill me-2"></i>
+                          <strong>Mesa Bloqueada</strong>
+                        </div>
+                        <div className="list-group list-group-flush small">
+                          {bloqueos.map((bloqueo, idx) => (
+                            <div
+                              key={idx}
+                              className="list-group-item px-0 py-2 border-0 bg-light"
+                            >
+                              <div className="d-flex align-items-start justify-content-between">
+                                <div>
+                                  <i className="bi bi-calendar-x text-danger me-1"></i>
+                                  <strong className="text-danger">
+                                    {bloqueo.hora_inicio && bloqueo.hora_fin
+                                      ? `${formatearHora(bloqueo.hora_inicio)} - ${formatearHora(bloqueo.hora_fin)}`
+                                      : 'Día completo'
+                                    }
+                                  </strong>
+                                  <div className="text-muted mt-1" style={{ fontSize: '0.85em' }}>
+                                    <i className="bi bi-info-circle me-1"></i>
+                                    {bloqueo.motivo}
+                                  </div>
+                                  {bloqueo.fecha_inicio !== bloqueo.fecha_fin && (
+                                    <div className="text-muted mt-1" style={{ fontSize: '0.8em' }}>
+                                      <i className="bi bi-calendar-range me-1"></i>
+                                      Hasta {new Date(bloqueo.fecha_fin + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                    </div>
+                                  )}
+                                </div>
+                                <span className={`badge bg-danger`}>
+                                  {bloqueo.categoria_display}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
 
                   {/* Mostrar reservas si está activo el modo de disponibilidad */}
                   {mostrarDisponibilidad && (
@@ -533,30 +655,36 @@ export default function GestionMesas() {
         </div>
       )}
 
-      {/* Leyenda de Estados */}
-      <div className="card mt-4">
-        <div className="card-body">
-          <h6 className="card-title">Leyenda de Estados:</h6>
-          <div className="row">
-            <div className="col-md-3">
-              <span className="badge bg-success me-2">DISPONIBLE</span>
-              <small className="text-muted">Mesa lista para uso</small>
-            </div>
-            <div className="col-md-3">
-              <span className="badge bg-warning me-2">RESERVADA</span>
-              <small className="text-muted">Mesa con reserva confirmada</small>
-            </div>
-            <div className="col-md-3">
-              <span className="badge bg-danger me-2">OCUPADA</span>
-              <small className="text-muted">Mesa ocupada actualmente</small>
-            </div>
-            <div className="col-md-3">
-              <span className="badge bg-info me-2">EN LIMPIEZA</span>
-              <small className="text-muted">Mesa siendo limpiada</small>
+          {/* Leyenda de Estados */}
+          <div className="card mt-4">
+            <div className="card-body">
+              <h6 className="card-title">Leyenda de Estados:</h6>
+              <div className="row">
+                <div className="col-md-3">
+                  <span className="badge bg-success me-2">DISPONIBLE</span>
+                  <small className="text-muted">Mesa lista para uso</small>
+                </div>
+                <div className="col-md-3">
+                  <span className="badge bg-warning me-2">RESERVADA</span>
+                  <small className="text-muted">Mesa con reserva confirmada</small>
+                </div>
+                <div className="col-md-3">
+                  <span className="badge bg-danger me-2">OCUPADA</span>
+                  <small className="text-muted">Mesa ocupada actualmente</small>
+                </div>
+                <div className="col-md-3">
+                  <span className="badge bg-info me-2">EN LIMPIEZA</span>
+                  <small className="text-muted">Mesa siendo limpiada</small>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </Tab>
+
+        <Tab eventKey="bloqueos" title={<><i className="bi bi-lock me-2"></i>Bloqueos de Mesas</>}>
+          <ListaBloqueosActivos />
+        </Tab>
+      </Tabs>
 
       {/* Modal de detalle de reserva */}
       {detalleModal.reserva && (
