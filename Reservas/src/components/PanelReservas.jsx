@@ -1186,7 +1186,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
 
                     <div className="row g-3 mb-3">
                         {!showAllReservations ? (
-                            <div className="col-md-3">
+                            <div className="col-md-6 col-lg-3">
                                 <label
                                     htmlFor="filtro-fecha"
                                     className="form-label small"
@@ -1220,7 +1220,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                             </div>
                         ) : (
                             <>
-                                <div className="col-md-3">
+                                <div className="col-md-6 col-lg-2">
                                     <label
                                         htmlFor="filtro-fecha-inicio"
                                         className="form-label small"
@@ -1235,7 +1235,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                         onChange={(e) => setFechaInicio(e.target.value)}
                                     />
                                 </div>
-                                <div className="col-md-3">
+                                <div className="col-md-6 col-lg-2">
                                     <label
                                         htmlFor="filtro-fecha-fin"
                                         className="form-label small"
@@ -1254,7 +1254,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                             </>
                         )}
 
-                        <div className="col-md-3">
+                        <div className="col-md-6 col-lg-2">
                             <label
                                 htmlFor="filtro-estado"
                                 className="form-label small"
@@ -1275,7 +1275,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                             </select>
                         </div>
 
-                        <div className="col-md-3">
+                        <div className={`col-md-12 ${showAllReservations ? 'col-lg-4' : 'col-lg-5'}`}>
                             <label
                                 htmlFor="filtro-busqueda"
                                 className="form-label small"
@@ -1373,7 +1373,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                             )}
                         </div>
 
-                        <div className="col-md-3">
+                        <div className="col-md-6 col-lg-2">
                             <label
                                 htmlFor="items-per-page"
                                 className="form-label small"
