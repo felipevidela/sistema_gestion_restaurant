@@ -41,9 +41,6 @@ body {
 }
 
 .panel-controls {
-    position: sticky;
-    top: 72px;
-    z-index: 9;
     border-radius: 1rem;
     background: white;
 }
