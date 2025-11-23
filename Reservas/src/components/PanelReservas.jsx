@@ -2051,6 +2051,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                     <i className="bi bi-plus-circle-fill"></i>
                                 </div>
                                 <span className="timeline-step-label">Creada</span>
+                                <div className="timeline-connector"></div>
                             </div>
 
                             <div className={`timeline-step ${['ACTIVA', 'COMPLETADA'].includes(detalleModal.reserva.estado) ? 'completed' : detalleModal.reserva.estado === 'PENDIENTE' ? 'current' : ''}`}>
@@ -2058,6 +2059,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                     <i className="bi bi-check-circle-fill"></i>
                                 </div>
                                 <span className="timeline-step-label">Confirmada</span>
+                                <div className="timeline-connector"></div>
                             </div>
 
                             <div className={`timeline-step ${
