@@ -5,7 +5,7 @@ Sistema completo de gestión de reservas para restaurantes con backend Django RE
 
 ## Descripción del Proyecto
 
-Este sistema fue desarrollado como proyecto académico para la asignatura de Desarrollo de Aplicaciones Web. Implementa un sistema completo de gestión de reservas para restaurantes, utilizando tecnologías modernas y aplicando buenas prácticas de desarrollo de software.
+Este sistema fue desarrollado como proyecto académico para la asignatura de Ingeniería de Software. Implementa un sistema completo de gestión de reservas para restaurantes, utilizando tecnologías modernas y aplicando buenas prácticas de desarrollo de software.
 
 ## Características Principales
 
@@ -361,7 +361,7 @@ python manage.py poblar_datos
 ## Autores
 
 Proyecto Académico - INACAP Chile
-Asignatura: Desarrollo de Aplicaciones Web
+Asignatura: Ingeniería de Software
 
 ## Licencia
 
