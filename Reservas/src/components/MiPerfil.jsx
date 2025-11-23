@@ -14,8 +14,6 @@ export default function MiPerfil() {
   const [success, setSuccess] = useState('');
   const [editMode, setEditMode] = useState(false);
 
-  console.log('MiPerfil renderizado, editMode:', editMode);
-
   const user = getCurrentUser();
 
   const [formData, setFormData] = useState({
@@ -29,23 +27,11 @@ export default function MiPerfil() {
   const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
-    console.log('MiPerfil montado - cargando perfil');
     cargarPerfil();
-
-    return () => {
-      console.log('MiPerfil desmontado');
-    };
   }, []);
-
-  // Rastrear cambios en editMode
-  useEffect(() => {
-    console.log('🔄 editMode cambió a:', editMode);
-    console.trace('Stack trace del cambio de editMode');
-  }, [editMode]);
 
   const cargarPerfil = async () => {
     try {
-      console.log('cargarPerfil llamado');
       setError('');
       setSuccess('');
 
@@ -72,7 +58,6 @@ export default function MiPerfil() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    console.log(`Campo ${name} cambiado a: ${value}, editMode: ${editMode}`);
     let processedValue = value;
 
     // Formatear RUT y teléfono mientras se escribe
@@ -175,7 +160,6 @@ export default function MiPerfil() {
   };
 
   const handleCancelar = () => {
-    console.log('handleCancelar llamado');
     setEditMode(false);
     setError('');
     setSuccess('');
@@ -323,13 +307,7 @@ export default function MiPerfil() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('=== CLICK EN EDITAR PERFIL ===');
-                        console.log('editMode antes:', editMode);
                         setEditMode(true);
-                        console.log('setEditMode(true) ejecutado');
-                        setTimeout(() => {
-                          console.log('editMode después (100ms):', editMode);
-                        }, 100);
                       }}
                       type="button"
                     >
