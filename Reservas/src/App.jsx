@@ -77,10 +77,12 @@ function App() {
       ],
       cajero: [
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
-        { id: 'todas-reservas', label: 'Todas las Reservas', icon: 'bi-list-check' }
+        { id: 'todas-reservas', label: 'Todas las Reservas', icon: 'bi-list-check' },
+        { id: 'nueva-reserva', label: 'Nueva Reserva', icon: 'bi-plus-circle' }
       ],
       admin: [
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
+        { id: 'nueva-reserva', label: 'Nueva Reserva', icon: 'bi-plus-circle' },
         { id: 'gestion-usuarios', label: 'Gestión de Usuarios', icon: 'bi-people' },
         { id: 'gestion-mesas', label: 'Gestión de Mesas', icon: 'bi-grid-3x3' }
       ]
@@ -95,13 +97,21 @@ function App() {
       case 'mis-reservas':
         return <MisReservas />;
       case 'nueva-reserva':
-        return <FormularioReserva onReservaCreada={() => setActiveTab('mis-reservas')} />;
+        // Al crear reserva, redirigir según el rol
+        const onReservaCreada = () => {
+          if (user?.rol === 'cliente') {
+            setActiveTab('mis-reservas');
+          } else {
+            setActiveTab('reservas-dia');
+          }
+        };
+        return <FormularioReserva onReservaCreada={onReservaCreada} />;
       case 'mi-perfil':
         return <MiPerfil />;
       case 'reservas-dia':
-        return <PanelReservas user={user} onLogout={handleLogout} />;
+        return <PanelReservas user={user} onLogout={handleLogout} setActiveTab={setActiveTab} />;
       case 'todas-reservas':
-        return <PanelReservas user={user} onLogout={handleLogout} showAllReservations={true} />;
+        return <PanelReservas user={user} onLogout={handleLogout} showAllReservations={true} setActiveTab={setActiveTab} />;
       case 'gestion-mesas':
         return <GestionMesas />;
       case 'gestion-usuarios':

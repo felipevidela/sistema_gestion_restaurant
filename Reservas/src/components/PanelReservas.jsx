@@ -12,7 +12,7 @@ import { formatErrorMessage } from "../utils/errorMessages";
 import CalendarioMensual from "./CalendarioMensual";
 import { Dropdown } from 'react-bootstrap';
 
-function PanelReservas({ user, onLogout, showAllReservations = false }) {
+function PanelReservas({ user, onLogout, showAllReservations = false, setActiveTab }) {
     // Usar el rol real del usuario autenticado
     const rolActual = user?.rol || "cliente";
     const toast = useToast();
@@ -888,34 +888,31 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
             }
 
             return (
-                <div className="dropdown">
-                    <span
+                <Dropdown align="end">
+                    <Dropdown.Toggle
+                        as="span"
                         className={`estado-badge estado-${reserva.estado}`}
                         style={{ cursor: 'pointer' }}
-                        role="button"
                         id={`estado-dropdown-${reserva.id}`}
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false"
                         title="Click para cambiar estado"
                     >
                         {reserva.estado}
                         <i className="bi bi-chevron-down ms-1" style={{ fontSize: '0.75rem' }}></i>
-                    </span>
-                    <ul className="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby={`estado-dropdown-${reserva.id}`}>
-                        <li className="dropdown-header">Cambiar a:</li>
+                    </Dropdown.Toggle>
+
+                    <Dropdown.Menu className="shadow-sm">
+                        <Dropdown.Header>Cambiar a:</Dropdown.Header>
                         {estadosDisponibles.map((estado) => (
-                            <li key={estado.value}>
-                                <button
-                                    className="dropdown-item d-flex align-items-center"
-                                    onClick={() => handleCambiarEstado(reserva.id, estado.value)}
-                                >
-                                    <i className={`bi ${estado.icon} me-2 text-${estado.color}`}></i>
-                                    <span>{estado.label}</span>
-                                </button>
-                            </li>
+                            <Dropdown.Item
+                                key={estado.value}
+                                onClick={() => handleCambiarEstado(reserva.id, estado.value)}
+                            >
+                                <i className={`bi ${estado.icon} me-2 text-${estado.color}`}></i>
+                                <span>{estado.label}</span>
+                            </Dropdown.Item>
                         ))}
-                    </ul>
-                </div>
+                    </Dropdown.Menu>
+                </Dropdown>
             );
         }
 
@@ -1659,7 +1656,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                                     className="btn btn-primary btn-sm"
                                     aria-label="Crear nueva reserva"
                                     title="Crear nueva reserva"
-                                    onClick={() => setActiveTab('nueva-reserva')}
+                                    onClick={() => setActiveTab && setActiveTab('nueva-reserva')}
                                 >
                                     <i className="bi bi-plus-circle me-1"></i>
                                     Crear reserva
@@ -1697,7 +1694,7 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                         <CalendarioMensual
                             fechaSeleccionada={fecha}
                             onDiaClick={handleDiaClick}
-                            onCrearReserva={() => puedeCrearReserva && setActiveTab('nueva-reserva')}
+                            onCrearReserva={() => puedeCrearReserva && setActiveTab && setActiveTab('nueva-reserva')}
                         />
                     ) : (
                         /* List View */
