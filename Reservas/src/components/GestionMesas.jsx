@@ -775,32 +775,14 @@ export default function GestionMesas() {
         </Tab>
       </Tabs>
 
-      {/* Modal de detalle de reserva */}
       {detalleModal.reserva && (
         <Modal
           isOpen={detalleModal.isOpen}
           onClose={() => setDetalleModal({ isOpen: false, reserva: null })}
-          title={
-            <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 w-100">
-              <div>
-                <span className="fw-semibold d-block">Reserva #{detalleModal.reserva.id}</span>
-                <small className="text-muted">Detalle completo del cliente y su mesa</small>
-              </div>
-              <span className={`estado-chip estado-chip--${(detalleModal.reserva.estado || '').toLowerCase()}`}>
-                <i className={`bi ${{
-                  ACTIVA: 'bi-lightning-charge-fill',
-                  PENDIENTE: 'bi-clock-history',
-                  COMPLETADA: 'bi-check2-circle',
-                  CANCELADA: 'bi-x-octagon-fill'
-                }[detalleModal.reserva.estado] || 'bi-info-circle'} me-2`}></i>
-                {detalleModal.reserva.estado}
-              </span>
-            </div>
-          }
+          title={null}
           size="xl"
         >
           <div className="reserva-detalle-content">
-            {/* Header visual con resumen rápido */}
             <div className="reserva-header-summary mb-4 p-4 bg-light rounded-3">
               <div className="row g-3 text-center">
                 <div className="col-md-3">
@@ -840,7 +822,6 @@ export default function GestionMesas() {
             </div>
 
             <div className="row g-4">
-              {/* Información del Cliente - Card */}
               <div className="col-lg-6">
                 <div className="card h-100 border-0 shadow-sm">
                   <div className="card-header bg-primary bg-gradient text-white">
@@ -907,7 +888,6 @@ export default function GestionMesas() {
                 </div>
               </div>
 
-              {/* Detalles de la Reserva - Card */}
               <div className="col-lg-6">
                 <div className="card h-100 border-0 shadow-sm">
                   <div className="card-header bg-success bg-gradient text-white">
@@ -968,35 +948,89 @@ export default function GestionMesas() {
               </div>
             </div>
 
-            {/* Notas Especiales - Full Width Card */}
             {detalleModal.reserva.notas && (
-              <div className="mt-4">
-                <div className="card border-0 shadow-sm">
-                  <div className="card-header bg-warning bg-opacity-10 border-warning">
-                    <h6 className="mb-0 text-warning-emphasis">
-                      <i className="bi bi-chat-left-text-fill me-2"></i>
-                      Notas y Requerimientos Especiales del Cliente
-                    </h6>
-                  </div>
-                  <div className="card-body bg-warning bg-opacity-10">
-                    <div className="d-flex align-items-start">
-                      <i className="bi bi-quote text-warning-emphasis me-3 fs-3"></i>
-                      <p className="mb-0 fst-italic">{detalleModal.reserva.notas}</p>
-                    </div>
+              <div className="card border-0 shadow-sm mt-4">
+                <div className="card-header bg-warning bg-opacity-10 border-warning">
+                  <h6 className="mb-0 text-warning-emphasis">
+                    <i className="bi bi-chat-left-text-fill me-2"></i>
+                    Notas y Requerimientos Especiales
+                  </h6>
+                </div>
+                <div className="card-body bg-warning bg-opacity-10">
+                  <div className="d-flex align-items-start">
+                    <i className="bi bi-quote text-warning-emphasis me-3 fs-3"></i>
+                    <p className="mb-0 fst-italic">{detalleModal.reserva.notas}</p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Botón Cerrar */}
-            <div className="d-flex justify-content-end pt-4 mt-4 border-top">
+            <div className="d-flex justify-content-between align-items-center pt-4 mt-4 border-top">
               <button
-                className="btn btn-lg btn-outline-secondary"
+                className="btn btn-outline-secondary"
                 onClick={() => setDetalleModal({ isOpen: false, reserva: null })}
               >
                 <i className="bi bi-x-circle me-2"></i>
                 Cerrar
               </button>
+
+              <div className="d-flex gap-2">
+                {(rolActual === "cajero" || rolActual === "admin") && (
+                  <div className="dropdown">
+                    <button
+                      className="btn btn-outline-primary dropdown-toggle"
+                      type="button"
+                      data-bs-toggle="dropdown"
+                    >
+                      Cambiar Estado
+                    </button>
+                    <ul className="dropdown-menu dropdown-menu-end">
+                      {[
+                        { label: "ACTIVA", value: "activa", icon: "bi-check-circle", color: "success" },
+                        { label: "PENDIENTE", value: "pendiente", icon: "bi-clock", color: "warning" },
+                        { label: "COMPLETADA", value: "completada", icon: "bi-check-all", color: "info" },
+                        { label: "CANCELADA", value: "cancelada", icon: "bi-x-circle", color: "danger" }
+                      ]
+                        .filter(e => e.label !== detalleModal.reserva.estado)
+                        .map(estado => (
+                          <li key={estado.value}>
+                            <button
+                              className="dropdown-item d-flex align-items-center"
+                              onClick={() => {
+                                setDetalleModal({ isOpen: false, reserva: null });
+                                handleCambiarEstado(detalleModal.reserva.id, estado.value);
+                              }}
+                            >
+                              <i className={`bi ${estado.icon} me-2 text-${estado.color}`}></i>
+                              Cambiar a {estado.label}
+                            </button>
+                          </li>
+                        ))
+                      }
+                    </ul>
+                  </div>
+                )}
+
+                {(rolActual === "admin" || rolActual === "cajero") && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleAbrirModalEdicion(detalleModal.reserva)}
+                    disabled={loadingEdit}
+                  >
+                    {loadingEdit ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Cargando...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-pencil-square me-2"></i>
+                        Editar Reserva
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </Modal>

@@ -240,7 +240,7 @@ body {
 .reserva-detail-hero {
     background: linear-gradient(135deg, #0d6efd 0%, #6f42c1 100%);
     border-radius: 1rem;
-    padding: 1rem 1.25rem;
+    padding: 0.9rem 1rem;
     color: #fff;
     display: flex;
     justify-content: space-between;
@@ -315,12 +315,17 @@ body {
 .timeline-connector {
     flex: 1;
     height: 2px;
-    background: linear-gradient(90deg, rgba(13,110,253,0.4), rgba(111,66,193,0.4));
+    background: linear-gradient(90deg, rgba(13, 110, 253, 0.4), rgba(111, 66, 193, 0.4));
     border-radius: 999px;
 }
 
 .reserva-detalle-content .card {
     border-radius: 0.9rem;
+}
+
+.reserva-modal-wrapper {
+    max-width: 980px;
+    margin: 0 auto;
 }
 
 .pagination {
@@ -374,6 +379,7 @@ body {
         transform: translateX(100%);
         opacity: 0;
     }
+
     to {
         transform: translateX(0);
         opacity: 1;
@@ -399,14 +405,16 @@ body {
 }
 
 /* Form controls modernos */
-.form-control, .form-select {
+.form-control,
+.form-select {
     border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 0.65rem;
     padding: 0.65rem 1rem;
     transition: all 0.2s ease;
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
     border-color: var(--brand-primary);
     box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
 }
@@ -590,7 +598,7 @@ body {
 }
 
 .mesa-card:hover {
-    box-shadow: 0 12px 28px rgba(0,0,0,0.08);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
 }
 
@@ -663,6 +671,7 @@ body {
     0% {
         background-position: -200px 0;
     }
+
     100% {
         background-position: calc(200px + 100%) 0;
     }
@@ -687,6 +696,7 @@ body {
 
 /* Responsive mejoras */
 @media (max-width: 992px) and (min-width: 769px) {
+
     /* Tablets */
     .auto-refresh-pill {
         min-width: 140px;
