@@ -848,39 +848,43 @@ export default function GestionMesas() {
             {/* Información de contacto */}
             <div className="card compact-card mb-3">
               <div className="card-body">
-                <div className="section-title">
-                  <span className="icon-circle bg-primary-subtle text-primary">
-                    <i className="bi bi-person-badge-fill"></i>
-                  </span>
-                  <div>
-                    <p className="card-kicker text-uppercase mb-1">Contacto</p>
-                    <h6 className="mb-0">Información del Cliente</h6>
+                <div className="section-title mb-3">
+                  <div className="d-flex align-items-center gap-2 flex-grow-1">
+                    <span className="icon-circle bg-primary-subtle text-primary">
+                      <i className="bi bi-person-badge-fill"></i>
+                    </span>
+                    <div>
+                      <p className="card-kicker text-uppercase mb-1">Contacto</p>
+                      <h6 className="mb-0">Información del Cliente</h6>
+                    </div>
                   </div>
-                </div>
 
-                {/* Botones de contacto */}
-                {(detalleModal.reserva.cliente_telefono || detalleModal.reserva.cliente_email) && (
-                  <div className="contact-actions mb-3">
-                    {detalleModal.reserva.cliente_telefono && (
-                      <a
-                        href={`tel:${detalleModal.reserva.cliente_telefono}`}
-                        className="btn btn-outline-success"
-                      >
-                        <i className="bi bi-telephone-fill me-2"></i>
-                        Llamar
-                      </a>
-                    )}
-                    {detalleModal.reserva.cliente_email && (
-                      <a
-                        href={`mailto:${detalleModal.reserva.cliente_email}`}
-                        className="btn btn-outline-primary"
-                      >
-                        <i className="bi bi-envelope-fill me-2"></i>
-                        Email
-                      </a>
-                    )}
-                  </div>
-                )}
+                  {/* Botones de contacto inline */}
+                  {(detalleModal.reserva.cliente_telefono || detalleModal.reserva.cliente_email) && (
+                    <div className="d-flex gap-2">
+                      {detalleModal.reserva.cliente_telefono && (
+                        <a
+                          href={`tel:${detalleModal.reserva.cliente_telefono}`}
+                          className="btn btn-outline-success btn-sm"
+                          title="Llamar"
+                        >
+                          <i className="bi bi-telephone-fill"></i>
+                          <span className="d-none d-lg-inline ms-1">Llamar</span>
+                        </a>
+                      )}
+                      {detalleModal.reserva.cliente_email && (
+                        <a
+                          href={`mailto:${detalleModal.reserva.cliente_email}`}
+                          className="btn btn-outline-primary btn-sm"
+                          title="Enviar email"
+                        >
+                          <i className="bi bi-envelope-fill"></i>
+                          <span className="d-none d-lg-inline ms-1">Email</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Información visible de contacto */}
                 {detalleModal.reserva.cliente_telefono && (

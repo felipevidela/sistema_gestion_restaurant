@@ -415,10 +415,11 @@ body {
 .section-title {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
-    margin-bottom: 1.25rem;
     padding-bottom: 0.75rem;
     border-bottom: 2px solid rgba(0, 0, 0, 0.06);
+    flex-wrap: wrap;
 }
 
 .section-title h6 {
