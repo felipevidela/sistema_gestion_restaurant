@@ -9,7 +9,7 @@ Sistema completo de gestión de reservas para restaurantes con backend Django RE
 - 🔒 **Encriptación de datos sensibles**: RUT y teléfono cifrados
 - 📅 **Gestión de reservas** con validación de disponibilidad
 - 🪑 **Gestión de mesas** con estados
-- 🎨 **Interfaz moderna** con React y Bootstrap 5
+- 🎨 **Interfaz moderna y responsive** con React, Bootstrap 5 y diseño personalizado
 - 🔄 **API REST completa** con filtros y permisos
 - ♻️ **Soft delete**: Recuperación de reservas eliminadas
 - 📊 **Sistema de auditoría**: Registro de operaciones críticas
@@ -18,7 +18,7 @@ Sistema completo de gestión de reservas para restaurantes con backend Django RE
 
 ## Mejoras de Calidad Implementadas
 
-El sistema incluye **35 mejoras** que garantizan robustez, seguridad y buena experiencia de usuario:
+El sistema incluye **43 mejoras** que garantizan robustez, seguridad y buena experiencia de usuario:
 
 ### Backend (31 mejoras)
 
@@ -58,13 +58,23 @@ El sistema incluye **35 mejoras** que garantizan robustez, seguridad y buena exp
 - ✅ Ejemplos de filtros y ordenamiento
 - ✅ Especificación de permisos
 
-### Frontend (4 mejoras)
+### Frontend (12 mejoras)
 
 **Validación y UX:**
 - ✅ Revalidación de disponibilidad antes de confirmar
 - ✅ Validación de selección de mesa
 - ✅ Mensajes de error claros y consistentes
 - ✅ Transacciones atómicas (rollback en caso de error)
+
+**Diseño Moderno y UI:**
+- ✅ Modal de detalle de reserva rediseñado con hero degradado
+- ✅ Timeline visual de estados con iconos descriptivos
+- ✅ Sistema de diseño con variables CSS personalizadas
+- ✅ Botones de contacto optimizados inline
+- ✅ Layout responsive adaptativo para tablets y móviles
+- ✅ Componentes compactos y profesionales
+- ✅Fix de overlapping en controles de filtros
+- ✅ Efectos hover optimizados sin movimientos disruptivos
 
 ## Tecnologías Utilizadas
 
@@ -81,6 +91,8 @@ El sistema incluye **35 mejoras** que garantizan robustez, seguridad y buena exp
 - React 19.2.0
 - Vite 7.2.2
 - Bootstrap 5.3.3
+- Bootstrap Icons 1.11.x
+- Sistema de diseño personalizado con variables CSS
 
 ## Requisitos Previos
 
