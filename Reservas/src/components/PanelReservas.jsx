@@ -2017,194 +2017,152 @@ function PanelReservas({ user, onLogout, showAllReservations = false }) {
                     size="xl"
                 >
                     <div className="reserva-detalle-content">
-                        {/* Header visual con resumen rápido */}
-                        <div className="reserva-header-summary mb-4 p-4 bg-light rounded-3">
-                            <div className="row g-3 text-center">
-                                <div className="col-md-3">
-                                    <div className="summary-item">
-                                        <i className="bi bi-calendar3 fs-2 text-primary mb-2 d-block"></i>
-                                        <div className="small text-muted">Fecha</div>
-                                        <div className="fw-bold">
-                                            {new Date(detalleModal.reserva.fecha + 'T00:00:00').toLocaleDateString('es-ES', {
-                                                day: 'numeric',
-                                                month: 'short'
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="col-md-3">
-                                    <div className="summary-item">
-                                        <i className="bi bi-clock fs-2 text-primary mb-2 d-block"></i>
-                                        <div className="small text-muted">Horario</div>
-                                        <div className="fw-bold">{formatearHora(detalleModal.reserva.hora)}</div>
-                                    </div>
-                                </div>
-                                <div className="col-md-3">
-                                    <div className="summary-item">
-                                        <i className="bi bi-table fs-2 text-primary mb-2 d-block"></i>
-                                        <div className="small text-muted">Mesa</div>
-                                        <div className="fw-bold">{detalleModal.reserva.mesa}</div>
-                                    </div>
-                                </div>
-                                <div className="col-md-3">
-                                    <div className="summary-item">
-                                        <i className="bi bi-people fs-2 text-primary mb-2 d-block"></i>
-                                        <div className="small text-muted">Personas</div>
-                                        <div className="fw-bold">{detalleModal.reserva.personas}</div>
-                                    </div>
-                                </div>
+                        {/* Hero con degradado */}
+                        <div className="modal-hero-gradient">
+                            <h3 className="mb-0">{detalleModal.reserva.cliente}</h3>
+                            <div className="hero-badges">
+                                <span className="hero-badge">
+                                    <i className="bi bi-table"></i>
+                                    Mesa {detalleModal.reserva.mesa}
+                                </span>
+                                <span className="hero-badge">
+                                    <i className="bi bi-calendar3"></i>
+                                    {new Date(detalleModal.reserva.fecha + 'T00:00:00').toLocaleDateString('es-ES', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric'
+                                    })}
+                                </span>
+                                <span className="hero-badge">
+                                    <i className="bi bi-clock"></i>
+                                    {formatearHora(detalleModal.reserva.hora)} hrs
+                                </span>
+                                <span className="hero-badge">
+                                    <i className="bi bi-people-fill"></i>
+                                    {detalleModal.reserva.personas} {detalleModal.reserva.personas === 1 ? 'persona' : 'personas'}
+                                </span>
                             </div>
                         </div>
 
-                        <div className="row g-4">
-                            {/* Información del Cliente - Card */}
-                            <div className="col-lg-6">
-                                <div className="card h-100 border-0 shadow-sm">
-                                    <div className="card-header bg-primary bg-gradient text-white">
-                                        <h6 className="mb-0">
-                                            <i className="bi bi-person-circle me-2"></i>
-                                            Información del Cliente
-                                        </h6>
-                                    </div>
-                                    <div className="card-body">
-                                        <div className="info-item mb-3">
-                                            <div className="d-flex align-items-center mb-2">
-                                                <i className="bi bi-person-fill text-primary me-2 fs-5"></i>
-                                                <span className="small text-muted">Nombre completo</span>
-                                            </div>
-                                        <div className="ps-4 fw-semibold">{detalleModal.reserva.cliente}</div>
-                                        </div>
-
-                                        {detalleModal.reserva.cliente_telefono && (
-                                            <div className="info-item mb-3">
-                                                <div className="d-flex align-items-center mb-2">
-                                                    <i className="bi bi-telephone-fill text-success me-2 fs-5"></i>
-                                                    <span className="small text-muted">Teléfono</span>
-                                                </div>
-                                                <div className="ps-4">
-                                                    <a
-                                                        href={`tel:${detalleModal.reserva.cliente_telefono}`}
-                                                        className="text-decoration-none fw-semibold text-success d-inline-flex align-items-center text-break"
-                                                    >
-                                                        {detalleModal.reserva.cliente_telefono}
-                                                        <i className="bi bi-box-arrow-up-right ms-2 small"></i>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {detalleModal.reserva.cliente_email && (
-                                            <div className="info-item mb-3">
-                                                <div className="d-flex align-items-center mb-2">
-                                                    <i className="bi bi-envelope-fill text-info me-2 fs-5"></i>
-                                                    <span className="small text-muted">Email</span>
-                                                </div>
-                                                <div className="ps-4">
-                                                    <a
-                                                        href={`mailto:${detalleModal.reserva.cliente_email}`}
-                                                        className="text-decoration-none fw-semibold text-info d-inline-flex align-items-center text-break"
-                                                    >
-                                                        {detalleModal.reserva.cliente_email}
-                                                        <i className="bi bi-box-arrow-up-right ms-2 small"></i>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {detalleModal.reserva.cliente_rut && (
-                                            <div className="info-item">
-                                                <div className="d-flex align-items-center mb-2">
-                                                    <i className="bi bi-card-text text-secondary me-2 fs-5"></i>
-                                                    <span className="small text-muted">RUT</span>
-                                                </div>
-                                                <div className="ps-4 fw-semibold font-monospace">{detalleModal.reserva.cliente_rut}</div>
-                                            </div>
-                                        )}
-                                    </div>
+                        {/* Timeline de estados */}
+                        <div className="timeline-container">
+                            <div className={`timeline-step ${['ACTIVA', 'COMPLETADA', 'CANCELADA'].includes(detalleModal.reserva.estado) ? 'completed' : ''}`}>
+                                <div className="timeline-step-icon">
+                                    <i className="bi bi-plus-circle-fill"></i>
                                 </div>
+                                <span className="timeline-step-label">Creada</span>
                             </div>
 
-                            {/* Detalles de la Reserva - Card */}
-                            <div className="col-lg-6">
-                                <div className="card h-100 border-0 shadow-sm">
-                                    <div className="card-header bg-success bg-gradient text-white">
-                                        <h6 className="mb-0">
-                                            <i className="bi bi-calendar-check me-2"></i>
-                                            Detalles de la Reserva
-                                        </h6>
-                                    </div>
-                                    <div className="card-body">
-                                        <div className="info-item mb-3">
-                                            <div className="d-flex align-items-center mb-2">
-                                                <i className="bi bi-calendar3 text-primary me-2 fs-5"></i>
-                                                <span className="small text-muted">Fecha completa</span>
-                                            </div>
-                                            <div className="ps-4 fw-semibold">
-                                                {new Date(detalleModal.reserva.fecha + 'T00:00:00').toLocaleDateString('es-ES', {
-                                                    weekday: 'long',
-                                                    year: 'numeric',
-                                                    month: 'long',
-                                                    day: 'numeric'
-                                                })}
-                                            </div>
-                                        </div>
+                            <div className={`timeline-step ${['ACTIVA', 'COMPLETADA'].includes(detalleModal.reserva.estado) ? 'completed' : detalleModal.reserva.estado === 'PENDIENTE' ? 'current' : ''}`}>
+                                <div className="timeline-step-icon">
+                                    <i className="bi bi-check-circle-fill"></i>
+                                </div>
+                                <span className="timeline-step-label">Confirmada</span>
+                            </div>
 
-                                        <div className="info-item mb-3">
-                                            <div className="d-flex align-items-center mb-2">
-                                                <i className="bi bi-clock-fill text-warning me-2 fs-5"></i>
-                                                <span className="small text-muted">Horario de reserva</span>
-                                            </div>
-                                            <div className="ps-4">
-                                                <span className="badge bg-warning text-dark fs-6 px-3 py-2">
-                                                    {formatearHora(detalleModal.reserva.hora)} hrs
-                                                </span>
-                                            </div>
-                                        </div>
+                            <div className={`timeline-step ${
+                                detalleModal.reserva.estado === 'ACTIVA' ? 'current' :
+                                detalleModal.reserva.estado === 'COMPLETADA' ? 'completed' :
+                                detalleModal.reserva.estado === 'CANCELADA' ? 'current' : ''
+                            }`}>
+                                <div className="timeline-step-icon">
+                                    <i className={`bi ${
+                                        detalleModal.reserva.estado === 'COMPLETADA' ? 'bi-star-fill' :
+                                        detalleModal.reserva.estado === 'CANCELADA' ? 'bi-x-circle-fill' :
+                                        'bi-lightning-charge-fill'
+                                    }`}></i>
+                                </div>
+                                <span className="timeline-step-label">
+                                    {detalleModal.reserva.estado === 'CANCELADA' ? 'Cancelada' :
+                                     detalleModal.reserva.estado === 'COMPLETADA' ? 'Completada' : 'Activa'}
+                                </span>
+                            </div>
+                        </div>
 
-                                        <div className="info-item mb-3">
-                                            <div className="d-flex align-items-center mb-2">
-                                                <i className="bi bi-table text-info me-2 fs-5"></i>
-                                                <span className="small text-muted">Mesa asignada</span>
-                                            </div>
-                                            <div className="ps-4">
-                                                <span className="badge bg-info fs-6 px-3 py-2">{detalleModal.reserva.mesa}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="info-item">
-                                            <div className="d-flex align-items-center mb-2">
-                                                <i className="bi bi-people-fill text-success me-2 fs-5"></i>
-                                                <span className="small text-muted">Número de comensales</span>
-                                            </div>
-                                            <div className="ps-4 fw-semibold">
-                                                {detalleModal.reserva.personas} {detalleModal.reserva.personas === 1 ? 'persona' : 'personas'}
-                                            </div>
-                                        </div>
+                        {/* Información de contacto */}
+                        <div className="card compact-card mb-3">
+                            <div className="card-body">
+                                <div className="section-title">
+                                    <span className="icon-circle bg-primary-subtle text-primary">
+                                        <i className="bi bi-person-badge-fill"></i>
+                                    </span>
+                                    <div>
+                                        <p className="card-kicker text-uppercase mb-1">Contacto</p>
+                                        <h6 className="mb-0">Información del Cliente</h6>
                                     </div>
                                 </div>
+
+                                {/* Botones de contacto */}
+                                {(detalleModal.reserva.cliente_telefono || detalleModal.reserva.cliente_email) && (
+                                    <div className="contact-actions mb-3">
+                                        {detalleModal.reserva.cliente_telefono && (
+                                            <a
+                                                href={`tel:${detalleModal.reserva.cliente_telefono}`}
+                                                className="btn btn-outline-success"
+                                            >
+                                                <i className="bi bi-telephone-fill me-2"></i>
+                                                Llamar
+                                            </a>
+                                        )}
+                                        {detalleModal.reserva.cliente_email && (
+                                            <a
+                                                href={`mailto:${detalleModal.reserva.cliente_email}`}
+                                                className="btn btn-outline-primary"
+                                            >
+                                                <i className="bi bi-envelope-fill me-2"></i>
+                                                Email
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Información visible de contacto */}
+                                {detalleModal.reserva.cliente_telefono && (
+                                    <div className="info-row">
+                                        <span className="info-label">Teléfono</span>
+                                        <span className="info-value text-end">
+                                            <i className="bi bi-telephone me-1"></i>
+                                            {detalleModal.reserva.cliente_telefono}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {detalleModal.reserva.cliente_email && (
+                                    <div className="info-row">
+                                        <span className="info-label">Email</span>
+                                        <span className="info-value text-end text-break">
+                                            <i className="bi bi-envelope me-1"></i>
+                                            {detalleModal.reserva.cliente_email}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {detalleModal.reserva.cliente_rut && (
+                                    <div className="info-row mb-0">
+                                        <span className="info-label">RUT</span>
+                                        <span className="info-value">
+                                            <span className="badge-soft">{detalleModal.reserva.cliente_rut}</span>
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                         {/* Notas Especiales */}
                         {detalleModal.reserva.notas && (
-                            <div className="card border-0 shadow-sm mt-4">
-                                <div className="card-header bg-warning bg-opacity-10 border-warning">
-                                    <h6 className="mb-0 text-warning-emphasis">
-                                        <i className="bi bi-chat-left-text-fill me-2"></i>
-                                        Notas y Requerimientos Especiales
-                                    </h6>
-                                </div>
-                                <div className="card-body bg-warning bg-opacity-10">
-                                    <div className="d-flex align-items-start">
-                                        <i className="bi bi-quote text-warning-emphasis me-3 fs-3"></i>
-                                        <p className="mb-0 fst-italic">{detalleModal.reserva.notas}</p>
+                            <div className="note-card">
+                                <div className="d-flex align-items-start gap-3">
+                                    <i className="bi bi-chat-left-quote-fill fs-4"></i>
+                                    <div>
+                                        <p className="mb-1 fw-semibold text-warning-emphasis">Notas y Requerimientos</p>
+                                        <p className="mb-0 fst-italic text-body">{detalleModal.reserva.notas}</p>
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {/* Acciones */}
-                        <div className="d-flex justify-content-between align-items-center pt-4 mt-4 border-top">
+                        <div className="d-flex justify-content-between align-items-center pt-3 mt-3 border-top reserva-actions">
                             <button
                                 className="btn btn-outline-secondary"
                                 onClick={() => setDetalleModal({ isOpen: false, reserva: null })}

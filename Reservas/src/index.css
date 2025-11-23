@@ -328,6 +328,353 @@ body {
     margin: 0 auto;
 }
 
+/* ===================================
+   ESTILOS DEL MODAL DE DETALLE DE RESERVA
+   =================================== */
+
+/* Hero con degradado para el modal */
+.modal-hero-gradient {
+    background: var(--brand-hero);
+    border-radius: 0.9rem;
+    padding: 1.5rem;
+    color: #fff;
+    margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+}
+
+.modal-hero-gradient h3 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+
+.modal-hero-gradient .hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.modal-hero-gradient .hero-badge {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--chip-radius);
+    padding: 0.4rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    backdrop-filter: blur(10px);
+}
+
+/* Barra de metadata horizontal */
+.reserva-meta-bar {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.05) 0%, rgba(111, 66, 193, 0.05) 100%);
+    border-radius: 0.85rem;
+    border: 1px solid rgba(13, 110, 253, 0.1);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 140px;
+}
+
+.meta-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.meta-label {
+    font-size: 0.75rem;
+    color: var(--brand-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 0.15rem;
+}
+
+.meta-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1b1f24;
+}
+
+/* Títulos de sección */
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.06);
+}
+
+.section-title h6 {
+    font-weight: 700;
+    color: #1b1f24;
+}
+
+/* Cards compactos */
+.compact-card {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.2s ease;
+}
+
+.compact-card .card-body {
+    padding: 1.25rem;
+}
+
+.compact-card:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+.card-kicker {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--brand-muted);
+    letter-spacing: 0.08em;
+}
+
+/* Iconos circulares */
+.icon-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+/* Filas de información */
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    gap: 1rem;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-size: 0.85rem;
+    color: var(--brand-muted);
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1b1f24;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+/* Links de contacto */
+.contact-link {
+    color: var(--brand-primary) !important;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.contact-link:hover {
+    color: var(--brand-accent) !important;
+    text-decoration: underline;
+}
+
+/* Botones de contacto */
+.contact-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.contact-actions .btn {
+    flex: 1;
+    min-width: 120px;
+}
+
+.contact-info-text {
+    font-size: 0.8rem;
+    color: var(--brand-muted);
+    margin-top: 0.25rem;
+}
+
+/* Badges suaves (genérico) */
+.badge-soft {
+    background: rgba(13, 110, 253, 0.12);
+    color: var(--brand-primary);
+    border: none;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--chip-radius);
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+/* Card de notas */
+.note-card {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.08) 0%, rgba(255, 193, 7, 0.12) 100%);
+    border: 1px solid rgba(255, 193, 7, 0.25);
+    border-left: 4px solid #ffc107;
+    border-radius: 0.85rem;
+    padding: 1.25rem;
+}
+
+.note-card i {
+    color: #d39e00;
+}
+
+/* Sección de acciones */
+.reserva-actions {
+    border-top-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Timeline de estados (para el modal) */
+.timeline-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: rgba(13, 110, 253, 0.04);
+    border-radius: 0.85rem;
+    margin-bottom: 1.25rem;
+}
+
+.timeline-container .timeline-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    position: relative;
+}
+
+.timeline-container .timeline-step-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.08);
+    color: #adb5bd;
+    font-size: 0.95rem;
+    z-index: 2;
+    transition: all 0.3s ease;
+}
+
+.timeline-container .timeline-step.completed .timeline-step-icon {
+    background: var(--brand-primary);
+    color: #fff;
+}
+
+.timeline-container .timeline-step.current .timeline-step-icon {
+    background: #ffc107;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.2);
+}
+
+.timeline-container .timeline-step-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #adb5bd;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.timeline-container .timeline-step.completed .timeline-step-label,
+.timeline-container .timeline-step.current .timeline-step-label {
+    color: #1b1f24;
+}
+
+.timeline-container .timeline-connector {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: rgba(0, 0, 0, 0.1);
+    z-index: 1;
+}
+
+.timeline-container .timeline-step.completed .timeline-connector {
+    background: linear-gradient(90deg, var(--brand-primary), rgba(13, 110, 253, 0.3));
+}
+
+/* Responsive adjustments para el modal */
+@media (max-width: 768px) {
+    .modal-hero-gradient {
+        margin: -1rem -1rem 1rem -1rem;
+        padding: 1.25rem;
+    }
+
+    .modal-hero-gradient h3 {
+        font-size: 1.35rem;
+    }
+
+    .reserva-meta-bar {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .meta-item {
+        min-width: 100%;
+    }
+
+    .info-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+    }
+
+    .info-value {
+        width: 100%;
+    }
+
+    .contact-actions {
+        flex-direction: column;
+    }
+
+    .contact-actions .btn {
+        width: 100%;
+    }
+
+    .timeline-container {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .timeline-container .timeline-step-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 0.8rem;
+    }
+
+    .timeline-container .timeline-step-label {
+        font-size: 0.65rem;
+    }
+}
+
 .pagination {
     gap: 0.4rem;
 }
