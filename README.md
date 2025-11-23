@@ -1,97 +1,104 @@
 # Sistema de Gestión de Reservas - Restaurante
 
+**Proyecto Académico - INACAP Chile**
 Sistema completo de gestión de reservas para restaurantes con backend Django REST Framework y frontend React.
 
-## Características
+## Descripción del Proyecto
 
-- 🔐 **Sistema de autenticación** con tokens
-- 👥 **Control de roles**: Administrador, Cajero, Mesero y Cliente
-- 🔒 **Encriptación de datos sensibles**: RUT y teléfono cifrados
-- 📅 **Gestión de reservas** con validación de disponibilidad
-- 🪑 **Gestión de mesas** con estados
-- 🎨 **Interfaz moderna y responsive** con React, Bootstrap 5 y diseño personalizado
-- 🔄 **API REST completa** con filtros y permisos
-- ♻️ **Soft delete**: Recuperación de reservas eliminadas
-- 📊 **Sistema de auditoría**: Registro de operaciones críticas
-- ⚡ **Optimización de rendimiento**: Cache y paginación
-- 🛡️ **Seguridad mejorada**: Validaciones y protección CSRF
+Este sistema fue desarrollado como proyecto académico para la asignatura de Desarrollo de Aplicaciones Web. Implementa un sistema completo de gestión de reservas para restaurantes, utilizando tecnologías modernas y aplicando buenas prácticas de desarrollo de software.
 
-## Mejoras de Calidad Implementadas
+## Características Principales
 
-El sistema incluye **43 mejoras** que garantizan robustez, seguridad y buena experiencia de usuario:
+### Funcionalidades del Sistema
 
-### Backend (31 mejoras)
+- Sistema de autenticación basado en tokens
+- Control de acceso por roles (Administrador, Cajero, Mesero y Cliente)
+- Encriptación de datos sensibles (RUT y teléfono)
+- Gestión completa de reservas con validación de disponibilidad
+- Administración de mesas con control de estados
+- Interfaz responsive adaptada para dispositivos móviles
+- API REST completa con filtros y permisos
+- Sistema de soft delete para recuperación de datos
+- Sistema de auditoría y registro de operaciones
+- Optimización de rendimiento con cache y paginación
+- Validaciones exhaustivas y protección CSRF
+
+## Mejoras Implementadas
+
+El sistema incluye 43 mejoras que garantizan robustez, seguridad y buena experiencia de usuario.
+
+### Backend - 31 mejoras
 
 **Validaciones Críticas:**
-- ✅ Prevención de solapamiento de horarios en reservas
-- ✅ Validación de capacidad de mesas
-- ✅ Validación de horarios de negocio (12:00 - 23:00)
-- ✅ Validación de fechas y horas pasadas
-- ✅ Unicidad de RUT y email en perfiles
+- Prevención de solapamiento de horarios en reservas
+- Validación de capacidad de mesas
+- Validación de horarios de negocio (12:00 - 23:00)
+- Validación de fechas y horas pasadas
+- Unicidad de RUT y email en perfiles
 
 **Seguridad:**
-- ✅ Encriptación de datos sensibles (RUT, teléfono)
-- ✅ Validación de SECRET_KEY en producción
-- ✅ Configuración CSRF completa
-- ✅ Límite de caracteres en campos de texto
-- ✅ Constraints a nivel de base de datos
+- Encriptación de datos sensibles (RUT, teléfono) usando Fernet (AES-128)
+- Validación de SECRET_KEY en producción
+- Configuración CSRF completa
+- Límite de caracteres en campos de texto
+- Constraints a nivel de base de datos
 
 **Rendimiento:**
-- ✅ Paginación de resultados (50 por página)
-- ✅ Índices compuestos en base de datos
-- ✅ Sistema de cache (5 minutos)
-- ✅ Optimización de consultas
+- Paginación de resultados (50 por página)
+- Índices compuestos en base de datos
+- Sistema de cache (5 minutos)
+- Optimización de consultas
 
 **Auditoría y Logs:**
-- ✅ Sistema de logging con archivos rotativos
-- ✅ Registro de operaciones críticas
-- ✅ Logs separados: general y auditoría
-- ✅ Logs de creación y cambio de estado
+- Sistema de logging con archivos rotativos
+- Registro de operaciones críticas
+- Logs separados: general y auditoría
+- Logs de creación y cambio de estado
 
 **Recuperación de Datos:**
-- ✅ Soft delete en reservas
-- ✅ Métodos de restauración
-- ✅ Historial de eliminaciones
+- Soft delete en reservas
+- Métodos de restauración
+- Historial de eliminaciones
 
 **Documentación:**
-- ✅ Documentación completa de endpoints
-- ✅ Ejemplos de filtros y ordenamiento
-- ✅ Especificación de permisos
+- Documentación completa de endpoints
+- Ejemplos de filtros y ordenamiento
+- Especificación de permisos
 
-### Frontend (12 mejoras)
+### Frontend - 12 mejoras
 
 **Validación y UX:**
-- ✅ Revalidación de disponibilidad antes de confirmar
-- ✅ Validación de selección de mesa
-- ✅ Mensajes de error claros y consistentes
-- ✅ Transacciones atómicas (rollback en caso de error)
+- Revalidación de disponibilidad antes de confirmar
+- Validación de selección de mesa
+- Mensajes de error claros y consistentes
+- Transacciones atómicas con rollback en caso de error
 
-**Diseño Moderno y UI:**
-- ✅ Modal de detalle de reserva rediseñado con hero degradado
-- ✅ Timeline visual de estados con iconos descriptivos
-- ✅ Sistema de diseño con variables CSS personalizadas
-- ✅ Botones de contacto optimizados inline
-- ✅ Layout responsive adaptativo para tablets y móviles
-- ✅ Componentes compactos y profesionales
-- ✅Fix de overlapping en controles de filtros
-- ✅ Efectos hover optimizados sin movimientos disruptivos
+**Diseño y UI:**
+- Modal de detalle de reserva con diseño moderno
+- Timeline visual de estados con iconos descriptivos
+- Sistema de diseño con variables CSS personalizadas
+- Botones de contacto optimizados
+- Layout responsive para tablets y móviles
+- Componentes compactos y profesionales
+- Corrección de overlapping en controles de filtros
+- Efectos hover optimizados
 
 ## Tecnologías Utilizadas
 
 ### Backend
-- Django 5.2.7
-- Django REST Framework 3.16.1
-- PostgreSQL
-- django-encrypted-model-fields 0.6.5 (encriptación Fernet) ✅
-- django-cors-headers (CORS para React)
-- django-filter (filtros avanzados)
-- cryptography 46.0.3 (algoritmo de encriptación)
+- **Django** 5.2.7
+- **Django REST Framework** 3.16.1
+- **PostgreSQL** - Base de datos relacional
+- **django-encrypted-model-fields** 0.6.5 - Encriptación Fernet
+- **django-cors-headers** - CORS para React
+- **django-filter** - Filtros avanzados
+- **cryptography** 46.0.3 - Algoritmo de encriptación
 
 ### Frontend
-- React 19.2.0
-- Vite 7.2.2
-- Bootstrap 5.3.3
-- Bootstrap Icons 1.11.x
+- **React** 19.2.0
+- **Vite** 7.2.2
+- **Bootstrap** 5.3.3
+- **Bootstrap Icons** 1.11.x
 - Sistema de diseño personalizado con variables CSS
 
 ## Requisitos Previos
@@ -182,32 +189,33 @@ Después de ejecutar `python manage.py poblar_datos`, tendrás acceso a estos us
 ## Estructura del Proyecto
 
 ```
-Sprint 3/
-├── REST frameworks/ReservaProject/  # Backend Django
-│   ├── mainApp/
-│   │   ├── models.py                 # Modelos: Perfil, Mesa, Reserva
-│   │   ├── serializers.py            # Serializers REST
-│   │   ├── views.py                  # Endpoints API
-│   │   ├── permissions.py            # Permisos personalizados
-│   │   ├── signals.py                # Señales para crear perfil
-│   │   ├── admin.py                  # Panel de administración
-│   │   └── management/commands/
-│   │       └── poblar_datos.py       # Script de datos de prueba
-│   ├── ReservaProject/
-│   │   ├── settings.py               # Configuración (PostgreSQL, CORS, etc.)
-│   │   └── urls.py                   # Rutas de la API
-│   └── requirements.txt              # Dependencias Python
-│
-└── Reservas/                         # Frontend React
-    ├── src/
-    │   ├── components/
-    │   │   ├── LoginForm.jsx         # Formulario de login
-    │   │   └── PanelReservas.jsx     # Panel principal
-    │   ├── services/
-    │   │   └── reservasApi.js        # Cliente API REST
-    │   ├── App.jsx                   # Componente principal
-    │   └── main.jsx                  # Entry point
-    └── package.json                  # Dependencias Node
+modulo_reservas/
+├── Sprint 3/
+│   ├── REST frameworks/ReservaProject/  # Backend Django
+│   │   ├── mainApp/
+│   │   │   ├── models.py                 # Modelos: Perfil, Mesa, Reserva
+│   │   │   ├── serializers.py            # Serializers REST
+│   │   │   ├── views.py                  # Endpoints API
+│   │   │   ├── permissions.py            # Permisos personalizados
+│   │   │   ├── signals.py                # Señales para crear perfil
+│   │   │   ├── admin.py                  # Panel de administración
+│   │   │   └── management/commands/
+│   │   │       └── poblar_datos.py       # Script de datos de prueba
+│   │   ├── ReservaProject/
+│   │   │   ├── settings.py               # Configuración
+│   │   │   └── urls.py                   # Rutas de la API
+│   │   └── requirements.txt              # Dependencias Python
+│   │
+│   └── Reservas/                         # Frontend React
+│       ├── src/
+│       │   ├── components/               # Componentes React
+│       │   ├── services/                 # Cliente API REST
+│       │   ├── contexts/                 # Context API
+│       │   ├── utils/                    # Utilidades
+│       │   ├── App.jsx                   # Componente principal
+│       │   └── main.jsx                  # Entry point
+│       └── package.json                  # Dependencias Node
+└── docs/                                 # Documentación
 ```
 
 ## API Endpoints
@@ -215,15 +223,9 @@ Sprint 3/
 ### Autenticación
 
 - `POST /api/login/` - Iniciar sesión
-  ```json
-  {
-    "username": "admin",
-    "password": "admin123"
-  }
-  ```
-
 - `POST /api/register/` - Registrar nuevo usuario
 - `GET /api/perfil/` - Obtener perfil del usuario autenticado
+- `PATCH /api/perfil/actualizar/` - Actualizar perfil
 
 ### Mesas
 
@@ -236,43 +238,36 @@ Sprint 3/
 
 ### Reservas
 
-- `GET /api/reservas/` - Listar reservas
-  - Filtros disponibles: `?date=today`, `?fecha_reserva=2025-11-12`, `?estado=activa`
+- `GET /api/reservas/` - Listar reservas (con filtros)
 - `POST /api/reservas/` - Crear reserva
 - `GET /api/reservas/{id}/` - Detalle de reserva
 - `PATCH /api/reservas/{id}/` - Actualizar reserva (Admin/Cajero)
 - `DELETE /api/reservas/{id}/` - Eliminar reserva (Admin/Cajero)
 - `PATCH /api/reservas/{id}/cambiar_estado/` - Cambiar estado de reserva
-  ```json
-  {
-    "estado": "activa"
-  }
-  ```
 
 ## Sistema de Permisos por Rol
 
 | Funcionalidad              | Admin | Cajero | Mesero | Cliente |
 |----------------------------|-------|--------|--------|---------|
-| Ver todas las reservas     | ✅    | ✅     | ✅     | ❌      |
-| Ver propias reservas       | ✅    | ✅     | ✅     | ✅      |
-| Crear reservas             | ✅    | ✅     | ❌     | ✅      |
-| Cambiar estado de reservas | ✅    | ✅     | ❌     | ❌      |
-| Eliminar reservas          | ✅    | ✅     | ❌     | ❌      |
-| CRUD de mesas              | ✅    | ❌     | ❌     | ❌      |
-| Consultar mesas            | ✅    | ✅     | ✅     | ❌      |
-| Asignar roles              | ✅    | ❌     | ❌     | ❌      |
+| Ver todas las reservas     | Si    | Si     | Si     | No      |
+| Ver propias reservas       | Si    | Si     | Si     | Si      |
+| Crear reservas             | Si    | Si     | No     | Si      |
+| Cambiar estado de reservas | Si    | Si     | No     | No      |
+| Eliminar reservas          | Si    | Si     | No     | No      |
+| CRUD de mesas              | Si    | No     | No     | No      |
+| Consultar mesas            | Si    | Si     | Si     | No      |
+| Asignar roles              | Si    | No     | No     | No      |
 
 ## Seguridad Implementada
 
-### Encriptación de Datos Sensibles ✅
+### Encriptación de Datos Sensibles
 
-Los campos `rut` y `telefono` del modelo `Perfil` están **encriptados** usando **django-encrypted-model-fields** con el algoritmo **Fernet (AES-128)**.
+Los campos `rut` y `telefono` del modelo `Perfil` están encriptados usando **django-encrypted-model-fields** con el algoritmo **Fernet (AES-128)**.
 
-- Los datos se cifran **automáticamente** antes de guardar en la base de datos
+- Los datos se cifran automáticamente antes de guardar en la base de datos
 - En PostgreSQL se almacenan con el formato: `gAAAAAB...` (encriptados)
 - La API desencripta automáticamente al consultar los datos
 - Solo el dueño del perfil o un administrador pueden ver los datos descifrados
-- La configuración de claves está en `settings.py` (`FIELD_ENCRYPTION_KEY`)
 - **IMPORTANTE**: En producción, usar variables de entorno para la clave de encriptación
 
 ### Autenticación por Token
@@ -284,19 +279,20 @@ Los campos `rut` y `telefono` del modelo `Perfil` están **encriptados** usando 
 ### Validaciones Implementadas
 
 **Backend:**
-- ✅ Solapamiento de horarios (evita reservas duplicadas)
-- ✅ Capacidad de mesas (validación de número de personas)
-- ✅ Horarios de negocio (12:00 - 23:00)
-- ✅ Fechas y horas pasadas (no permite reservas antiguas)
-- ✅ Unicidad de RUT y email
-- ✅ Constraints en base de datos (num_personas entre 1 y 50)
-- ✅ Validación de SECRET_KEY en producción
+- Solapamiento de horarios (evita reservas duplicadas)
+- Capacidad de mesas (validación de número de personas)
+- Horarios de negocio (12:00 - 23:00)
+- Fechas y horas pasadas (no permite reservas antiguas)
+- Unicidad de RUT y email
+- Constraints en base de datos (num_personas entre 1 y 50)
+- Validación de SECRET_KEY en producción
 
 **Frontend:**
-- ✅ Revalidación de disponibilidad antes de confirmar
-- ✅ Validación de formularios en tiempo real
-- ✅ Manejo de errores consistente
-- ✅ Validación de selección de mesa
+- Revalidación de disponibilidad antes de confirmar
+- Validación de formularios en tiempo real
+- Manejo de errores consistente
+- Validación de selección de mesa
+- Validación de transiciones de estado válidas
 
 ### Sistema de Auditoría
 
@@ -311,25 +307,11 @@ Eventos registrados:
 
 ### Soft Delete
 
-Las reservas eliminadas no se borran permanentemente:
-
-```python
-# Soft delete (marca como eliminada)
-reserva.delete()
-
-# Restaurar reserva
-reserva.restore()
-
-# Eliminar permanentemente (solo admin)
-reserva.hard_delete()
-
-# Consultar eliminadas
-Reserva.objects.only_deleted()
-```
+Las reservas eliminadas no se borran permanentemente, permitiendo su recuperación.
 
 ### Sistema de Cache
 
-- Cache en memoria (desarrollo)
+- Cache en memoria para desarrollo
 - 1000 entradas máximo
 - Timeout de 5 minutos
 - Preparado para Redis en producción
@@ -338,10 +320,10 @@ Reserva.objects.only_deleted()
 
 Accede al panel de administración en **http://localhost:8000/admin/**
 
-Desde aquí puedes:
+Funcionalidades disponibles:
 - Gestionar usuarios y perfiles
 - Asignar roles manualmente
-- Ver/editar mesas y reservas
+- Ver y editar mesas y reservas
 - Verificar que los datos sensibles están encriptados
 
 ## Desarrollo
@@ -378,14 +360,14 @@ python manage.py poblar_datos
 
 ## Autores
 
-**Sprint 3 - Equipo de Desarrollo**
-
-- Implementación de backend Django REST
-- Desarrollo de frontend React
-- Integración de sistemas
+Proyecto Académico - INACAP Chile
+Asignatura: Desarrollo de Aplicaciones Web
 
 ## Licencia
 
-Este proyecto es parte de para INACAP Chile.
+Este proyecto es parte del trabajo académico para INACAP Chile.
+Desarrollado con fines educativos.
 
+---
 
+**Nota**: Este proyecto fue desarrollado como parte de la evaluación académica y tiene fines exclusivamente educativos.
