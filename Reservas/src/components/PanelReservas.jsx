@@ -716,6 +716,17 @@ function PanelReservas({ user, onLogout, showAllReservations = false, setActiveT
         }
     }
 
+    // Helper function: Obtener transiciones válidas según estado actual
+    // Debe coincidir con la lógica del backend (mainApp/views.py líneas 1296-1301)
+    function obtenerTransicionesValidas(estadoActual) {
+        const transiciones = {
+            'PENDIENTE': ['activa', 'cancelada'],
+            'ACTIVA': ['completada', 'cancelada'],
+            'COMPLETADA': [],  // Estado final
+            'CANCELADA': []    // Estado final
+        };
+        return transiciones[estadoActual] || [];
+    }
 
     function renderAcciones(reserva) {
         const isLoading = loadingRows[reserva.id];
@@ -729,7 +740,9 @@ function PanelReservas({ user, onLogout, showAllReservations = false, setActiveT
                 { label: "CANCELADA", value: "cancelada", icon: "bi-x-circle", color: "danger" }
             ];
 
-            const estadosDisponibles = estados.filter((e) => e.label !== reserva.estado);
+            // Filtrar solo transiciones válidas según el estado actual
+            const transicionesPermitidas = obtenerTransicionesValidas(reserva.estado);
+            const estadosDisponibles = estados.filter((e) => transicionesPermitidas.includes(e.value));
 
             if (isLoading) {
                 return (
@@ -876,7 +889,9 @@ function PanelReservas({ user, onLogout, showAllReservations = false, setActiveT
                 { label: "CANCELADA", value: "cancelada", icon: "bi-x-circle", color: "danger" }
             ];
 
-            const estadosDisponibles = estados.filter((e) => e.label !== reserva.estado);
+            // Filtrar solo transiciones válidas según el estado actual
+            const transicionesPermitidas = obtenerTransicionesValidas(reserva.estado);
+            const estadosDisponibles = estados.filter((e) => transicionesPermitidas.includes(e.value));
 
             if (isLoading) {
                 return (
@@ -2175,41 +2190,38 @@ function PanelReservas({ user, onLogout, showAllReservations = false, setActiveT
                             </button>
 
                             <div className="d-flex gap-2">
-                                {(rolActual === "cajero" || rolActual === "admin") && (
-                                    <div className="dropdown">
-                                        <button
-                                            className="btn btn-outline-primary dropdown-toggle"
-                                            type="button"
-                                            data-bs-toggle="dropdown"
-                                        >
-                                            Cambiar Estado
-                                        </button>
-                                        <ul className="dropdown-menu dropdown-menu-end">
-                                            {[
-                                                { label: "ACTIVA", value: "activa", icon: "bi-check-circle", color: "success" },
-                                                { label: "PENDIENTE", value: "pendiente", icon: "bi-clock", color: "warning" },
-                                                { label: "COMPLETADA", value: "completada", icon: "bi-check-all", color: "info" },
-                                                { label: "CANCELADA", value: "cancelada", icon: "bi-x-circle", color: "danger" }
-                                            ]
-                                                .filter(e => e.label !== detalleModal.reserva.estado)
-                                                .map(estado => (
-                                                    <li key={estado.value}>
-                                                        <button
-                                                            className="dropdown-item d-flex align-items-center"
-                                                            onClick={() => {
-                                                                setDetalleModal({ isOpen: false, reserva: null });
-                                                                handleCambiarEstado(detalleModal.reserva.id, estado.value);
-                                                            }}
-                                                        >
-                                                            <i className={`bi ${estado.icon} me-2 text-${estado.color}`}></i>
-                                                            Cambiar a {estado.label}
-                                                        </button>
-                                                    </li>
-                                                ))
-                                            }
-                                        </ul>
-                                    </div>
-                                )}
+                                {(rolActual === "cajero" || rolActual === "admin") && (() => {
+                                    const estadosModal = [
+                                        { label: "ACTIVA", value: "activa", icon: "bi-check-circle", color: "success" },
+                                        { label: "PENDIENTE", value: "pendiente", icon: "bi-clock", color: "warning" },
+                                        { label: "COMPLETADA", value: "completada", icon: "bi-check-all", color: "info" },
+                                        { label: "CANCELADA", value: "cancelada", icon: "bi-x-circle", color: "danger" }
+                                    ];
+                                    const transicionesPermitidas = obtenerTransicionesValidas(detalleModal.reserva.estado);
+                                    const estadosDisponiblesModal = estadosModal.filter(e => transicionesPermitidas.includes(e.value));
+
+                                    return (
+                                        <Dropdown align="end">
+                                            <Dropdown.Toggle variant="outline-primary" id="dropdown-estado-modal">
+                                                Cambiar Estado
+                                            </Dropdown.Toggle>
+                                            <Dropdown.Menu>
+                                                {estadosDisponiblesModal.map(estado => (
+                                                    <Dropdown.Item
+                                                        key={estado.value}
+                                                        onClick={() => {
+                                                            setDetalleModal({ isOpen: false, reserva: null });
+                                                            handleCambiarEstado(detalleModal.reserva.id, estado.value);
+                                                        }}
+                                                    >
+                                                        <i className={`bi ${estado.icon} me-2 text-${estado.color}`}></i>
+                                                        Cambiar a {estado.label}
+                                                    </Dropdown.Item>
+                                                ))}
+                                            </Dropdown.Menu>
+                                        </Dropdown>
+                                    );
+                                })()}
 
                                 {(rolActual === "admin" || rolActual === "cajero") && (
                                     <button
