@@ -932,7 +932,7 @@ export default function GestionMesas() {
             )}
 
             {/* Acciones */}
-            <div className="d-flex justify-content-between align-items-center pt-3 mt-3 border-top reserva-actions">
+            <div className="d-flex justify-content-center align-items-center pt-3 mt-3 border-top reserva-actions">
               <button
                 className="btn btn-outline-secondary"
                 onClick={() => setDetalleModal({ isOpen: false, reserva: null })}
@@ -940,64 +940,6 @@ export default function GestionMesas() {
                 <i className="bi bi-x-circle me-2"></i>
                 Cerrar
               </button>
-
-              <div className="d-flex gap-2">
-                {(rolActual === "cajero" || rolActual === "admin") && (
-                  <div className="dropdown">
-                    <button
-                      className="btn btn-outline-primary dropdown-toggle"
-                      type="button"
-                      data-bs-toggle="dropdown"
-                    >
-                      Cambiar Estado
-                    </button>
-                    <ul className="dropdown-menu dropdown-menu-end">
-                      {[
-                        { label: "ACTIVA", value: "activa", icon: "bi-check-circle", color: "success" },
-                        { label: "PENDIENTE", value: "pendiente", icon: "bi-clock", color: "warning" },
-                        { label: "COMPLETADA", value: "completada", icon: "bi-check-all", color: "info" },
-                        { label: "CANCELADA", value: "cancelada", icon: "bi-x-circle", color: "danger" }
-                      ]
-                        .filter(e => e.label !== detalleModal.reserva.estado)
-                        .map(estado => (
-                          <li key={estado.value}>
-                            <button
-                              className="dropdown-item d-flex align-items-center"
-                              onClick={() => {
-                                setDetalleModal({ isOpen: false, reserva: null });
-                                handleCambiarEstado(detalleModal.reserva.id, estado.value);
-                              }}
-                            >
-                              <i className={`bi ${estado.icon} me-2 text-${estado.color}`}></i>
-                              Cambiar a {estado.label}
-                            </button>
-                          </li>
-                        ))
-                      }
-                    </ul>
-                  </div>
-                )}
-
-                {(rolActual === "admin" || rolActual === "cajero") && (
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => handleAbrirModalEdicion(detalleModal.reserva)}
-                    disabled={loadingEdit}
-                  >
-                    {loadingEdit ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        Cargando...
-                      </>
-                    ) : (
-                      <>
-                        <i className="bi bi-pencil-square me-2"></i>
-                        Editar Reserva
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
             </div>
           </div>
         </Modal>
