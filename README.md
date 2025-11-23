@@ -3,11 +3,11 @@
 **Proyecto Académico - INACAP Chile**
 Sistema completo de gestión de reservas para restaurantes con backend Django REST Framework y frontend React.
 
-## Descripción del Proyecto
+## 📖 Descripción del Proyecto
 
 Este sistema fue desarrollado como proyecto académico para la asignatura de Ingeniería de Software. Implementa un sistema completo de gestión de reservas para restaurantes, utilizando tecnologías modernas y aplicando buenas prácticas de desarrollo de software.
 
-## Características Principales
+## ⭐ Características Principales
 
 ### Funcionalidades del Sistema
 
@@ -23,57 +23,57 @@ Este sistema fue desarrollado como proyecto académico para la asignatura de Ing
 - Optimización de rendimiento con cache y paginación
 - Validaciones exhaustivas y protección CSRF
 
-## Mejoras Implementadas
+## 🎯 Características Técnicas del Sistema
 
-El sistema incluye 43 mejoras que garantizan robustez, seguridad y buena experiencia de usuario.
+El sistema implementa **43 funcionalidades técnicas** que garantizan robustez, seguridad y excelente experiencia de usuario.
 
-### Backend - 31 mejoras
+### 🔧 Backend - 31 Funcionalidades
 
-**Validaciones Críticas:**
+**✅ Validaciones Críticas:**
 - Prevención de solapamiento de horarios en reservas
 - Validación de capacidad de mesas
 - Validación de horarios de negocio (12:00 - 23:00)
 - Validación de fechas y horas pasadas
 - Unicidad de RUT y email en perfiles
 
-**Seguridad:**
+**🔒 Seguridad:**
 - Encriptación de datos sensibles (RUT, teléfono) usando Fernet (AES-128)
 - Validación de SECRET_KEY en producción
 - Configuración CSRF completa
 - Límite de caracteres en campos de texto
 - Constraints a nivel de base de datos
 
-**Rendimiento:**
+**⚡ Rendimiento:**
 - Paginación de resultados (50 por página)
 - Índices compuestos en base de datos
 - Sistema de cache (5 minutos)
 - Optimización de consultas
 
-**Auditoría y Logs:**
+**📋 Auditoría y Logs:**
 - Sistema de logging con archivos rotativos
 - Registro de operaciones críticas
 - Logs separados: general y auditoría
 - Logs de creación y cambio de estado
 
-**Recuperación de Datos:**
+**♻️ Recuperación de Datos:**
 - Soft delete en reservas
 - Métodos de restauración
 - Historial de eliminaciones
 
-**Documentación:**
+**📚 Documentación:**
 - Documentación completa de endpoints
 - Ejemplos de filtros y ordenamiento
 - Especificación de permisos
 
-### Frontend - 12 mejoras
+### 💻 Frontend - 12 Funcionalidades
 
-**Validación y UX:**
+**✨ Validación y UX:**
 - Revalidación de disponibilidad antes de confirmar
 - Validación de selección de mesa
 - Mensajes de error claros y consistentes
 - Transacciones atómicas con rollback en caso de error
 
-**Diseño y UI:**
+**🎨 Diseño y UI:**
 - Modal de detalle de reserva con diseño moderno
 - Timeline visual de estados con iconos descriptivos
 - Sistema de diseño con variables CSS personalizadas
@@ -83,7 +83,7 @@ El sistema incluye 43 mejoras que garantizan robustez, seguridad y buena experie
 - Corrección de overlapping en controles de filtros
 - Efectos hover optimizados
 
-## Tecnologías Utilizadas
+## 🛠️ Tecnologías Utilizadas
 
 ### Backend
 - **Django** 5.2.7
@@ -101,14 +101,14 @@ El sistema incluye 43 mejoras que garantizan robustez, seguridad y buena experie
 - **Bootstrap Icons** 1.11.x
 - Sistema de diseño personalizado con variables CSS
 
-## Requisitos Previos
+## 📋 Requisitos Previos
 
 - Python 3.10 o superior
 - Node.js 18 o superior
 - PostgreSQL 14 o superior
 - pip y npm instalados
 
-## Instalación
+## 🚀 Instalación
 
 ### 1. Configurar PostgreSQL
 
@@ -175,7 +175,7 @@ npm run dev
 
 El frontend estará disponible en: **http://localhost:5173**
 
-## Credenciales de Prueba
+## 🔑 Credenciales de Prueba
 
 Después de ejecutar `python manage.py poblar_datos`, tendrás acceso a estos usuarios:
 
@@ -186,7 +186,7 @@ Después de ejecutar `python manage.py poblar_datos`, tendrás acceso a estos us
 | `mesero1`  | `mesero123` | Mesero         | Consulta mesas y reservas               |
 | `cliente1` | `cliente123`| Cliente        | Crea y ve sus propias reservas          |
 
-## Estructura del Proyecto
+## 📁 Estructura del Proyecto
 
 ```
 modulo_reservas/
@@ -218,7 +218,7 @@ modulo_reservas/
 └── docs/                                 # Documentación
 ```
 
-## API Endpoints
+## 🌐 API Endpoints
 
 ### Autenticación
 
@@ -245,7 +245,7 @@ modulo_reservas/
 - `DELETE /api/reservas/{id}/` - Eliminar reserva (Admin/Cajero)
 - `PATCH /api/reservas/{id}/cambiar_estado/` - Cambiar estado de reserva
 
-## Sistema de Permisos por Rol
+## 👥 Sistema de Permisos por Rol
 
 | Funcionalidad              | Admin | Cajero | Mesero | Cliente |
 |----------------------------|-------|--------|--------|---------|
@@ -258,7 +258,7 @@ modulo_reservas/
 | Consultar mesas            | Si    | Si     | Si     | No      |
 | Asignar roles              | Si    | No     | No     | No      |
 
-## Seguridad Implementada
+## 🔐 Seguridad Implementada
 
 ### Encriptación de Datos Sensibles
 
@@ -316,7 +316,7 @@ Las reservas eliminadas no se borran permanentemente, permitiendo su recuperaci�
 - Timeout de 5 minutos
 - Preparado para Redis en producción
 
-## Panel de Administración Django
+## 🎛️ Panel de Administración Django
 
 Accede al panel de administración en **http://localhost:8000/admin/**
 
@@ -326,7 +326,7 @@ Funcionalidades disponibles:
 - Ver y editar mesas y reservas
 - Verificar que los datos sensibles están encriptados
 
-## Desarrollo
+## 🧪 Desarrollo
 
 ### Ejecutar tests
 
@@ -358,16 +358,16 @@ python manage.py migrate
 python manage.py poblar_datos
 ```
 
-## Autores
+## 👨‍💻 Autores
 
-Proyecto Académico - INACAP Chile
+**Proyecto Académico - INACAP Chile**
 Asignatura: Ingeniería de Software
 
-## Licencia
+## 📄 Licencia
 
 Este proyecto es parte del trabajo académico para INACAP Chile.
 Desarrollado con fines educativos.
 
 ---
 
-**Nota**: Este proyecto fue desarrollado como parte de la evaluación académica y tiene fines exclusivamente educativos.
+**📌 Nota**: Este proyecto fue desarrollado como parte de la evaluación académica y tiene fines exclusivamente educativos.
