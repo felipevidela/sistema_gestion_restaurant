@@ -58,6 +58,7 @@ export default function MiPerfil() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    console.log(`Campo ${name} cambiado a: ${value}, editMode: ${editMode}`);
     let processedValue = value;
 
     // Formatear RUT y teléfono mientras se escribe
@@ -173,10 +174,18 @@ export default function MiPerfil() {
         <Col md={8} lg={6}>
           <Card className="shadow-sm">
             <Card.Header className="bg-primary text-white">
-              <h5 className="mb-0">
-                <i className="bi bi-person-circle me-2"></i>
-                Mi Perfil
-              </h5>
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">
+                  <i className="bi bi-person-circle me-2"></i>
+                  Mi Perfil
+                </h5>
+                {editMode && (
+                  <Badge bg="warning" text="dark">
+                    <i className="bi bi-pencil-fill me-1"></i>
+                    Modo Edición
+                  </Badge>
+                )}
+              </div>
             </Card.Header>
             <Card.Body className="p-4">
               {error && (
@@ -296,7 +305,11 @@ export default function MiPerfil() {
                   {!editMode ? (
                     <Button
                       variant="primary"
-                      onClick={() => setEditMode(true)}
+                      onClick={() => {
+                        console.log('Activando modo edición');
+                        setEditMode(true);
+                      }}
+                      type="button"
                     >
                       <i className="bi bi-pencil me-2"></i>
                       Editar Perfil
