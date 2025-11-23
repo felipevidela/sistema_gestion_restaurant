@@ -729,30 +729,9 @@ function PanelReservas({ user, onLogout, showAllReservations = false, setActiveT
     }
 
     function renderAcciones(reserva) {
-        const isLoading = loadingRows[reserva.id];
-
-        // Admin y Cajero - Dropdown menu para cambiar estados
+        // Admin y Cajero - Dropdown menu para acciones (Ver detalle, etc.)
+        // Nota: El cambio de estado se hace desde el badge clickeable
         if (rolActual === "admin" || rolActual === "cajero") {
-            const estados = [
-                { label: "ACTIVA", value: "activa", icon: "bi-check-circle", color: "success" },
-                { label: "PENDIENTE", value: "pendiente", icon: "bi-clock", color: "warning" },
-                { label: "COMPLETADA", value: "completada", icon: "bi-check-all", color: "info" },
-                { label: "CANCELADA", value: "cancelada", icon: "bi-x-circle", color: "danger" }
-            ];
-
-            // Filtrar solo transiciones válidas según el estado actual
-            const transicionesPermitidas = obtenerTransicionesValidas(reserva.estado);
-            const estadosDisponibles = estados.filter((e) => transicionesPermitidas.includes(e.value));
-
-            if (isLoading) {
-                return (
-                    <button className="btn btn-outline-primary btn-sm" disabled>
-                        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                        Procesando...
-                    </button>
-                );
-            }
-
             return (
                 <Dropdown align="end">
                     <Dropdown.Toggle variant="outline-primary" size="sm" id={`dropdown-${reserva.id}`}>
@@ -761,20 +740,11 @@ function PanelReservas({ user, onLogout, showAllReservations = false, setActiveT
                     </Dropdown.Toggle>
 
                     <Dropdown.Menu>
-                        {estadosDisponibles.map((estado) => (
-                            <Dropdown.Item
-                                key={estado.value}
-                                onClick={() => handleCambiarEstado(reserva.id, estado.value)}
-                            >
-                                <i className={`bi ${estado.icon} me-2 text-${estado.color}`}></i>
-                                Cambiar a {estado.label}
-                            </Dropdown.Item>
-                        ))}
-                        <Dropdown.Divider />
                         <Dropdown.Item onClick={() => setDetalleModal({ isOpen: true, reserva })}>
                             <i className="bi bi-eye me-2"></i>
                             Ver detalle
                         </Dropdown.Item>
+                        {/* Futuras acciones: Editar, Eliminar, etc. */}
                     </Dropdown.Menu>
                 </Dropdown>
             );
