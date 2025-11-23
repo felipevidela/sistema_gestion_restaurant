@@ -942,12 +942,11 @@ body {
 .mesa-card {
     border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: 1rem;
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: box-shadow 0.2s ease;
 }
 
 .mesa-card:hover {
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
 }
 
 .mesa-card .mesa-icon {
