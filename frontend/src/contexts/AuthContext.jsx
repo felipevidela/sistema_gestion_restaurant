@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { login as apiLogin, logout as apiLogout, getCurrentUser, isAuthenticated } from '../services/reservasApi';
+import { login as apiLogin, logout as apiLogout, getCurrentUser, isAuthenticated, validateToken } from '../services/reservasApi';
 
 const AuthContext = createContext(null);
 
@@ -23,13 +23,18 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Inicializar usuario desde localStorage al montar
+  // Inicializar usuario desde localStorage al montar y validar token
   useEffect(() => {
-    const initAuth = () => {
+    const initAuth = async () => {
       try {
         if (isAuthenticated()) {
-          const currentUser = getCurrentUser();
-          setUser(currentUser);
+          // Validar token contra el servidor antes de cargar el usuario
+          const isValid = await validateToken();
+          if (isValid) {
+            const currentUser = getCurrentUser();
+            setUser(currentUser);
+          }
+          // Si el token es inválido, validateToken() ya limpió localStorage
         }
       } catch (error) {
         console.error('Error al inicializar autenticación:', error);

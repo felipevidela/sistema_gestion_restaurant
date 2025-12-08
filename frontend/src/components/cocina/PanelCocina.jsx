@@ -10,6 +10,67 @@ import {
 import { useCocinaWebSocket } from '../../hooks/useWebSocket';
 import { useAuth } from '../../contexts/AuthContext';
 
+// Estilos CSS para animaciones del panel de cocina
+const styles = `
+  .pedido-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .pedido-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+  }
+  .pedido-urgente {
+    animation: pulseUrgente 1.5s ease-in-out infinite;
+  }
+  @keyframes pulseUrgente {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+    }
+  }
+  .timer-urgente {
+    font-weight: bold;
+    animation: timerPulse 1s ease-in-out infinite;
+  }
+  @keyframes timerPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  .badge-conexion-conectando {
+    animation: blink 1s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .contador-animado {
+    display: inline-block;
+    transition: transform 0.3s ease;
+  }
+  .contador-animado.changed {
+    animation: counterBounce 0.3s ease;
+  }
+  @keyframes counterBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+  }
+  .summary-card {
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  .summary-card:hover {
+    transform: translateY(-2px);
+  }
+  .estado-transition {
+    animation: fadeInScale 0.3s ease;
+  }
+  @keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+`;
+
 /**
  * Panel de cocina con cola de pedidos en tiempo real
  */
@@ -42,7 +103,7 @@ function PanelCocina() {
     try {
       setError(null);
       const data = await getColaCocina();
-      setPedidos(data);
+      setPedidos(data || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -116,8 +177,17 @@ function PanelCocina() {
     );
   }
 
+  // Determinar si el tiempo es urgente (más de 15 min)
+  const esTiempoUrgente = (fecha) => {
+    const minutos = Math.floor((new Date() - new Date(fecha)) / 60000);
+    return minutos > 15;
+  };
+
   return (
     <Container fluid>
+      {/* Inyectar estilos CSS */}
+      <style>{styles}</style>
+
       {/* Alertas */}
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>
@@ -133,9 +203,12 @@ function PanelCocina() {
             Panel de Cocina
           </h3>
           <div className="d-flex align-items-center gap-2">
-            <Badge bg={isConnected ? 'success' : 'secondary'}>
+            <Badge
+              bg={isConnected ? 'success' : 'secondary'}
+              className={!isConnected && connectionStatus === 'Conectando...' ? 'badge-conexion-conectando' : ''}
+            >
               <i className={`bi bi-${isConnected ? 'wifi' : 'wifi-off'} me-1`}></i>
-              {isConnected ? 'Conectado' : connectionStatus}
+              {isConnected ? 'En vivo' : connectionStatus}
             </Badge>
             <small className="text-muted">
               Última actualización: {new Date().toLocaleTimeString('es-CL')}
@@ -148,48 +221,52 @@ function PanelCocina() {
         </Button>
       </div>
 
-      {/* Resumen */}
+      {/* Resumen con iconos */}
       <Row className="mb-4">
         <Col xs={6} md={3} lg={2}>
           <Card
-            className={`text-center cursor-pointer ${filtro === 'urgentes' ? 'border-danger border-2' : ''}`}
+            className={`text-center summary-card ${filtro === 'urgentes' ? 'border-danger border-2' : ''}`}
             onClick={() => setFiltro(filtro === 'urgentes' ? 'todos' : 'urgentes')}
             style={{ cursor: 'pointer' }}
           >
             <Card.Body className="py-3">
-              <div className="h3 mb-0 text-danger">{contadores.urgentes}</div>
+              <i className="bi bi-exclamation-triangle text-danger d-block mb-1" style={{ fontSize: '1.3rem' }}></i>
+              <div className="h3 mb-0 text-danger contador-animado" key={contadores.urgentes}>{contadores.urgentes}</div>
               <small className="text-muted">Urgentes</small>
             </Card.Body>
           </Card>
         </Col>
         <Col xs={6} md={3} lg={2}>
           <Card
-            className={`text-center ${filtro === 'creados' ? 'border-secondary border-2' : ''}`}
+            className={`text-center summary-card ${filtro === 'creados' ? 'border-secondary border-2' : ''}`}
             onClick={() => setFiltro(filtro === 'creados' ? 'todos' : 'creados')}
             style={{ cursor: 'pointer' }}
           >
             <Card.Body className="py-3">
-              <div className="h3 mb-0 text-secondary">{contadores.creados}</div>
+              <i className="bi bi-hourglass-split text-secondary d-block mb-1" style={{ fontSize: '1.3rem' }}></i>
+              <div className="h3 mb-0 text-secondary contador-animado" key={contadores.creados}>{contadores.creados}</div>
               <small className="text-muted">Pendientes</small>
             </Card.Body>
           </Card>
         </Col>
         <Col xs={6} md={3} lg={2}>
           <Card
-            className={`text-center ${filtro === 'en_preparacion' ? 'border-warning border-2' : ''}`}
+            className={`text-center summary-card ${filtro === 'en_preparacion' ? 'border-warning border-2' : ''}`}
             onClick={() => setFiltro(filtro === 'en_preparacion' ? 'todos' : 'en_preparacion')}
             style={{ cursor: 'pointer' }}
           >
             <Card.Body className="py-3">
-              <div className="h3 mb-0 text-warning">{contadores.en_preparacion}</div>
+              <i className="bi bi-fire text-warning d-block mb-1" style={{ fontSize: '1.3rem' }}></i>
+              <div className="h3 mb-0 text-warning contador-animado" key={contadores.en_preparacion}>{contadores.en_preparacion}</div>
               <small className="text-muted">En Preparación</small>
             </Card.Body>
           </Card>
         </Col>
         <Col xs={6} md={3} lg={2}>
-          <Card className="text-center">
+          <Card className="text-center summary-card">
             <Card.Body className="py-3">
-              <div className="h3 mb-0 text-success">{contadores.listos}</div>
+              <i className="bi bi-check-circle text-success d-block mb-1" style={{ fontSize: '1.3rem' }}></i>
+              <div className="h3 mb-0 text-success contador-animado" key={contadores.listos}>{contadores.listos}</div>
               <small className="text-muted">Listos</small>
             </Card.Body>
           </Card>
@@ -208,11 +285,12 @@ function PanelCocina() {
             const estado = ESTADOS_PEDIDO[pedido.estado];
             const tiempoTranscurrido = calcularTiempo(pedido.fecha_creacion);
             const esUrgente = pedido.estado === 'URGENTE';
+            const tiempoEsUrgente = esTiempoUrgente(pedido.fecha_creacion);
 
             return (
               <Col key={pedido.id}>
                 <Card
-                  className={`h-100 shadow-sm ${esUrgente ? 'border-danger border-2' : ''}`}
+                  className={`h-100 shadow-sm pedido-card estado-transition ${esUrgente ? 'border-danger border-2 pedido-urgente' : ''}`}
                 >
                   {/* Header del pedido */}
                   <Card.Header className={`bg-${estado.color} text-white d-flex justify-content-between align-items-center`}>
@@ -222,7 +300,12 @@ function PanelCocina() {
                         #{pedido.id}
                       </Badge>
                     </div>
-                    <Badge bg="light" text="dark">
+                    <Badge
+                      bg={tiempoEsUrgente ? 'danger' : 'light'}
+                      text={tiempoEsUrgente ? 'white' : 'dark'}
+                      className={tiempoEsUrgente ? 'timer-urgente' : ''}
+                      style={{ fontSize: tiempoEsUrgente ? '0.9rem' : undefined }}
+                    >
                       <i className="bi bi-clock me-1"></i>
                       {tiempoTranscurrido}
                     </Badge>

@@ -1,13 +1,29 @@
 import { useState, useEffect } from 'react';
 import {
   Container, Row, Col, Card, Table, Button, Modal, Form,
-  Badge, Spinner, Alert, InputGroup, Tabs, Tab
+  Badge, Spinner, Alert, InputGroup, Tabs, Tab, OverlayTrigger, Tooltip
 } from 'react-bootstrap';
 import {
   getCategorias, crearCategoria, actualizarCategoria, eliminarCategoria,
   getPlatos, crearPlato, actualizarPlato, eliminarPlato,
   getIngredientes, getRecetaPlato, agregarIngredienteReceta, eliminarReceta
 } from '../../services/menuApi';
+
+// Componente para label con asterisco de requerido
+const RequiredLabel = ({ children }) => (
+  <Form.Label>
+    {children} <span className="text-danger">*</span>
+  </Form.Label>
+);
+
+// Componente de estado vacío
+const EmptyState = ({ icon, title, subtitle }) => (
+  <div className="text-center py-5">
+    <i className={`bi ${icon} text-muted`} style={{ fontSize: '3rem' }}></i>
+    <h5 className="mt-3 text-muted">{title}</h5>
+    <p className="text-muted small">{subtitle}</p>
+  </div>
+);
 
 /**
  * Panel de administración del menú
@@ -26,12 +42,17 @@ function GestionMenu() {
   const [showCategoriaModal, setShowCategoriaModal] = useState(false);
   const [showPlatoModal, setShowPlatoModal] = useState(false);
   const [showRecetaModal, setShowRecetaModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Estados de edición
   const [categoriaEditar, setCategoriaEditar] = useState(null);
   const [platoEditar, setPlatoEditar] = useState(null);
   const [platoReceta, setPlatoReceta] = useState(null);
   const [recetaActual, setRecetaActual] = useState([]);
+
+  // Estados de guardado
+  const [saving, setSaving] = useState(false);
 
   // Tab activo
   const [activeTab, setActiveTab] = useState('platos');
@@ -50,9 +71,9 @@ function GestionMenu() {
         getPlatos(),
         getIngredientes()
       ]);
-      setCategorias(cats);
-      setPlatos(plts);
-      setIngredientes(ings);
+      setCategorias(cats || []);
+      setPlatos(plts || []);
+      setIngredientes(ings || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -61,6 +82,20 @@ function GestionMenu() {
   };
 
   // ==================== CATEGORÍAS ====================
+
+  // Función para mostrar modal de confirmación
+  const showConfirm = (message, onConfirm) => {
+    setConfirmAction({ message, onConfirm });
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirm = async () => {
+    if (confirmAction?.onConfirm) {
+      await confirmAction.onConfirm();
+    }
+    setShowConfirmModal(false);
+    setConfirmAction(null);
+  };
 
   const handleGuardarCategoria = async (e) => {
     e.preventDefault();
@@ -73,6 +108,7 @@ function GestionMenu() {
     };
 
     try {
+      setSaving(true);
       if (categoriaEditar) {
         await actualizarCategoria(categoriaEditar.id, data);
         setSuccess('Categoría actualizada');
@@ -85,18 +121,21 @@ function GestionMenu() {
       cargarDatos();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleEliminarCategoria = async (id) => {
-    if (!confirm('¿Eliminar esta categoría?')) return;
-    try {
-      await eliminarCategoria(id);
-      setSuccess('Categoría eliminada');
-      cargarDatos();
-    } catch (err) {
-      setError(err.message);
-    }
+    showConfirm('¿Estás seguro de eliminar esta categoría? Esta acción no se puede deshacer.', async () => {
+      try {
+        await eliminarCategoria(id);
+        setSuccess('Categoría eliminada');
+        cargarDatos();
+      } catch (err) {
+        setError(err.message);
+      }
+    });
   };
 
   // ==================== PLATOS ====================
@@ -115,6 +154,7 @@ function GestionMenu() {
     };
 
     try {
+      setSaving(true);
       if (platoEditar) {
         await actualizarPlato(platoEditar.id, data);
         setSuccess('Plato actualizado');
@@ -127,18 +167,21 @@ function GestionMenu() {
       cargarDatos();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleEliminarPlato = async (id) => {
-    if (!confirm('¿Eliminar este plato?')) return;
-    try {
-      await eliminarPlato(id);
-      setSuccess('Plato eliminado');
-      cargarDatos();
-    } catch (err) {
-      setError(err.message);
-    }
+    showConfirm('¿Estás seguro de eliminar este plato? Esta acción no se puede deshacer.', async () => {
+      try {
+        await eliminarPlato(id);
+        setSuccess('Plato eliminado');
+        cargarDatos();
+      } catch (err) {
+        setError(err.message);
+      }
+    });
   };
 
   // ==================== RECETAS ====================
@@ -242,48 +285,65 @@ function GestionMenu() {
                   </tr>
                 </thead>
                 <tbody>
-                  {platos.map(plato => (
-                    <tr key={plato.id}>
-                      <td className="fw-medium">{plato.nombre}</td>
-                      <td>{plato.categoria_nombre}</td>
-                      <td>${Number(plato.precio).toLocaleString('es-CL')}</td>
-                      <td>{plato.tiempo_preparacion} min</td>
-                      <td>
-                        {plato.disponible ? (
-                          <Badge bg="success">Disponible</Badge>
-                        ) : (
-                          <Badge bg="secondary">No disponible</Badge>
-                        )}
-                        {!plato.activo && <Badge bg="dark" className="ms-1">Inactivo</Badge>}
-                      </td>
-                      <td className="text-end">
-                        <Button
-                          variant="outline-info"
-                          size="sm"
-                          className="me-1"
-                          onClick={() => handleVerReceta(plato)}
-                          title="Ver receta"
-                        >
-                          <i className="bi bi-list-check"></i>
-                        </Button>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          className="me-1"
-                          onClick={() => { setPlatoEditar(plato); setShowPlatoModal(true); }}
-                        >
-                          <i className="bi bi-pencil"></i>
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={() => handleEliminarPlato(plato.id)}
-                        >
-                          <i className="bi bi-trash"></i>
-                        </Button>
+                  {platos.length === 0 ? (
+                    <tr>
+                      <td colSpan={6}>
+                        <EmptyState
+                          icon="bi-egg-fried"
+                          title="No hay platos"
+                          subtitle="Crea tu primer plato haciendo clic en 'Nuevo Plato'"
+                        />
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    platos.map(plato => (
+                      <tr key={plato.id}>
+                        <td className="fw-medium">{plato.nombre}</td>
+                        <td>{plato.categoria_nombre}</td>
+                        <td>${Number(plato.precio).toLocaleString('es-CL')}</td>
+                        <td>{plato.tiempo_preparacion} min</td>
+                        <td>
+                          {plato.disponible ? (
+                            <Badge bg="success">Disponible</Badge>
+                          ) : (
+                            <Badge bg="secondary">No disponible</Badge>
+                          )}
+                          {!plato.activo && <Badge bg="dark" className="ms-1">Inactivo</Badge>}
+                        </td>
+                        <td className="text-end">
+                          <OverlayTrigger placement="top" overlay={<Tooltip>Ver receta</Tooltip>}>
+                            <Button
+                              variant="outline-info"
+                              size="sm"
+                              className="me-1"
+                              onClick={() => handleVerReceta(plato)}
+                            >
+                              <i className="bi bi-list-check"></i>
+                            </Button>
+                          </OverlayTrigger>
+                          <OverlayTrigger placement="top" overlay={<Tooltip>Editar plato</Tooltip>}>
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              className="me-1"
+                              onClick={() => { setPlatoEditar(plato); setShowPlatoModal(true); }}
+                            >
+                              <i className="bi bi-pencil"></i>
+                            </Button>
+                          </OverlayTrigger>
+                          <OverlayTrigger placement="top" overlay={<Tooltip>Eliminar plato</Tooltip>}>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleEliminarPlato(plato.id)}
+                            >
+                              <i className="bi bi-trash"></i>
+                            </Button>
+                          </OverlayTrigger>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </Table>
             </Card.Body>
@@ -312,42 +372,58 @@ function GestionMenu() {
                   </tr>
                 </thead>
                 <tbody>
-                  {categorias.sort((a, b) => a.orden - b.orden).map(cat => (
-                    <tr key={cat.id}>
-                      <td>{cat.orden}</td>
-                      <td className="fw-medium">{cat.nombre}</td>
-                      <td className="text-muted small">{cat.descripcion || '-'}</td>
-                      <td>
-                        <Badge bg="light" text="dark">
-                          {platos.filter(p => p.categoria === cat.id).length}
-                        </Badge>
-                      </td>
-                      <td>
-                        {cat.activa ? (
-                          <Badge bg="success">Activa</Badge>
-                        ) : (
-                          <Badge bg="secondary">Inactiva</Badge>
-                        )}
-                      </td>
-                      <td className="text-end">
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          className="me-1"
-                          onClick={() => { setCategoriaEditar(cat); setShowCategoriaModal(true); }}
-                        >
-                          <i className="bi bi-pencil"></i>
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={() => handleEliminarCategoria(cat.id)}
-                        >
-                          <i className="bi bi-trash"></i>
-                        </Button>
+                  {categorias.length === 0 ? (
+                    <tr>
+                      <td colSpan={6}>
+                        <EmptyState
+                          icon="bi-folder"
+                          title="No hay categorías"
+                          subtitle="Crea tu primera categoría haciendo clic en 'Nueva Categoría'"
+                        />
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    categorias.sort((a, b) => a.orden - b.orden).map(cat => (
+                      <tr key={cat.id}>
+                        <td>{cat.orden}</td>
+                        <td className="fw-medium">{cat.nombre}</td>
+                        <td className="text-muted small">{cat.descripcion || '-'}</td>
+                        <td>
+                          <Badge bg="light" text="dark">
+                            {platos.filter(p => p.categoria === cat.id).length}
+                          </Badge>
+                        </td>
+                        <td>
+                          {cat.activa ? (
+                            <Badge bg="success">Activa</Badge>
+                          ) : (
+                            <Badge bg="secondary">Inactiva</Badge>
+                          )}
+                        </td>
+                        <td className="text-end">
+                          <OverlayTrigger placement="top" overlay={<Tooltip>Editar categoría</Tooltip>}>
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              className="me-1"
+                              onClick={() => { setCategoriaEditar(cat); setShowCategoriaModal(true); }}
+                            >
+                              <i className="bi bi-pencil"></i>
+                            </Button>
+                          </OverlayTrigger>
+                          <OverlayTrigger placement="top" overlay={<Tooltip>Eliminar categoría</Tooltip>}>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleEliminarCategoria(cat.id)}
+                            >
+                              <i className="bi bi-trash"></i>
+                            </Button>
+                          </OverlayTrigger>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </Table>
             </Card.Body>
@@ -365,11 +441,12 @@ function GestionMenu() {
           </Modal.Header>
           <Modal.Body>
             <Form.Group className="mb-3">
-              <Form.Label>Nombre</Form.Label>
+              <RequiredLabel>Nombre</RequiredLabel>
               <Form.Control
                 name="nombre"
                 defaultValue={categoriaEditar?.nombre}
                 required
+                placeholder="Ej: Entradas, Platos principales..."
               />
             </Form.Group>
             <Form.Group className="mb-3">
@@ -379,6 +456,7 @@ function GestionMenu() {
                 name="descripcion"
                 rows={2}
                 defaultValue={categoriaEditar?.descripcion}
+                placeholder="Descripción opcional de la categoría"
               />
             </Form.Group>
             <Row>
@@ -403,11 +481,16 @@ function GestionMenu() {
             </Row>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowCategoriaModal(false)}>
+            <Button variant="secondary" onClick={() => setShowCategoriaModal(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button variant="primary" type="submit">
-              Guardar
+            <Button variant="primary" type="submit" disabled={saving}>
+              {saving ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  Guardando...
+                </>
+              ) : 'Guardar'}
             </Button>
           </Modal.Footer>
         </Form>
@@ -425,17 +508,18 @@ function GestionMenu() {
             <Row>
               <Col md={8}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Nombre</Form.Label>
+                  <RequiredLabel>Nombre</RequiredLabel>
                   <Form.Control
                     name="nombre"
                     defaultValue={platoEditar?.nombre}
                     required
+                    placeholder="Ej: Lomo saltado, Ceviche..."
                   />
                 </Form.Group>
               </Col>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Categoría</Form.Label>
+                  <RequiredLabel>Categoría</RequiredLabel>
                   <Form.Select name="categoria" defaultValue={platoEditar?.categoria} required>
                     <option value="">Seleccionar...</option>
                     {categorias.filter(c => c.activa).map(cat => (
@@ -452,12 +536,13 @@ function GestionMenu() {
                 name="descripcion"
                 rows={2}
                 defaultValue={platoEditar?.descripcion}
+                placeholder="Describe brevemente el plato..."
               />
             </Form.Group>
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Precio ($)</Form.Label>
+                  <RequiredLabel>Precio ($)</RequiredLabel>
                   <Form.Control
                     type="number"
                     name="precio"
@@ -465,6 +550,7 @@ function GestionMenu() {
                     min="0"
                     defaultValue={platoEditar?.precio}
                     required
+                    placeholder="0"
                   />
                 </Form.Group>
               </Col>
@@ -497,11 +583,16 @@ function GestionMenu() {
             </Row>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowPlatoModal(false)}>
+            <Button variant="secondary" onClick={() => setShowPlatoModal(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button variant="primary" type="submit">
-              Guardar
+            <Button variant="primary" type="submit" disabled={saving}>
+              {saving ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  Guardando...
+                </>
+              ) : 'Guardar'}
             </Button>
           </Modal.Footer>
         </Form>
@@ -595,6 +686,28 @@ function GestionMenu() {
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowRecetaModal(false)}>
             Cerrar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* MODAL: CONFIRMACIÓN */}
+      <Modal show={showConfirmModal} onHide={() => setShowConfirmModal(false)} centered>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="text-danger">
+            <i className="bi bi-exclamation-triangle me-2"></i>
+            Confirmar acción
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="pt-2">
+          <p className="mb-0">{confirmAction?.message}</p>
+        </Modal.Body>
+        <Modal.Footer className="border-0">
+          <Button variant="outline-secondary" onClick={() => setShowConfirmModal(false)}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={handleConfirm}>
+            <i className="bi bi-trash me-1"></i>
+            Eliminar
           </Button>
         </Modal.Footer>
       </Modal>

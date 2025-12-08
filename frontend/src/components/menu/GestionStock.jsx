@@ -1,12 +1,49 @@
 import { useState, useEffect } from 'react';
 import {
   Container, Row, Col, Card, Table, Button, Modal, Form,
-  Badge, Spinner, Alert, InputGroup, ProgressBar
+  Badge, Spinner, Alert, InputGroup, ProgressBar, OverlayTrigger, Tooltip
 } from 'react-bootstrap';
 import {
   getIngredientes, crearIngrediente, actualizarIngrediente,
   eliminarIngrediente, getIngredientesBajoStock
 } from '../../services/menuApi';
+
+// Estilos CSS para animaciones
+const styles = `
+  .stock-card {
+    transition: transform 0.2s ease;
+  }
+  .stock-card:hover {
+    transform: translateY(-2px);
+  }
+  .pulse-alert {
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  .progress-animated {
+    transition: width 0.5s ease;
+  }
+  .modal-section {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 16px;
+    background: linear-gradient(145deg, #ffffff, #f8f9fb);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  .field-hint {
+    font-size: 0.85rem;
+    color: #6c757d;
+  }
+  .pill-muted {
+    background: #f1f3f5;
+    color: #495057;
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+  }
+`;
 
 const UNIDADES_MEDIDA = [
   { value: 'gr', label: 'Gramos (gr)' },
@@ -33,6 +70,12 @@ function GestionStock() {
   // Modal de ajuste rápido de stock
   const [showAjusteModal, setShowAjusteModal] = useState(false);
   const [ingredienteAjuste, setIngredienteAjuste] = useState(null);
+  const [ajusteTipo, setAjusteTipo] = useState('agregar');
+  const [ajusteCantidad, setAjusteCantidad] = useState('');
+
+  // Modal de confirmación
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Filtros
   const [filtro, setFiltro] = useState('todos'); // todos, bajo_stock, activos
@@ -50,8 +93,8 @@ function GestionStock() {
         getIngredientes(),
         getIngredientesBajoStock()
       ]);
-      setIngredientes(ings);
-      setIngredientesBajoStock(bajos);
+      setIngredientes(ings || []);
+      setIngredientesBajoStock(bajos || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -89,16 +132,23 @@ function GestionStock() {
     }
   };
 
+  // Mostrar modal de confirmación
+  const showConfirm = (message, onConfirm) => {
+    setConfirmAction({ message, onConfirm });
+    setShowConfirmModal(true);
+  };
+
   // Eliminar ingrediente
-  const handleEliminar = async (id) => {
-    if (!confirm('¿Eliminar este ingrediente?')) return;
-    try {
-      await eliminarIngrediente(id);
-      setSuccess('Ingrediente eliminado');
-      cargarDatos();
-    } catch (err) {
-      setError(err.message);
-    }
+  const handleEliminar = (id, nombre) => {
+    showConfirm(`¿Eliminar el ingrediente "${nombre}"?`, async () => {
+      try {
+        await eliminarIngrediente(id);
+        setSuccess('Ingrediente eliminado');
+        cargarDatos();
+      } catch (err) {
+        setError(err.message);
+      }
+    });
   };
 
   // Ajuste rápido de stock
@@ -169,6 +219,9 @@ function GestionStock() {
 
   return (
     <Container fluid>
+      {/* Inyectar estilos */}
+      <style>{styles}</style>
+
       {/* Alertas */}
       {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
       {success && <Alert variant="success" dismissible onClose={() => setSuccess(null)}>{success}</Alert>}
@@ -184,41 +237,45 @@ function GestionStock() {
         </Button>
       </div>
 
-      {/* Resumen */}
+      {/* Resumen con iconos */}
       <Row className="mb-4">
         <Col md={3}>
-          <Card className="text-center border-0 shadow-sm">
+          <Card className="text-center border-0 shadow-sm stock-card">
             <Card.Body>
-              <div className="h2 mb-0 text-primary">{ingredientes.length}</div>
+              <i className="bi bi-archive text-primary" style={{ fontSize: '1.5rem' }}></i>
+              <div className="h2 mb-0 text-primary">{ingredientes.length.toLocaleString('es-CL')}</div>
               <small className="text-muted">Total Ingredientes</small>
             </Card.Body>
           </Card>
         </Col>
         <Col md={3}>
-          <Card className="text-center border-0 shadow-sm">
+          <Card className="text-center border-0 shadow-sm stock-card">
             <Card.Body>
+              <i className="bi bi-check-circle text-success" style={{ fontSize: '1.5rem' }}></i>
               <div className="h2 mb-0 text-success">
-                {ingredientes.filter(i => i.activo).length}
+                {ingredientes.filter(i => i.activo).length.toLocaleString('es-CL')}
               </div>
               <small className="text-muted">Activos</small>
             </Card.Body>
           </Card>
         </Col>
         <Col md={3}>
-          <Card className="text-center border-0 shadow-sm">
+          <Card className="text-center border-0 shadow-sm stock-card">
             <Card.Body>
+              <i className="bi bi-exclamation-triangle text-danger" style={{ fontSize: '1.5rem' }}></i>
               <div className="h2 mb-0 text-danger">
-                {ingredientesBajoStock.length}
+                {ingredientesBajoStock.length.toLocaleString('es-CL')}
               </div>
               <small className="text-muted">Bajo Stock</small>
             </Card.Body>
           </Card>
         </Col>
         <Col md={3}>
-          <Card className="text-center border-0 shadow-sm">
+          <Card className="text-center border-0 shadow-sm stock-card">
             <Card.Body>
+              <i className="bi bi-x-circle text-warning" style={{ fontSize: '1.5rem' }}></i>
               <div className="h2 mb-0 text-warning">
-                {ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length}
+                {ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length.toLocaleString('es-CL')}
               </div>
               <small className="text-muted">Sin Stock</small>
             </Card.Body>
@@ -226,9 +283,9 @@ function GestionStock() {
         </Col>
       </Row>
 
-      {/* Alerta de bajo stock */}
+      {/* Alerta de bajo stock con animación */}
       {ingredientesBajoStock.length > 0 && (
-        <Alert variant="warning" className="mb-4">
+        <Alert variant="warning" className="mb-4 pulse-alert">
           <i className="bi bi-exclamation-triangle me-2"></i>
           <strong>{ingredientesBajoStock.length} ingredientes</strong> tienen stock por debajo del mínimo:
           {' '}
@@ -301,6 +358,7 @@ function GestionStock() {
                       <ProgressBar
                         now={porcentaje}
                         variant={colorBarra}
+                        className="progress-animated"
                         style={{ height: '8px' }}
                       />
                       <small className="text-muted">{porcentaje.toFixed(0)}% del mínimo</small>
@@ -319,30 +377,40 @@ function GestionStock() {
                       )}
                     </td>
                     <td className="text-end">
-                      <Button
-                        variant="outline-success"
-                        size="sm"
-                        className="me-1"
-                        onClick={() => { setIngredienteAjuste(ing); setShowAjusteModal(true); }}
-                        title="Ajustar stock"
-                      >
-                        <i className="bi bi-plus-slash-minus"></i>
-                      </Button>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        className="me-1"
-                        onClick={() => { setIngredienteEditar(ing); setShowModal(true); }}
-                      >
-                        <i className="bi bi-pencil"></i>
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        onClick={() => handleEliminar(ing.id)}
-                      >
-                        <i className="bi bi-trash"></i>
-                      </Button>
+                      <OverlayTrigger placement="top" overlay={<Tooltip>Ajustar stock</Tooltip>}>
+                        <Button
+                          variant="outline-success"
+                          size="sm"
+                          className="me-1"
+                          onClick={() => {
+                            setIngredienteAjuste(ing);
+                            setAjusteTipo('agregar');
+                            setAjusteCantidad('');
+                            setShowAjusteModal(true);
+                          }}
+                        >
+                          <i className="bi bi-plus-slash-minus"></i>
+                        </Button>
+                      </OverlayTrigger>
+                      <OverlayTrigger placement="top" overlay={<Tooltip>Editar ingrediente</Tooltip>}>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          className="me-1"
+                          onClick={() => { setIngredienteEditar(ing); setShowModal(true); }}
+                        >
+                          <i className="bi bi-pencil"></i>
+                        </Button>
+                      </OverlayTrigger>
+                      <OverlayTrigger placement="top" overlay={<Tooltip>Eliminar ingrediente</Tooltip>}>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => handleEliminar(ing.id, ing.nombre)}
+                        >
+                          <i className="bi bi-trash"></i>
+                        </Button>
+                      </OverlayTrigger>
                     </td>
                   </tr>
                 );
@@ -357,92 +425,130 @@ function GestionStock() {
         <Form onSubmit={handleGuardar}>
           <Modal.Header closeButton>
             <Modal.Title>
+              <i className="bi bi-archive me-2"></i>
               {ingredienteEditar ? 'Editar Ingrediente' : 'Nuevo Ingrediente'}
             </Modal.Title>
+            <div className="d-flex align-items-center ms-auto gap-2">
+              <span className="pill-muted">
+                {ingredienteEditar ? 'Modo edición' : 'Creación rápida'}
+              </span>
+              {ingredienteEditar && (
+                <Badge bg={ingredienteEditar.activo === false ? 'secondary' : 'success'}>
+                  {ingredienteEditar.activo === false ? 'Inactivo' : 'Activo'}
+                </Badge>
+              )}
+            </div>
           </Modal.Header>
-          <Modal.Body>
-            <Row>
+          <Modal.Body className="bg-light">
+            <Row className="gy-3">
               <Col md={8}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Nombre</Form.Label>
-                  <Form.Control
-                    name="nombre"
-                    defaultValue={ingredienteEditar?.nombre}
-                    required
-                  />
-                </Form.Group>
+                <div className="modal-section h-100">
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold">Nombre</Form.Label>
+                    <Form.Control
+                      name="nombre"
+                      defaultValue={ingredienteEditar?.nombre}
+                      placeholder="Ej: Tomate, Filete de res..."
+                      required
+                    />
+                    <div className="field-hint mt-1">Nombre legible que usarán cocina y menú.</div>
+                  </Form.Group>
+                  <Form.Group className="mb-0">
+                    <Form.Label className="fw-semibold">Descripción</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      name="descripcion"
+                      rows={2}
+                      defaultValue={ingredienteEditar?.descripcion}
+                      placeholder="Notas opcionales para compras o preparación."
+                    />
+                  </Form.Group>
+                </div>
               </Col>
               <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Unidad de Medida</Form.Label>
-                  <Form.Select
-                    name="unidad_medida"
-                    defaultValue={ingredienteEditar?.unidad_medida || 'un'}
-                    required
-                  >
-                    {UNIDADES_MEDIDA.map(u => (
-                      <option key={u.value} value={u.value}>{u.label}</option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
+                <div className="modal-section h-100">
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold">Unidad de Medida</Form.Label>
+                    <Form.Select
+                      name="unidad_medida"
+                      defaultValue={ingredienteEditar?.unidad_medida || 'un'}
+                      required
+                    >
+                      {UNIDADES_MEDIDA.map(u => (
+                        <option key={u.value} value={u.value}>{u.label}</option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                  <Form.Check
+                    type="switch"
+                    name="activo"
+                    label="Ingrediente activo"
+                    defaultChecked={ingredienteEditar?.activo !== false}
+                  />
+                  <div className="field-hint mt-2">
+                    Desactiva para ocultarlo en recetas y compras.
+                  </div>
+                </div>
               </Col>
             </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>Descripción</Form.Label>
-              <Form.Control
-                as="textarea"
-                name="descripcion"
-                rows={2}
-                defaultValue={ingredienteEditar?.descripcion}
-              />
-            </Form.Group>
-            <Row>
+
+            <Row className="gy-3 mt-1">
               <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Cantidad Disponible</Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="cantidad_disponible"
-                    step="0.001"
-                    min="0"
-                    defaultValue={ingredienteEditar?.cantidad_disponible || 0}
-                    required
-                  />
-                </Form.Group>
+                <div className="modal-section">
+                  <Form.Label className="fw-semibold">Cantidad Disponible</Form.Label>
+                  <InputGroup>
+                    <Form.Control
+                      type="number"
+                      name="cantidad_disponible"
+                      step="0.001"
+                      min="0"
+                      defaultValue={ingredienteEditar?.cantidad_disponible || 0}
+                      required
+                    />
+                    <InputGroup.Text>
+                      {ingredienteEditar?.unidad_medida || 'un'}
+                    </InputGroup.Text>
+                  </InputGroup>
+                  <div className="field-hint mt-1">Cantidad actual en bodega.</div>
+                </div>
               </Col>
               <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Stock Mínimo</Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="stock_minimo"
-                    step="0.001"
-                    min="0"
-                    defaultValue={ingredienteEditar?.stock_minimo || 0}
-                    required
-                  />
-                </Form.Group>
+                <div className="modal-section">
+                  <Form.Label className="fw-semibold">Stock Mínimo</Form.Label>
+                  <InputGroup>
+                    <Form.Control
+                      type="number"
+                      name="stock_minimo"
+                      step="0.001"
+                      min="0"
+                      defaultValue={ingredienteEditar?.stock_minimo || 0}
+                      required
+                    />
+                    <InputGroup.Text>
+                      {ingredienteEditar?.unidad_medida || 'un'}
+                    </InputGroup.Text>
+                  </InputGroup>
+                  <div className="field-hint mt-1">Umbral para alertas de reposición.</div>
+                </div>
               </Col>
               <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Precio Unitario ($)</Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="precio_unitario"
-                    step="1"
-                    min="0"
-                    defaultValue={ingredienteEditar?.precio_unitario || 0}
-                    required
-                  />
-                </Form.Group>
+                <div className="modal-section">
+                  <Form.Label className="fw-semibold">Precio Unitario ($)</Form.Label>
+                  <InputGroup>
+                    <InputGroup.Text>$</InputGroup.Text>
+                    <Form.Control
+                      type="number"
+                      name="precio_unitario"
+                      step="1"
+                      min="0"
+                      defaultValue={ingredienteEditar?.precio_unitario || 0}
+                      required
+                    />
+                  </InputGroup>
+                  <div className="field-hint mt-1">Costo base para valorización.</div>
+                </div>
               </Col>
             </Row>
-            <Form.Check
-              type="switch"
-              name="activo"
-              label="Ingrediente activo"
-              defaultChecked={ingredienteEditar?.activo !== false}
-            />
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={() => setShowModal(false)}>
@@ -455,23 +561,30 @@ function GestionStock() {
         </Form>
       </Modal>
 
-      {/* MODAL: Ajuste Rápido de Stock */}
+      {/* MODAL: Ajuste Rápido de Stock con Preview */}
       <Modal show={showAjusteModal} onHide={() => setShowAjusteModal(false)}>
         <Form onSubmit={handleAjusteStock}>
           <Modal.Header closeButton>
             <Modal.Title>
+              <i className="bi bi-plus-slash-minus me-2"></i>
               Ajustar Stock: {ingredienteAjuste?.nombre}
             </Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <Alert variant="info" className="mb-3">
-              Stock actual: <strong>{ingredienteAjuste?.cantidad_disponible} {ingredienteAjuste?.unidad_medida}</strong>
+              <i className="bi bi-box me-2"></i>
+              Stock actual: <strong>{parseFloat(ingredienteAjuste?.cantidad_disponible || 0).toFixed(2)} {ingredienteAjuste?.unidad_medida}</strong>
             </Alert>
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Tipo de Ajuste</Form.Label>
-                  <Form.Select name="tipo" required>
+                  <Form.Select
+                    name="tipo"
+                    value={ajusteTipo}
+                    onChange={(e) => setAjusteTipo(e.target.value)}
+                    required
+                  >
                     <option value="agregar">Agregar stock</option>
                     <option value="restar">Restar stock</option>
                   </Form.Select>
@@ -483,6 +596,8 @@ function GestionStock() {
                   <Form.Control
                     type="number"
                     name="cantidad"
+                    value={ajusteCantidad}
+                    onChange={(e) => setAjusteCantidad(e.target.value)}
                     step="0.001"
                     min="0.001"
                     required
@@ -490,16 +605,79 @@ function GestionStock() {
                 </Form.Group>
               </Col>
             </Row>
+            {/* Preview del nuevo stock */}
+            {ajusteCantidad && parseFloat(ajusteCantidad) > 0 && (
+              <Alert
+                variant={
+                  ajusteTipo === 'restar' &&
+                  parseFloat(ingredienteAjuste?.cantidad_disponible || 0) - parseFloat(ajusteCantidad) < 0
+                    ? 'danger'
+                    : 'success'
+                }
+                className="mb-0"
+              >
+                <i className={`bi ${ajusteTipo === 'agregar' ? 'bi-arrow-up' : 'bi-arrow-down'} me-2`}></i>
+                Nuevo stock: <strong>
+                  {ajusteTipo === 'agregar'
+                    ? (parseFloat(ingredienteAjuste?.cantidad_disponible || 0) + parseFloat(ajusteCantidad)).toFixed(2)
+                    : (parseFloat(ingredienteAjuste?.cantidad_disponible || 0) - parseFloat(ajusteCantidad)).toFixed(2)
+                  } {ingredienteAjuste?.unidad_medida}
+                </strong>
+                {ajusteTipo === 'restar' &&
+                 parseFloat(ingredienteAjuste?.cantidad_disponible || 0) - parseFloat(ajusteCantidad) < 0 && (
+                  <div className="small mt-1 text-danger">
+                    <i className="bi bi-exclamation-triangle me-1"></i>
+                    La cantidad no puede ser negativa
+                  </div>
+                )}
+              </Alert>
+            )}
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={() => setShowAjusteModal(false)}>
               Cancelar
             </Button>
-            <Button variant="primary" type="submit">
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={
+                ajusteTipo === 'restar' &&
+                parseFloat(ingredienteAjuste?.cantidad_disponible || 0) - parseFloat(ajusteCantidad || 0) < 0
+              }
+            >
+              <i className="bi bi-check-lg me-1"></i>
               Aplicar Ajuste
             </Button>
           </Modal.Footer>
         </Form>
+      </Modal>
+
+      {/* MODAL: Confirmación de eliminación */}
+      <Modal show={showConfirmModal} onHide={() => setShowConfirmModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            <i className="bi bi-exclamation-triangle text-warning me-2"></i>
+            Confirmar acción
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="mb-0">{confirmAction?.message}</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowConfirmModal(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              setShowConfirmModal(false);
+              confirmAction?.onConfirm?.();
+            }}
+          >
+            <i className="bi bi-trash me-1"></i>
+            Eliminar
+          </Button>
+        </Modal.Footer>
       </Modal>
     </Container>
   );

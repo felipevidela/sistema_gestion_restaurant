@@ -1,11 +1,54 @@
 import { useState, useEffect } from 'react';
 import {
   Container, Row, Col, Card, Table, Button, Form, Badge,
-  Spinner, Alert, Modal, InputGroup, ListGroup
+  Spinner, Alert, Modal, InputGroup, ListGroup, ButtonGroup
 } from 'react-bootstrap';
 import { crearPedido } from '../../services/cocinaApi';
 import { getCategorias, getPlatos } from '../../services/menuApi';
 import { getMesas } from '../../services/reservasApi';
+
+// Estilos CSS para animaciones
+const styles = `
+  .plato-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .plato-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+  }
+  .plato-card.en-carrito {
+    border-color: #198754 !important;
+    border-width: 2px !important;
+    background-color: rgba(25, 135, 84, 0.05);
+  }
+  .badge-cantidad {
+    animation: bounce 0.3s ease;
+    font-size: 0.9rem !important;
+    padding: 0.4em 0.7em !important;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+  }
+  .carrito-sticky {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    border: 2px solid #dee2e6;
+  }
+  .empty-cart-icon {
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .item-enter {
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+`;
 
 /**
  * Componente para crear nuevos pedidos
@@ -47,11 +90,11 @@ function CrearPedido({ mesaPreseleccionada = null, reservaPreseleccionada = null
         getPlatos({ disponible: true, activo: true })
       ]);
 
-      setMesas(mesasData);
-      setCategorias(categoriasData);
-      setPlatos(platosData);
+      setMesas(mesasData || []);
+      setCategorias(categoriasData || []);
+      setPlatos(platosData || []);
 
-      if (categoriasData.length > 0) {
+      if ((categoriasData || []).length > 0) {
         setCategoriaActiva(categoriasData[0].id);
       }
     } catch (err) {
@@ -159,7 +202,7 @@ function CrearPedido({ mesaPreseleccionada = null, reservaPreseleccionada = null
   };
 
   // Filtrar platos
-  const platosFiltrados = platos.filter(p => {
+  const platosFiltrados = (platos || []).filter(p => {
     const matchCategoria = !categoriaActiva || p.categoria === categoriaActiva;
     const matchBusqueda = !busqueda ||
       p.nombre.toLowerCase().includes(busqueda.toLowerCase());
@@ -185,6 +228,9 @@ function CrearPedido({ mesaPreseleccionada = null, reservaPreseleccionada = null
 
   return (
     <Container fluid>
+      {/* Inyectar estilos CSS */}
+      <style>{styles}</style>
+
       {/* Alertas */}
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>
@@ -246,17 +292,29 @@ function CrearPedido({ mesaPreseleccionada = null, reservaPreseleccionada = null
                   return (
                     <Col key={plato.id}>
                       <Card
-                        className={`h-100 cursor-pointer ${enCarrito ? 'border-primary border-2' : ''}`}
+                        className={`h-100 plato-card ${enCarrito ? 'en-carrito' : ''}`}
                         onClick={() => agregarAlCarrito(plato)}
                         style={{ cursor: 'pointer' }}
                       >
-                        <Card.Body className="p-2 text-center">
+                        <Card.Body className="p-2 text-center position-relative">
+                          {/* Badge de cantidad superpuesto */}
+                          {enCarrito && (
+                            <Badge
+                              bg="success"
+                              className="position-absolute badge-cantidad"
+                              style={{ top: '-8px', right: '-8px' }}
+                              key={enCarrito.cantidad}
+                            >
+                              x{enCarrito.cantidad}
+                            </Badge>
+                          )}
                           <div className="mb-2">
                             {plato.imagen ? (
                               <img
                                 src={plato.imagen}
                                 alt={plato.nombre}
                                 className="rounded"
+                                loading="lazy"
                                 style={{ width: '60px', height: '60px', objectFit: 'cover' }}
                               />
                             ) : (
@@ -272,11 +330,6 @@ function CrearPedido({ mesaPreseleccionada = null, reservaPreseleccionada = null
                           <div className="text-primary fw-bold">
                             ${Number(plato.precio).toLocaleString('es-CL')}
                           </div>
-                          {enCarrito && (
-                            <Badge bg="primary" className="mt-1">
-                              x{enCarrito.cantidad}
-                            </Badge>
-                          )}
                         </Card.Body>
                       </Card>
                     </Col>
@@ -295,13 +348,13 @@ function CrearPedido({ mesaPreseleccionada = null, reservaPreseleccionada = null
 
         {/* Columna derecha: Carrito */}
         <Col lg={4}>
-          <Card className="sticky-top" style={{ top: '20px' }}>
+          <Card className="sticky-top carrito-sticky" style={{ top: '20px' }}>
             <Card.Header className="bg-primary text-white">
               <h5 className="mb-0">
                 <i className="bi bi-cart3 me-2"></i>
                 Pedido Actual
                 {carrito.length > 0 && (
-                  <Badge bg="light" text="primary" className="ms-2">
+                  <Badge bg="light" text="primary" className="ms-2 badge-cantidad" key={carrito.reduce((sum, item) => sum + item.cantidad, 0)}>
                     {carrito.reduce((sum, item) => sum + item.cantidad, 0)} items
                   </Badge>
                 )}
@@ -332,13 +385,14 @@ function CrearPedido({ mesaPreseleccionada = null, reservaPreseleccionada = null
               {/* Items del carrito */}
               {carrito.length === 0 ? (
                 <div className="text-center text-muted py-4">
-                  <i className="bi bi-cart text-muted" style={{ fontSize: '3rem' }}></i>
-                  <p className="mt-2">Agrega platos al pedido</p>
+                  <i className="bi bi-cart3 empty-cart-icon" style={{ fontSize: '4rem', opacity: 0.5 }}></i>
+                  <p className="mt-3 mb-1 fw-medium">Carrito vacío</p>
+                  <small>Haz clic en los platos para agregarlos</small>
                 </div>
               ) : (
                 <ListGroup variant="flush" className="mb-3">
                   {carrito.map(item => (
-                    <ListGroup.Item key={item.plato.id} className="px-0">
+                    <ListGroup.Item key={item.plato.id} className="px-0 item-enter">
                       <div className="d-flex justify-content-between align-items-start">
                         <div className="flex-grow-1">
                           <div className="fw-medium">{item.plato.nombre}</div>

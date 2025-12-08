@@ -186,6 +186,41 @@ export function isAuthenticated() {
 }
 
 /**
+ * Validar el token actual contra el servidor
+ * @returns {Promise<boolean>} - true si el token es válido, false si no
+ */
+export async function validateToken() {
+  const token = getAuthToken();
+  if (!token) {
+    return false;
+  }
+
+  try {
+    // Usar el endpoint de perfil para validar el token
+    const response = await fetch(`${API_BASE_URL}/perfil/`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (response.ok) {
+      return true;
+    }
+
+    // Token inválido o expirado - limpiar silenciosamente
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return false;
+    }
+
+    // Otros errores (red, servidor) - asumir token válido para no cerrar sesión
+    return true;
+  } catch {
+    // Error de red - asumir token válido
+    return true;
+  }
+}
+
+/**
  * Obtener reservas con filtros opcionales
  * @param {Object} params - {fecha, estado, fecha_inicio, fecha_fin, search, page, page_size}
  * @param {string} params.search - Búsqueda por cliente (nombre, username, email)
@@ -443,7 +478,11 @@ export async function getMesas({ estado, fecha, hora } = {}) {
     throw new Error('Error al obtener mesas');
   }
 
-  return response.json();
+  const data = await response.json().catch(() => null);
+  if (data && typeof data === 'object' && Array.isArray(data.results)) {
+    return data.results;
+  }
+  return data || [];
 }
 
 /**

@@ -29,7 +29,13 @@ async function handleResponse(response) {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.detail || error.error || `Error ${response.status}`);
   }
-  return response.json();
+  const data = await response.json().catch(() => null);
+  if (data && typeof data === 'object' && Array.isArray(data.results)) {
+    return data.results;
+  }
+  // Respuestas vacías (204) o sin body
+  if (data === null) return [];
+  return data;
 }
 
 // ==================== ESTADOS DE PEDIDO ====================
