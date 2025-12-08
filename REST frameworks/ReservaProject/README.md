@@ -1,435 +1,488 @@
-# 🍽️ Sistema de Reservas de Restaurante
+# Sistema Integral de Gestión de Restaurante
 
-**Proyecto Universitario - Sistema de Gestión de Reservas**
-
-Sistema web completo para gestionar reservas de un restaurante, desarrollado con Django REST Framework (backend) y React (frontend).
+Sistema web completo para la gestión integral de un restaurante, incluyendo reservas, mesas, menú, stock de ingredientes, pedidos y cocina en tiempo real.
 
 ---
 
-## 📚 Descripción del Proyecto
+## Descripción General
 
-Este sistema permite a un restaurante gestionar sus reservas de forma eficiente con las siguientes funcionalidades:
+Este sistema permite gestionar todas las operaciones de un restaurante desde una única plataforma:
 
-- **Reservas públicas**: Los clientes pueden hacer reservas sin necesidad de crear cuenta
-- **Sistema de usuarios**: Opción de crear cuenta para gestionar múltiples reservas
-- **Gestión de mesas**: Control de disponibilidad y estados de las mesas
-- **Bloqueos de mesas**: Sistema administrativo para bloquear mesas por mantenimiento, eventos o reparaciones
-- **Roles de usuario**: Cliente, Mesero, Cajero y Administrador
-- **Validación de horarios**: Prevención de solapamientos y reservas duplicadas
+| Módulo | Descripción |
+|--------|-------------|
+| **Reservas** | Gestión de reservas públicas y con cuenta, validación de horarios |
+| **Mesas** | Control de disponibilidad, estados y bloqueos temporales |
+| **Menú** | Catálogo de platos con categorías, precios e imágenes |
+| **Stock** | Inventario de ingredientes con alertas de stock mínimo |
+| **Pedidos** | Creación de pedidos asociados a mesas con múltiples platos |
+| **Cocina** | Panel en tiempo real con WebSockets para gestión de pedidos |
 
 ---
 
-## 🚀 Tecnologías Utilizadas
+## Tecnologías
 
 ### Backend
-- **Django 5.2.7** - Framework web de Python
-- **Django REST Framework** - Para crear la API REST
-- **PostgreSQL** - Base de datos
-- **Token Authentication** - Sistema de autenticación
+- Django 5.2.7
+- Django REST Framework 3.16.1
+- Django Channels 4.0.0 (WebSockets)
+- PostgreSQL (Railway)
+- Redis (para WebSockets)
 
 ### Frontend
-- **React 19** - Librería de JavaScript para interfaces
-- **Vite** - Herramienta de desarrollo rápida
-- **React Bootstrap 5** - Componentes de Bootstrap para React
-- **Bootstrap 5** - Framework CSS para estilos
-- **React Router** - Navegación entre páginas
+- React 19
+- Vite 7
+- React Bootstrap 5
+- WebSockets nativos
 
 ---
 
-## 📋 Requisitos Previos
+## Arquitectura del Sistema
 
-Antes de comenzar, asegúrate de tener instalado:
-
-- Python 3.13 o superior
-- PostgreSQL
-- Node.js 18 o superior
-- npm (viene con Node.js)
-
----
-
-## 🔧 Instalación y Configuración
-
-### Paso 1: Clonar el Repositorio
-
-```bash
-git clone <url-del-repositorio>
-cd modulo_reservas
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Frontend React                            │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
+│  │ Reservas │ │  Mesas   │ │   Menú   │ │ Pedidos  │ │ Cocina │ │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Django REST API                              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────────┐│
+│  │ mainApp  │ │ menuApp  │ │cocinaApp │ │ Django Channels (WS) ││
+│  │ Reservas │ │  Platos  │ │ Pedidos  │ │   Tiempo Real        ││
+│  │  Mesas   │ │  Stock   │ │  Cola    │ │                      ││
+│  │ Usuarios │ │ Recetas  │ │          │ │                      ││
+│  └──────────┘ └──────────┘ └──────────┘ └──────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    PostgreSQL + Redis                            │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Paso 2: Configurar el Backend (Django)
+---
+
+## Módulos del Sistema
+
+### 1. Reservas
+
+**Funcionalidades:**
+- Reservas públicas sin necesidad de cuenta
+- Reservas con cuenta de usuario
+- Validación automática de solapamientos
+- Turnos de 2 horas
+- Email de confirmación con link de acceso
+- Activación de cuenta desde reserva de invitado
+
+**Estados de Reserva:**
+`pendiente` → `activa` → `completada` / `cancelada`
+
+### 2. Mesas
+
+**Funcionalidades:**
+- CRUD de mesas con capacidad
+- Estados dinámicos (disponible, reservada, ocupada, limpieza)
+- Sistema de bloqueos temporales (mantenimiento, eventos, reparaciones)
+- Bloqueos por rango de fechas o día completo
+
+**Estados de Mesa:**
+`disponible` | `reservada` | `ocupada` | `limpieza`
+
+### 3. Menú
+
+**Funcionalidades:**
+- Categorías de platos (Entradas, Platos Principales, Postres, etc.)
+- Platos con precio, descripción, imagen y tiempo de preparación
+- Recetas que vinculan platos con ingredientes
+- Verificación automática de disponibilidad según stock
+
+**Modelos:**
+```
+CategoriaMenu → Plato → Receta → Ingrediente
+```
+
+### 4. Stock de Ingredientes
+
+**Funcionalidades:**
+- Inventario de ingredientes con unidades de medida
+- Stock mínimo configurable por ingrediente
+- Alertas de stock bajo
+- Descuento automático al crear pedidos
+- Reversión de stock al cancelar pedidos
+
+**Operaciones atómicas:** Usa `F()` de Django para evitar race conditions.
+
+### 5. Pedidos
+
+**Funcionalidades:**
+- Crear pedidos asociados a mesas
+- Múltiples platos por pedido con cantidades
+- Notas especiales por plato
+- Precio snapshot (guarda precio al momento del pedido)
+- Validación de stock antes de confirmar
+
+**Estados de Pedido:**
+```
+CREADO → EN_PREPARACION → LISTO → ENTREGADO
+   ↓           ↓            ↓
+   └───────────┴────────────┴──→ CANCELADO
+
+También: CREADO → URGENTE → EN_PREPARACION...
+```
+
+### 6. Panel de Cocina
+
+**Funcionalidades:**
+- Cola de pedidos en tiempo real (WebSockets)
+- Filtros por estado (urgentes, en preparación, listos)
+- Cambio de estado con un clic
+- Tiempo transcurrido por pedido
+- Reconexión automática de WebSocket
+
+---
+
+## Roles de Usuario
+
+| Rol | Permisos |
+|-----|----------|
+| **Cliente** | Ver menú, hacer reservas, ver sus reservas |
+| **Mesero** | Reservas del día, gestión de mesas, crear pedidos, ver cocina |
+| **Cajero** | Todo de mesero + todas las reservas, crear pedidos |
+| **Admin** | Acceso completo: usuarios, mesas, menú, stock, bloqueos, cocina |
+
+---
+
+## Instalación
+
+### Requisitos
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL
+- Redis (para WebSockets en producción)
+
+### Backend
 
 ```bash
-# Navegar a la carpeta del backend
 cd "REST frameworks/ReservaProject"
 
-# Instalar dependencias de Python
+# Instalar dependencias
 pip3 install -r requirements.txt
 
-# Crear base de datos PostgreSQL
-createdb reservas_db
+# Configurar variable de entorno
+export DATABASE_URL="postgresql://usuario:password@host:puerto/basedatos"
 
 # Ejecutar migraciones
 python3 manage.py migrate
 
-# (Opcional) Crear un superusuario para acceder al admin
+# Crear superusuario
 python3 manage.py createsuperuser
 
-# Iniciar el servidor de desarrollo
+# Iniciar servidor
 python3 manage.py runserver
 ```
 
-El servidor backend estará disponible en: **http://localhost:8000**
-
-### Paso 3: Configurar el Frontend (React)
-
-En una **nueva terminal**:
+### Frontend
 
 ```bash
-# Navegar a la carpeta del frontend
 cd Reservas
 
-# Instalar dependencias de Node
+# Instalar dependencias
 npm install
 
-# Iniciar el servidor de desarrollo
+# Desarrollo
 npm run dev
+
+# Producción
+npm run build
 ```
 
-El frontend estará disponible en: **http://localhost:5173**
-
 ---
 
-## 🎯 Funcionalidades Principales
-
-### 1. Reservas sin Cuenta (Invitados)
-
-Los clientes pueden hacer reservas sin crear cuenta:
-- Completan un formulario con sus datos
-- Reciben un email con un link único para gestionar su reserva
-- Pueden cancelar su reserva con el link
-- Opción de activar cuenta después
-
-### 2. Reservas con Cuenta (Usuarios Registrados)
-
-Los usuarios pueden crear una cuenta para:
-- Ver todas sus reservas en un solo lugar
-- Crear nuevas reservas más rápidamente
-- Editar o cancelar reservas fácilmente
-- No necesitan links de acceso
-
-### 3. Panel de Administración (Staff)
-
-Diferentes niveles de acceso según el rol:
-
-- **Mesero**: Ver reservas del día, gestionar mesas
-- **Cajero**: Ver y gestionar todas las reservas
-- **Administrador**: Acceso completo al sistema, incluyendo gestión de bloqueos
-
-### 4. Bloqueos de Mesas (Solo Administradores)
-
-Los administradores pueden bloquear mesas para:
-- **Mantenimiento programado**: Reparaciones, limpieza profunda
-- **Eventos privados**: Reservas especiales, eventos corporativos
-- **Reparaciones urgentes**: Bloqueo temporal por daños
-- **Otros motivos**: Cualquier situación que requiera bloquear una mesa
-
-**Características de los bloqueos**:
-- Bloqueos por rango de fechas
-- Bloqueos de día completo o por horario específico
-- Categorización (mantenimiento, evento privado, reparación, etc.)
-- Motivo y notas descriptivas
-- Activación/desactivación sin eliminación
-- Las mesas bloqueadas NO aparecen como disponibles para reservas
-
----
-
-## 📊 Estructura de la Base de Datos
-
-### Modelos Principales
-
-#### Mesa
-- Número de mesa
-- Capacidad (número de personas)
-- Estado (disponible, reservada, ocupada, limpieza)
-
-#### Reserva
-- Cliente (usuario)
-- Mesa asignada
-- Fecha y hora (inicio y fin)
-- Número de personas
-- Estado (pendiente, activa, completada, cancelada)
-- Notas adicionales
-
-#### Perfil de Usuario
-- Rol (cliente, mesero, cajero, admin)
-- Datos personales (RUT y teléfono encriptados)
-- Información de contacto
-
-#### Bloqueo de Mesa
-- Mesa bloqueada
-- Rango de fechas (inicio y fin)
-- Horario específico (opcional, día completo si no se especifica)
-- Motivo del bloqueo
-- Categoría (mantenimiento, evento privado, reparación, reserva especial, otro)
-- Notas adicionales
-- Usuario que creó el bloqueo
-- Estado activo/inactivo
-
----
-
-## 🔐 Seguridad
-
-El sistema implementa varias medidas de seguridad:
-
-- **Encriptación**: Los datos sensibles (RUT, teléfono) se encriptan en la base de datos
-- **Autenticación por token**: Sistema seguro de inicio de sesión
-- **Validación de datos**: En frontend y backend
-- **Prevención de solapamientos**: No permite reservas duplicadas
-
----
-
-## 🎨 Uso del Sistema
-
-### Para Clientes (Vista Pública)
-
-1. Abre http://localhost:5173
-2. Completa el formulario de reserva
-3. Opcional: Marca "Quiero crear una cuenta" para acceso completo
-4. Recibirás un email de confirmación
-
-### Para Staff (Vista Interna)
-
-1. Haz clic en "Iniciar Sesión"
-2. Ingresa tus credenciales
-3. Accede a las funciones según tu rol
-
----
-
-## 📱 Endpoints de la API
+## Endpoints de la API
 
 ### Autenticación
 ```
-POST /api/login/                    - Iniciar sesión
-POST /api/register-and-reserve/     - Registrar y reservar
-POST /api/activar-cuenta/           - Activar cuenta de invitado
+POST /api/login/                      Iniciar sesión
+POST /api/register-and-reserve/       Registrar y reservar
+POST /api/activar-cuenta/             Activar cuenta
 ```
 
 ### Reservas
 ```
-GET  /api/reservas/                 - Listar reservas
-POST /api/reservas/                 - Crear reserva
-GET  /api/horas-disponibles/        - Ver horarios disponibles
-GET  /api/reserva-invitado/:token/  - Ver reserva con token
+GET  /api/reservas/                   Listar reservas
+POST /api/reservas/                   Crear reserva
+GET  /api/horas-disponibles/          Horarios disponibles
 ```
 
 ### Mesas
 ```
-GET  /api/mesas/                    - Listar mesas
-GET  /api/mesas/?fecha=&hora=       - Mesas disponibles
+GET  /api/mesas/                      Listar mesas
+GET  /api/mesas/?fecha=&hora=         Mesas disponibles
 ```
 
-### Bloqueos (Solo Administradores)
+### Bloqueos (Admin)
 ```
-GET    /api/bloqueos/                      - Listar bloqueos
-POST   /api/bloqueos/                      - Crear bloqueo
-GET    /api/bloqueos/:id/                  - Ver detalle de bloqueo
-PATCH  /api/bloqueos/:id/                  - Actualizar bloqueo
-DELETE /api/bloqueos/:id/                  - Eliminar bloqueo
-POST   /api/bloqueos/:id/activar/          - Activar bloqueo
-POST   /api/bloqueos/:id/desactivar/       - Desactivar bloqueo
-GET    /api/bloqueos/activos-hoy/          - Bloqueos activos para hoy
+GET    /api/bloqueos/                 Listar bloqueos
+POST   /api/bloqueos/                 Crear bloqueo
+PATCH  /api/bloqueos/{id}/            Actualizar
+DELETE /api/bloqueos/{id}/            Eliminar
 ```
 
-**Filtros disponibles para /api/bloqueos/**:
-- `mesa_numero`: Filtrar por número de mesa
-- `activo`: true/false - Filtrar por estado
-- `categoria`: Filtrar por categoría de bloqueo
-- `solo_activos`: true - Solo bloqueos activos
-- `activos_en_fecha`: YYYY-MM-DD - Bloqueos activos en una fecha
-
----
-
-## 🧪 Datos de Prueba
-
-### Generar Mesas de Ejemplo
-
-```bash
-python3 manage.py shell
-
-# Dentro del shell:
-from mainApp.models import Mesa
-
-for i in range(1, 7):
-    capacidad = 2 if i <= 4 else 4
-    Mesa.objects.create(numero=i, capacidad=capacidad, estado='disponible')
-
-exit()
+### Menú
+```
+GET  /api/menu/categorias/            Listar categorías
+GET  /api/menu/platos/                Listar platos
+GET  /api/menu/platos/?disponible=true Platos disponibles
+POST /api/menu/platos/                Crear plato (admin)
 ```
 
-### Generar Reservas de Ejemplo
+### Ingredientes/Stock (Admin)
+```
+GET  /api/menu/ingredientes/          Listar ingredientes
+GET  /api/menu/ingredientes/?bajo_stock=true  Bajo stock mínimo
+POST /api/menu/ingredientes/          Crear ingrediente
+PATCH /api/menu/ingredientes/{id}/    Actualizar stock
+```
 
-```bash
-python3 manage.py generar_reservas_ejemplo --reservas-por-dia 20
+### Cocina/Pedidos
+```
+GET  /api/cocina/pedidos/             Listar pedidos
+POST /api/cocina/pedidos/             Crear pedido
+GET  /api/cocina/cola/                Cola de cocina (activos)
+POST /api/cocina/pedidos/{id}/estado/ Cambiar estado
+```
+
+### WebSocket
+```
+WS /ws/cocina/                        Notificaciones tiempo real
 ```
 
 ---
 
-## 📝 Validaciones Implementadas
-
-### Validaciones de Reserva
-
-- ✅ Fecha no puede ser en el pasado
-- ✅ Hora de fin debe ser después de hora de inicio
-- ✅ No puede exceder la capacidad de la mesa
-- ✅ No permite solapamiento de horarios
-- ✅ Turnos de 2 horas
-
-### Validaciones de Usuario
-
-- ✅ RUT válido con dígito verificador
-- ✅ Teléfono en formato chileno (+56 9...)
-- ✅ Email válido
-- ✅ Contraseña segura (mínimo 8 caracteres)
-
----
-
-## 🔄 Estados del Sistema
-
-### Estados de Mesa
-- **disponible**: Mesa lista para reservar
-- **reservada**: Mesa con reserva confirmada
-- **ocupada**: Mesa actualmente en uso
-- **limpieza**: Mesa siendo limpiada
-
-### Estados de Reserva
-- **pendiente**: Reserva confirmada, cliente aún no llega
-- **activa**: Cliente ha llegado
-- **completada**: Reserva finalizada
-- **cancelada**: Reserva cancelada
-
----
-
-## 🛠️ Comandos Útiles
-
-### Backend (Django)
-
-```bash
-# Crear migraciones después de cambios en models.py
-python3 manage.py makemigrations
-
-# Aplicar migraciones
-python3 manage.py migrate
-
-# Acceder al shell interactivo
-python3 manage.py shell
-
-# Crear superusuario
-python3 manage.py createsuperuser
-
-# Ver todas las migraciones
-python3 manage.py showmigrations
-```
-
-### Frontend (React)
-
-```bash
-# Instalar nueva dependencia
-npm install <nombre-paquete>
-
-# Compilar para producción
-npm run build
-
-# Previsualizar build de producción
-npm run preview
-```
-
----
-
-## 📦 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 modulo_reservas/
-├── REST frameworks/
-│   └── ReservaProject/          # Backend Django
-│       ├── mainApp/             # App principal
-│       │   ├── models.py        # Modelos de BD
-│       │   ├── views.py         # Vistas de la API
-│       │   ├── serializers.py   # Serializadores
-│       │   └── urls.py          # URLs de la app
-│       ├── ReservaProject/      # Configuración
-│       │   ├── settings.py      # Configuración
-│       │   └── urls.py          # URLs principales
-│       └── manage.py            # CLI de Django
+├── REST frameworks/ReservaProject/   # Backend Django
+│   ├── mainApp/                      # Reservas, mesas, usuarios
+│   ├── menuApp/                      # Menú, ingredientes, recetas
+│   ├── cocinaApp/                    # Pedidos, cola de cocina
+│   └── ReservaProject/               # Configuración Django
 │
-└── Reservas/                    # Frontend React
-    ├── src/
-    │   ├── components/          # Componentes React
-    │   ├── contexts/            # Context API
-    │   ├── services/            # Llamadas a API
-    │   └── App.jsx              # Componente principal
-    └── package.json             # Dependencias npm
+└── Reservas/                         # Frontend React
+    └── src/
+        ├── components/
+        │   ├── menu/                 # MenuPublico, GestionMenu, GestionStock
+        │   └── cocina/               # PanelCocina, CrearPedido
+        ├── services/                 # APIs (menuApi, cocinaApi)
+        └── hooks/                    # useWebSocket
 ```
 
 ---
 
-## 🐛 Solución de Problemas Comunes
+## Flujo de Operación Típico
 
-### El servidor Django no inicia
+```
+1. Cliente hace reserva → Reserva confirmada
+                              ↓
+2. Cliente llega → Mesero cambia reserva a "activa"
+                              ↓
+3. Mesero crea pedido desde la mesa
+                              ↓
+4. Pedido aparece en Panel de Cocina (WebSocket)
+                              ↓
+5. Cocina cambia estado: EN_PREPARACION → LISTO
+                              ↓
+6. Mesero entrega → ENTREGADO
+                              ↓
+7. Stock se descuenta automáticamente
+   Platos sin stock se marcan como no disponibles
+```
+
+---
+
+## Validaciones Implementadas
+
+### Reservas
+- Fecha no puede ser pasada
+- No permite solapamiento de horarios
+- Capacidad de mesa respetada
+- Mesas bloqueadas no disponibles
+
+### Pedidos
+- Stock validado antes de crear
+- Transiciones de estado controladas
+- Precio guardado como snapshot
+
+### Stock
+- Descuento atómico con `select_for_update()`
+- Reversión completa al cancelar
+- Actualización automática de disponibilidad de platos
+
+---
+
+## Seguridad
+
+- Datos sensibles encriptados (RUT, teléfono)
+- Autenticación por token
+- Permisos por rol en cada endpoint
+- CORS configurado para frontend
+
+---
+
+## Despliegue en Railway
+
+El sistema está configurado para desplegarse en Railway:
+
+```
+DATABASE_URL=postgresql://...        # PostgreSQL de Railway
+REDIS_URL=redis://...                # Redis para WebSockets
+FIELD_ENCRYPTION_KEY=...             # Clave de encriptación
+```
+
+---
+
+## Comandos Útiles
+
 ```bash
-# Verificar que PostgreSQL está corriendo
-pg_isready
+# Generar mesas de ejemplo
+python3 manage.py shell -c "
+from mainApp.models import Mesa
+for i in range(1, 7):
+    Mesa.objects.get_or_create(numero=i, defaults={'capacidad': 4})
+"
 
-# Verificar que la base de datos existe
-psql -l | grep reservas_db
-```
+# Ejecutar tests
+python3 manage.py test cocinaApp.tests
 
-### Error de CORS en el frontend
-Verifica que en `settings.py` esté configurado:
-```python
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-]
-```
-
-### Error de migraciones
-```bash
-# Resetear migraciones (solo en desarrollo)
-python3 manage.py migrate mainApp zero
-python3 manage.py migrate
+# Ver migraciones pendientes
+python3 manage.py showmigrations
 ```
 
 ---
 
-## 📚 Recursos de Aprendizaje
+## Integración de Repositorios Externos
 
-- [Documentación de Django](https://docs.djangoproject.com/)
-- [Django REST Framework](https://www.django-rest-framework.org/)
-- [React Docs](https://react.dev/)
-- [Bootstrap 5](https://getbootstrap.com/docs/5.3/)
+Este sistema integra funcionalidades de múltiples repositorios, adaptándolas a una arquitectura unificada con Django + React.
+
+### Repositorio 1: Menú y Stock de Ingredientes
+**Fuente:** [github.com/F0b10n269/-Men-y-Stock-de-Ingredientes](https://github.com/F0b10n269/-Men-y-Stock-de-Ingredientes)
+
+| Funcionalidad Original | Adaptación Realizada |
+|------------------------|---------------------|
+| Modelo `Ingrediente` básico | Extendido con `stock_minimo`, `precio_unitario`, propiedad `bajo_stock` |
+| Modelo `Plato` simple | Agregado `tiempo_preparacion`, `imagen`, FK a `CategoriaMenu` |
+| Relación plato-ingrediente | Implementado como modelo `Receta` con `cantidad_requerida` |
+| Sin gestión de stock | Descuento atómico con `F()` y `select_for_update()` |
+| Sin disponibilidad automática | Método `verificar_disponibilidad()` en Plato |
+
+**Archivos creados en menuApp:**
+- `models.py` - CategoriaMenu, Ingrediente, Plato, Receta
+- `serializers.py` - Serializers con campos calculados
+- `views.py` - ViewSets con filtros django-filter
+- `filters.py` - IngredienteFilter, PlatoFilter
+
+### Repositorio 2: Módulo de Cocina (appPedidos)
+**Fuente:** [github.com/lizcalizaya/Modulo-4---repositorio-restaurante](https://github.com/lizcalizaya/Modulo-4---repositorio-restaurante)
+
+| Funcionalidad Original | Adaptación Realizada |
+|------------------------|---------------------|
+| Estados básicos de pedido | Agregado estado `URGENTE`, transiciones controladas |
+| Sin relación con mesas reales | FK a `mainApp.Mesa` (obligatoria) |
+| Sin relación con reservas | FK a `mainApp.Reserva` (opcional) |
+| Pedido con un solo plato | Modelo `DetallePedido` para múltiples platos |
+| Sin precio histórico | Campo `precio_unitario` snapshot en DetallePedido |
+| Sin WebSockets | Implementado Django Channels para tiempo real |
+| Sin integración con stock | Servicio `PedidoService` con descuento/reversión atómico |
+
+**Archivos creados en cocinaApp:**
+- `models.py` - Pedido, DetallePedido, EstadoPedido, TRANSICIONES_VALIDAS
+- `services.py` - PedidoService con lógica transaccional
+- `consumers.py` - CocinaConsumer para WebSockets
+- `routing.py` - Rutas WebSocket
+
+### Repositorio 3: Gestor de Pedidos
+**Fuente:** [github.com/Zhertx/Restaurant_Gestor_de_pedidos](https://github.com/Zhertx/Restaurant_Gestor_de_pedidos)
+
+| Funcionalidad Original | Estado |
+|------------------------|--------|
+| CRUD de pedidos | Ya implementado en cocinaApp (más robusto) |
+| Estados CREADO → CERRADO | Ya implementado con más estados |
+| Mocks de stock | Reemplazado por integración real con menuApp |
+| UI Django templates | Reemplazado por frontend React |
+| UUID como PK | Mantenido Integer autoincrement |
+
+**Resultado:** No se requirió integración adicional. La funcionalidad ya existía de forma más completa.
+
+### Resumen de Integración
+
+```
+Repositorio Original          →  Sistema Integrado
+─────────────────────────────────────────────────────
+Menú y Stock (repo 1)         →  menuApp/
+  - Ingredientes simples      →  Ingredientes con stock mínimo
+  - Platos básicos            →  Platos con categorías y recetas
+  - Sin stock dinámico        →  Descuento atómico F()
+
+Cocina appPedidos (repo 2)    →  cocinaApp/
+  - Pedido simple             →  Pedido + DetallePedido
+  - Sin tiempo real           →  WebSockets con Channels
+  - Sin integración           →  FK a Mesa, Reserva, User
+
+Gestor de Pedidos (repo 3)    →  (No integrado)
+  - Funcionalidad duplicada   →  Ya existía en cocinaApp
+```
+
+### Frontend React Integrado
+
+Componentes creados para las nuevas funcionalidades:
+
+```
+src/components/
+├── menu/
+│   ├── MenuPublico.jsx      # Vista del menú para clientes
+│   ├── GestionMenu.jsx      # Admin: CRUD de platos y categorías
+│   └── GestionStock.jsx     # Admin: inventario de ingredientes
+└── cocina/
+    ├── PanelCocina.jsx      # Cola de pedidos en tiempo real
+    └── CrearPedido.jsx      # Crear pedido desde mesa
+
+src/services/
+├── menuApi.js               # API de menú e ingredientes
+└── cocinaApi.js             # API de pedidos + estados
+
+src/hooks/
+└── useWebSocket.js          # Hook para conexión WebSocket
+```
 
 ---
 
-## 👥 Equipo de Desarrollo
+## Changelog
 
-**Proyecto Universitario** - Desarrollo de Aplicaciones Web
+### Diciembre 2024
+- Integración de repositorios externos (Menú, Stock, Cocina)
+- Sistema de menú con categorías y platos
+- Gestión de ingredientes y stock con alertas
+- Recetas (relación plato-ingrediente con cantidades)
+- Pedidos con múltiples detalles y precio snapshot
+- Panel de cocina en tiempo real (WebSockets)
+- Descuento/reversión automático de stock
+- Frontend React para menú, stock y cocina
+
+### Noviembre 2024
+- Sistema de bloqueo de mesas
+- Bloqueos por rango de fechas
+- Categorización de bloqueos
+
+### Octubre 2024
+- Sistema base de reservas
+- Gestión de mesas
+- Roles de usuario
+- Frontend React
 
 ---
 
-## 📄 Licencia
-
-Este proyecto es de uso educativo para el curso de Desarrollo de Aplicaciones Web.
-
----
-
-**Última actualización**: Noviembre 2025
-
-### Changelog - Noviembre 2025
-
-#### Nueva Funcionalidad: Sistema de Bloqueo de Mesas
-- ✨ Los administradores pueden bloquear mesas temporalmente
-- 🔒 Soporte para bloqueos de día completo o por horario específico
-- 📅 Bloqueos por rango de fechas con validación de solapamientos
-- 🏷️ Categorización de bloqueos (mantenimiento, eventos, reparaciones)
-- 🔄 Activación/desactivación de bloqueos sin eliminación
-- ✅ Integración automática con sistema de disponibilidad de mesas
-- 📱 Interfaz completa en React Bootstrap con filtros y búsqueda
+**Proyecto Universitario** - Ingeniería de Software

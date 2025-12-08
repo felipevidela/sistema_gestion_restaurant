@@ -12,6 +12,12 @@ import ReservaPublica from "./components/ReservaPublica";
 import AccesoReservaInvitado from "./components/AccesoReservaInvitado";
 import ActivarCuenta from "./components/ActivarCuenta";
 import { useAuth } from './contexts/AuthContext';
+// Nuevos componentes de menú y cocina
+import MenuPublico from "./components/menu/MenuPublico";
+import GestionMenu from "./components/menu/GestionMenu";
+import GestionStock from "./components/menu/GestionStock";
+import PanelCocina from "./components/cocina/PanelCocina";
+import CrearPedido from "./components/cocina/CrearPedido";
 
 const getDefaultTab = (rol) => {
   if (rol === 'cliente') return 'mis-reservas';
@@ -69,22 +75,31 @@ function App() {
       cliente: [
         { id: 'mis-reservas', label: 'Mis Reservas', icon: 'bi-list-ul' },
         { id: 'nueva-reserva', label: 'Nueva Reserva', icon: 'bi-plus-circle' },
+        { id: 'menu', label: 'Menú', icon: 'bi-book' },
         { id: 'mi-perfil', label: 'Mi Perfil', icon: 'bi-person-circle' }
       ],
       mesero: [
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
-        { id: 'gestion-mesas', label: 'Gestión de Mesas', icon: 'bi-grid-3x3' }
+        { id: 'gestion-mesas', label: 'Gestión de Mesas', icon: 'bi-grid-3x3' },
+        { id: 'crear-pedido', label: 'Crear Pedido', icon: 'bi-cart-plus' },
+        { id: 'cocina', label: 'Cocina', icon: 'bi-fire' }
       ],
       cajero: [
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
         { id: 'todas-reservas', label: 'Todas las Reservas', icon: 'bi-list-check' },
-        { id: 'nueva-reserva', label: 'Nueva Reserva', icon: 'bi-plus-circle' }
+        { id: 'nueva-reserva', label: 'Nueva Reserva', icon: 'bi-plus-circle' },
+        { id: 'crear-pedido', label: 'Crear Pedido', icon: 'bi-cart-plus' },
+        { id: 'cocina', label: 'Cocina', icon: 'bi-fire' }
       ],
       admin: [
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
         { id: 'nueva-reserva', label: 'Nueva Reserva', icon: 'bi-plus-circle' },
-        { id: 'gestion-usuarios', label: 'Gestión de Usuarios', icon: 'bi-people' },
-        { id: 'gestion-mesas', label: 'Gestión de Mesas', icon: 'bi-grid-3x3' }
+        { id: 'gestion-usuarios', label: 'Usuarios', icon: 'bi-people' },
+        { id: 'gestion-mesas', label: 'Mesas', icon: 'bi-grid-3x3' },
+        { id: 'gestion-menu', label: 'Menú', icon: 'bi-journal-text' },
+        { id: 'gestion-stock', label: 'Stock', icon: 'bi-box-seam' },
+        { id: 'crear-pedido', label: 'Crear Pedido', icon: 'bi-cart-plus' },
+        { id: 'cocina', label: 'Cocina', icon: 'bi-fire' }
       ]
     };
 
@@ -116,6 +131,17 @@ function App() {
         return <GestionMesas />;
       case 'gestion-usuarios':
         return <GestionUsuarios />;
+      // Nuevas pestañas de menú y cocina
+      case 'menu':
+        return <MenuPublico />;
+      case 'gestion-menu':
+        return <GestionMenu />;
+      case 'gestion-stock':
+        return <GestionStock />;
+      case 'crear-pedido':
+        return <CrearPedido onPedidoCreado={() => setActiveTab('cocina')} />;
+      case 'cocina':
+        return <PanelCocina />;
       default:
         return <Alert variant="warning">Sección no encontrada</Alert>;
     }

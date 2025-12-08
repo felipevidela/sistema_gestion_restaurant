@@ -67,11 +67,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third party
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
     'django_cryptography',
+    'django_filters',
+    'channels',
+    # Local apps
     'mainApp',
+    'menuApp',
+    'cocinaApp',
 ]
 
 MIDDLEWARE = [
@@ -215,6 +221,22 @@ REST_FRAMEWORK = {
     # FIX #14 (MODERADO): Paginación para mejorar rendimiento en listados
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,  # 50 elementos por página por defecto
+    # Filtros django-filter
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+}
+
+# ASGI Configuration para WebSockets (Channels)
+ASGI_APPLICATION = 'ReservaProject.asgi.application'
+
+# Channel Layers - Redis para WebSockets en tiempo real
+# En Railway: agregar Redis como Add-on y configurar REDIS_URL
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [os.environ.get('REDIS_URL', 'redis://localhost:6379')],
+        },
+    },
 }
 
 # Configuración CORS para permitir el frontend React

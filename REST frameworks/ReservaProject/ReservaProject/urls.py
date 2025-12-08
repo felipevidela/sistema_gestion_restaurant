@@ -42,6 +42,12 @@ urlpatterns = [
     # Incluir las rutas generadas por el router (mesas y reservas)
     path('api/', include(router.urls)),
 
+    # Rutas de menuApp (menú e ingredientes)
+    path('api/menu/', include('menuApp.urls')),
+
+    # Rutas de cocinaApp (pedidos y cocina)
+    path('api/cocina/', include('cocinaApp.urls')),
+
     # Servir el frontend React (catch-all - debe ir al FINAL)
     # Captura todas las rutas que no sean API, admin o static
     # WhiteNoise intercepta /static/ antes de que llegue aquí
