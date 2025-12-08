@@ -166,7 +166,7 @@ También: CREADO → URGENTE → EN_PREPARACION...
 ### Backend
 
 ```bash
-cd "REST frameworks/ReservaProject"
+cd backend
 
 # Instalar dependencias
 pip3 install -r requirements.txt
@@ -187,7 +187,7 @@ python3 manage.py runserver
 ### Frontend
 
 ```bash
-cd Reservas
+cd frontend
 
 # Instalar dependencias
 npm install
@@ -265,14 +265,15 @@ WS /ws/cocina/                        Notificaciones tiempo real
 ## Estructura del Proyecto
 
 ```
-modulo_reservas/
-├── REST frameworks/ReservaProject/   # Backend Django
+SISTEMA_GESTION_RESTAURANT/
+├── backend/                          # Backend Django
+│   ├── config/                       # Configuración Django
 │   ├── mainApp/                      # Reservas, mesas, usuarios
 │   ├── menuApp/                      # Menú, ingredientes, recetas
 │   ├── cocinaApp/                    # Pedidos, cola de cocina
-│   └── ReservaProject/               # Configuración Django
+│   └── manage.py
 │
-└── Reservas/                         # Frontend React
+└── frontend/                         # Frontend React
     └── src/
         ├── components/
         │   ├── menu/                 # MenuPublico, GestionMenu, GestionStock

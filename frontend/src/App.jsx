@@ -190,8 +190,8 @@ function App() {
         <Navbar bg="white" className="shadow-sm">
           <Container fluid>
             <Navbar.Brand className="mb-0 h1">
-              <i className="bi bi-calendar-check me-2 text-primary"></i>
-              Sistema de Reservas
+              <i className="bi bi-shop me-2 text-primary"></i>
+              Gestión de Restaurant
             </Navbar.Brand>
             <Button
               variant="outline-primary"
@@ -225,8 +225,8 @@ function App() {
       <Navbar bg="primary" variant="dark" className="shadow-sm app-navbar">
         <Container fluid>
           <Navbar.Brand className="mb-0 h1">
-            <i className="bi bi-calendar-check me-2"></i>
-            Sistema de Reservas
+            <i className="bi bi-shop me-2"></i>
+            Gestión de Restaurant
           </Navbar.Brand>
           <div className="d-flex align-items-center text-white">
             <div className="me-3">
