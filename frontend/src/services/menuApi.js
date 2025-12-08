@@ -205,7 +205,7 @@ export async function getIngredientes(filtros = {}) {
  * Obtener ingredientes con stock bajo el mínimo
  */
 export async function getIngredientesBajoStock() {
-  const response = await fetch(`${API_BASE_URL}/menu/ingredientes/bajo-minimo/`, {
+  const response = await fetch(`${API_BASE_URL}/menu/ingredientes/bajo_minimo/`, {
     headers: getAuthHeaders()
   });
   return handleResponse(response);

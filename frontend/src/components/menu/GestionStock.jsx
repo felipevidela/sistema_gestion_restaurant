@@ -421,15 +421,15 @@ function GestionStock() {
       </Card>
 
       {/* MODAL: Crear/Editar Ingrediente */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" fullscreen="sm-down">
         <Form onSubmit={handleGuardar}>
-          <Modal.Header closeButton>
-            <Modal.Title>
+          <Modal.Header closeButton className="flex-wrap">
+            <Modal.Title className="me-auto">
               <i className="bi bi-archive me-2"></i>
               {ingredienteEditar ? 'Editar Ingrediente' : 'Nuevo Ingrediente'}
             </Modal.Title>
-            <div className="d-flex align-items-center ms-auto gap-2">
-              <span className="pill-muted">
+            <div className="d-flex align-items-center gap-2 mt-2 mt-sm-0">
+              <span className="pill-muted d-none d-sm-inline">
                 {ingredienteEditar ? 'Modo edición' : 'Creación rápida'}
               </span>
               {ingredienteEditar && (
@@ -441,7 +441,7 @@ function GestionStock() {
           </Modal.Header>
           <Modal.Body className="bg-light">
             <Row className="gy-3">
-              <Col md={8}>
+              <Col xs={12} lg={8}>
                 <div className="modal-section h-100">
                   <Form.Group className="mb-3">
                     <Form.Label className="fw-semibold">Nombre</Form.Label>
@@ -465,7 +465,7 @@ function GestionStock() {
                   </Form.Group>
                 </div>
               </Col>
-              <Col md={4}>
+              <Col xs={12} lg={4}>
                 <div className="modal-section h-100">
                   <Form.Group className="mb-3">
                     <Form.Label className="fw-semibold">Unidad de Medida</Form.Label>
@@ -493,7 +493,7 @@ function GestionStock() {
             </Row>
 
             <Row className="gy-3 mt-1">
-              <Col md={4}>
+              <Col xs={12} sm={6} lg={4}>
                 <div className="modal-section">
                   <Form.Label className="fw-semibold">Cantidad Disponible</Form.Label>
                   <InputGroup>
@@ -512,7 +512,7 @@ function GestionStock() {
                   <div className="field-hint mt-1">Cantidad actual en bodega.</div>
                 </div>
               </Col>
-              <Col md={4}>
+              <Col xs={12} sm={6} lg={4}>
                 <div className="modal-section">
                   <Form.Label className="fw-semibold">Stock Mínimo</Form.Label>
                   <InputGroup>
@@ -531,7 +531,7 @@ function GestionStock() {
                   <div className="field-hint mt-1">Umbral para alertas de reposición.</div>
                 </div>
               </Col>
-              <Col md={4}>
+              <Col xs={12} sm={12} lg={4}>
                 <div className="modal-section">
                   <Form.Label className="fw-semibold">Precio Unitario ($)</Form.Label>
                   <InputGroup>

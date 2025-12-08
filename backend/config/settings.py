@@ -136,6 +136,10 @@ DATABASES = {
     )
 }
 
+# FIX: Remove 'schema' option if present, as it causes issues with psycopg2
+if 'default' in DATABASES and 'OPTIONS' in DATABASES['default'] and 'schema' in DATABASES['default']['OPTIONS']:
+    del DATABASES['default']['OPTIONS']['schema']
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
