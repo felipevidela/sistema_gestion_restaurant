@@ -50,6 +50,10 @@ RUN echo "Cache bust: $CACHEBUST"
 # Copiar código de Django
 COPY backend/ ./backend/
 
+# Copiar script de inicio
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+
 # Crear directorio para frontend y copiar archivos compilados
 RUN mkdir -p ./frontend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist/
@@ -64,4 +68,4 @@ RUN mkdir -p staticfiles static
 EXPOSE 8000
 
 # Script de inicio por defecto
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--log-file", "-", "--log-level", "info"]
+CMD ["bash", "/app/start.sh"]
