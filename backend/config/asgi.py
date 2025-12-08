@@ -1,5 +1,5 @@
 """
-ASGI config for ReservaProject project.
+ASGI config for Sistema de Gestión de Restaurant.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 

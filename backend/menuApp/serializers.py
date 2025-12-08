@@ -51,4 +51,4 @@ class PlatoListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Plato
-        fields = ['id', 'nombre', 'precio', 'categoria_nombre', 'disponible', 'imagen', 'tiempo_preparacion']
+        fields = ['id', 'nombre', 'precio', 'categoria', 'categoria_nombre', 'disponible', 'imagen', 'tiempo_preparacion', 'descripcion']

@@ -1,5 +1,5 @@
 """
-WSGI config for ReservaProject project.
+WSGI config for Sistema de Gestión de Restaurant.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

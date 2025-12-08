@@ -590,7 +590,7 @@ export async function updatePerfil(perfilData) {
 export async function verificarTokenInvitado(token) {
   const response = await fetch(`${API_BASE_URL}/verificar-token/${token}/`, {
     method: 'GET',
-    headers: getHeaders(),
+    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -609,7 +609,7 @@ export async function verificarTokenInvitado(token) {
 export async function verReservaInvitado(token) {
   const response = await fetch(`${API_BASE_URL}/reserva-invitado/${token}/`, {
     method: 'GET',
-    headers: getHeaders(),
+    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -628,7 +628,7 @@ export async function verReservaInvitado(token) {
 export async function cancelarReservaInvitado(token) {
   const response = await fetch(`${API_BASE_URL}/reserva-invitado/${token}/cancelar/`, {
     method: 'DELETE',
-    headers: getHeaders(),
+    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -647,7 +647,7 @@ export async function cancelarReservaInvitado(token) {
 export async function activarCuentaInvitado(data) {
   const response = await fetch(`${API_BASE_URL}/activar-cuenta/`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
 

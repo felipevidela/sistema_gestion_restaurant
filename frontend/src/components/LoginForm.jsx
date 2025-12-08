@@ -262,7 +262,7 @@ export default function LoginForm({ onLoginSuccess }) {
                 <Card.Body className="p-4">
                   <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                     <div>
-                      <h3 className="fw-bold text-primary mb-0">Sistema de Reservas</h3>
+                      <h3 className="fw-bold text-primary mb-0">Gestión de Restaurant</h3>
                       <small className="text-muted">
                         {modo === 'login' ? 'Ingresa para gestionar tus reservas' : 'Crea tu cuenta y reserva en minutos'}
                       </small>
