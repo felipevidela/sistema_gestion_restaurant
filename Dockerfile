@@ -50,7 +50,7 @@ RUN echo "Cache bust: $CACHEBUST"
 # Copiar código de Django
 COPY backend/ ./backend/
 
-# Copiar script de inicio
+# Copiar script de inicio (a /app y también a /app/backend para compatibilidad)
 COPY start.sh ./start.sh
 RUN chmod +x ./start.sh
 
@@ -64,8 +64,12 @@ WORKDIR /app/backend
 # Crear directorios para archivos estáticos
 RUN mkdir -p staticfiles static
 
+# Copiar start.sh también aquí para que Railway lo encuentre
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+
 # Exponer puerto (Railway usa variable PORT)
 EXPOSE 8000
 
 # Script de inicio por defecto
-CMD ["bash", "/app/start.sh"]
+CMD ["bash", "start.sh"]
