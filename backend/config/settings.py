@@ -55,7 +55,11 @@ if not DEBUG and SECRET_KEY == 'django-insecure-change-this-key':
         "Debes configurar la variable de entorno DJANGO_SECRET_KEY con una clave única y secreta."
     )
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.railway.app').split(',')
+# Obtener hosts de variable de entorno y siempre incluir .railway.app
+_allowed_hosts = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+if '.railway.app' not in _allowed_hosts:
+    _allowed_hosts.append('.railway.app')
+ALLOWED_HOSTS = _allowed_hosts
 
 
 # Application definition
