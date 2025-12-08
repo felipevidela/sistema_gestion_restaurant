@@ -227,6 +227,30 @@ class Reserva(models.Model):
                         f"{reserva.hora_inicio} y {reserva.hora_fin}"
                     )
 
+        # Validar que la mesa no tenga bloqueos activos que se solapen
+        bloqueos_activos = BloqueoMesa.objects.filter(
+            mesa=self.mesa,
+            activo=True,
+            fecha_inicio__lte=self.fecha_reserva,
+            fecha_fin__gte=self.fecha_reserva
+        )
+
+        for bloqueo in bloqueos_activos:
+            # Bloqueo de día completo
+            if not bloqueo.hora_inicio:
+                raise ValidationError(
+                    f"La mesa {self.mesa.numero} está bloqueada por '{bloqueo.get_categoria_display()}' "
+                    f"el día {self.fecha_reserva}."
+                )
+
+            # Bloqueo con horario: verificar solapamiento
+            if self.hora_inicio < bloqueo.hora_fin and self.hora_fin > bloqueo.hora_inicio:
+                raise ValidationError(
+                    f"La mesa {self.mesa.numero} está bloqueada por '{bloqueo.get_categoria_display()}' "
+                    f"entre {bloqueo.hora_inicio.strftime('%H:%M')} y {bloqueo.hora_fin.strftime('%H:%M')} "
+                    f"el {self.fecha_reserva}."
+                )
+
     def save(self, *args, **kwargs):
         # Auto-calcular hora_fin como hora_inicio + 2 horas
         if self.hora_inicio:

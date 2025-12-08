@@ -8,7 +8,7 @@ import pytest
 from datetime import date, time, timedelta
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from mainApp.models import Perfil, Mesa, Reserva
+from mainApp.models import Perfil, Mesa, Reserva, BloqueoMesa
 from mainApp.tests.factories import (
     UserFactory, PerfilFactory, PerfilClienteFactory,
     MesaFactory, ReservaFactory, ReservaPasadaFactory,
@@ -210,6 +210,66 @@ class TestReservaModel:
         assert reserva1.id is not None
         assert reserva2.id is not None
         assert reserva1.mesa != reserva2.mesa
+
+    def test_reserva_rechazada_por_bloqueo_dia_completo(self):
+        """No debe permitir reservas sobre un bloqueo activo de día completo"""
+        fecha = date.today() + timedelta(days=5)
+        mesa = MesaFactory()
+
+        BloqueoMesa.objects.create(
+            mesa=mesa,
+            fecha_inicio=fecha,
+            fecha_fin=fecha,
+            motivo='Evento privado',
+            categoria='evento_privado',
+            activo=True
+        )
+
+        reserva = ReservaFactory.build(
+            mesa=mesa,
+            fecha_reserva=fecha,
+            hora_inicio=time(14, 0)
+        )
+        # Calcular hora_fin manualmente porque build() no ejecuta save()
+        from datetime import datetime
+        dt_inicio = datetime.combine(datetime.today(), reserva.hora_inicio)
+        reserva.hora_fin = (dt_inicio + timedelta(hours=2)).time()
+
+        with pytest.raises(ValidationError) as exc_info:
+            reserva.full_clean()
+
+        assert 'bloqueada' in str(exc_info.value).lower()
+
+    def test_reserva_rechazada_por_bloqueo_horario(self):
+        """No debe permitir reservas que se solapan con un bloqueo con horario"""
+        fecha = date.today() + timedelta(days=6)
+        mesa = MesaFactory()
+
+        BloqueoMesa.objects.create(
+            mesa=mesa,
+            fecha_inicio=fecha,
+            fecha_fin=fecha,
+            hora_inicio=time(15, 0),
+            hora_fin=time(17, 0),
+            motivo='Reparación',
+            categoria='reparacion',
+            activo=True
+        )
+
+        reserva = ReservaFactory.build(
+            mesa=mesa,
+            fecha_reserva=fecha,
+            hora_inicio=time(16, 0)  # 16:00-18:00 se solapa con 15:00-17:00
+        )
+        from datetime import datetime
+        dt_inicio = datetime.combine(datetime.today(), reserva.hora_inicio)
+        reserva.hora_fin = (dt_inicio + timedelta(hours=2)).time()
+
+        with pytest.raises(ValidationError) as exc_info:
+            reserva.full_clean()
+
+        error_str = str(exc_info.value).lower()
+        assert 'bloqueada' in error_str or 'bloqueo' in error_str
 
     def test_reservas_misma_mesa_horarios_consecutivos_valido(self):
         """
