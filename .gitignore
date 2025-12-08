@@ -76,3 +76,9 @@ logs/
 *.bak
 *.swp
 *~.nib
+
+# Claude Code
+.claude/
+
+# Coverage
+coverage.xml

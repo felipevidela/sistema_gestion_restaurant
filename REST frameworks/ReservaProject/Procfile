@@ -1,2 +1,0 @@
-web: gunicorn ReservaProject.wsgi --log-file -
-release: bash ../../build.sh && python manage.py migrate && python manage.py collectstatic --noinput

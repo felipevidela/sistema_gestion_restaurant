@@ -36,7 +36,7 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 # Frontend React - configuración para producción
 # BASE_DIR = /app/ReservaProject (donde está manage.py)
 # BASE_DIR.parent = /app (donde está Reservas/)
-FRONTEND_DIR = BASE_DIR.parent / "Reservas" / "dist"
+FRONTEND_DIR = BASE_DIR.parent / "frontend" / "dist"
 FRONTEND_INDEX = FRONTEND_DIR / "index.html"
 
 # Quick-start development settings - unsuitable for production
@@ -92,7 +92,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'ReservaProject.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -109,7 +109,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'ReservaProject.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
@@ -226,7 +226,7 @@ REST_FRAMEWORK = {
 }
 
 # ASGI Configuration para WebSockets (Channels)
-ASGI_APPLICATION = 'ReservaProject.asgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 # Channel Layers - Redis para WebSockets en tiempo real
 # En Railway: agregar Redis como Add-on y configurar REDIS_URL

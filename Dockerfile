@@ -7,13 +7,13 @@ FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 # Copiar package.json y package-lock.json
-COPY Reservas/package*.json ./
+COPY frontend/package*.json ./
 
 # Instalar TODAS las dependencias (incluyendo devDependencies para vite)
 RUN npm ci || npm install
 
 # Copiar código del frontend
-COPY Reservas/ ./
+COPY frontend/ ./
 
 # Construir frontend
 RUN npm run build
@@ -27,8 +27,8 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Necesitamos que /app esté en PYTHONPATH para que Railway pueda importar `Reservas.wsgi`.
-ENV PYTHONPATH="/app"
+# Necesitamos que /app esté en PYTHONPATH para imports
+ENV PYTHONPATH="/app/backend"
 
 # Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
@@ -40,24 +40,22 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copiar y instalar dependencias de Python
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/requirements.txt ./backend/
+RUN pip install --no-cache-dir -r backend/requirements.txt
 
 # Invalidar cache para forzar rebuild con código actualizado
 ARG CACHEBUST=1
 RUN echo "Cache bust: $CACHEBUST"
 
-# Copiar código de Django (sin comillas, Docker maneja los espacios)
-COPY ["REST frameworks/ReservaProject/", "./ReservaProject/"]
+# Copiar código de Django
+COPY backend/ ./backend/
 
-# Crear directorio para frontend y copiar archivos compilados + adaptador WSGI
-RUN mkdir -p ./Reservas
-# Copiamos el adaptador Python (Reservas/__init__.py y Reservas/wsgi.py)
-COPY Reservas/__init__.py Reservas/wsgi.py ./Reservas/
-COPY --from=frontend-builder /app/frontend/dist ./Reservas/dist/
+# Crear directorio para frontend y copiar archivos compilados
+RUN mkdir -p ./frontend
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist/
 
 # Cambiar al directorio de Django
-WORKDIR /app/ReservaProject
+WORKDIR /app/backend
 
 # Crear directorios para archivos estáticos
 RUN mkdir -p staticfiles static
@@ -66,5 +64,4 @@ RUN mkdir -p staticfiles static
 EXPOSE 8000
 
 # Script de inicio por defecto
-# Railway Custom Start Command sobrescribirá esto si está configurado
-CMD ["gunicorn", "Reservas.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--log-file", "-", "--log-level", "info"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--log-file", "-", "--log-level", "info"]

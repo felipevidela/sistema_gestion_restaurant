@@ -1,12 +1,12 @@
 #!/bin/bash
 
-echo "🚀 Iniciando build del proyecto..."
+echo "Iniciando build del proyecto..."
 
 # Construir el frontend React
-echo "📦 Construyendo frontend React..."
-cd Reservas
+echo "Construyendo frontend React..."
+cd frontend
 npm install
 npm run build
 cd ..
 
-echo "✅ Build completado exitosamente!"
+echo "Build completado exitosamente!"
