@@ -6,7 +6,7 @@ cd frontend && npm install && npm run build && cd ..
 
 echo "Copiando build del frontend a staticfiles..."
 mkdir -p backend/staticfiles
-cp -r frontend/dist backend/staticfiles/
+cp -r frontend/dist/* backend/staticfiles/
 
 echo "Ejecutando migraciones..."
 cd backend && python manage.py migrate --noinput
