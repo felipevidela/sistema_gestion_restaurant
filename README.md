@@ -1,22 +1,22 @@
 # Sistema Integral de Gestión de Restaurante
 
-Plataforma web completa para gestionar reservas, mesas, menú, stock de ingredientes, pedidos y panel de cocina en tiempo real. El backend está construido en Django + Django REST Framework y Channels; el frontend en React (Vite) con WebSockets para actualizaciones en vivo.
+Plataforma web completa para gestionar reservas, mesas, menú, stock de ingredientes, pedidos y panel de cocina. El backend está construido en Django + Django REST Framework; el frontend en React (Vite) con actualización manual y automática cada 60 segundos.
 
 ## Arquitectura
-- Backend: Django 5 + DRF + Channels (ASGI), PostgreSQL, Redis para websockets, WhiteNoise para estáticos.
-- Frontend: React 19 con Vite, consumo de API REST y WS nativo para cola de cocina.
-- Despliegue pensado para Railway (PostgreSQL + Redis); scripts `start.sh` y `Procfile` incluidos.
+- Backend: Django 5 + DRF (WSGI con Gunicorn), PostgreSQL, WhiteNoise para estáticos.
+- Frontend: React 19 con Vite, consumo de API REST para toda la funcionalidad.
+- Despliegue pensado para Railway (PostgreSQL); scripts `start.sh` y `Procfile` incluidos.
 
 ## Módulos principales
 - **Reservas y Mesas (mainApp):** creación y gestión de reservas, validación de solapamientos, estados de mesas, bloqueos por rango de fecha y horario, roles y perfiles de usuario.
 - **Menú y Stock (menuApp):** categorías, platos, ingredientes, recetas; control de stock con alertas y disponibilidad automática de platos.
-- **Pedidos y Cocina (cocinaApp):** pedidos por mesa y reserva, múltiples platos por pedido, transiciones de estado controladas, descuento/reversión de stock y notificaciones por WebSocket al panel de cocina.
+- **Pedidos y Cocina (cocinaApp):** pedidos por mesa y reserva, múltiples platos por pedido, transiciones de estado controladas, descuento/reversión de stock y actualización del panel de cocina.
 
 ## Endpoints destacados (prefix `/api/`)
 - Autenticación: `/login/`, `/register/`, `/register-and-reserve/`, `/activar-cuenta/`.
 - Reservas y mesas: `/reservas/`, `/consultar-mesas/`, `/horas-disponibles/`, `/bloqueos/`.
 - Menú: `/menu/categorias/`, `/menu/platos/`, `/menu/ingredientes/`.
-- Cocina: `/cocina/pedidos/`, `/cocina/cola/` y WS `/ws/cocina/`.
+- Cocina: `/cocina/pedidos/`, `/cocina/cola/`.
 
 ## Puesta en marcha backend (desarrollo)
 ```bash
@@ -45,7 +45,7 @@ npm run dev  # Vite en 5173 por defecto
 - Nota: define `DATABASE_URL` a una base local antes de correr tests para evitar conectar a Railway.
 
 ## Despliegue
-- Variables clave: `DATABASE_URL`, `REDIS_URL`, `DJANGO_SECRET_KEY`, `FIELD_ENCRYPTION_KEY`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`, `FRONTEND_URL`.
+- Variables clave: `DATABASE_URL`, `DJANGO_SECRET_KEY`, `FIELD_ENCRYPTION_KEY`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`, `FRONTEND_URL`.
 - El build de frontend se sirve con WhiteNoise desde `backend/static` y `frontend/dist` (ver `config/settings.py`).
 
 ## Scripts útiles
@@ -59,7 +59,7 @@ npm run dev  # Vite en 5173 por defecto
 
 ## Estructura
 ```
-backend/   # Django + DRF + Channels
+backend/   # Django + DRF
 frontend/  # React + Vite
 docs/      # Documentación adicional
 ```
