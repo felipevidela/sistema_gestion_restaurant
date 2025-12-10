@@ -3,11 +3,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Avg, Count
 from django.db.models.functions import TruncDate
 from django.core.exceptions import ValidationError
+from datetime import timedelta
 
 from .models import Pedido, DetallePedido, EstadoPedido
 from .serializers import (
@@ -22,12 +24,19 @@ from .services import PedidoService
 from mainApp.permissions import IsAdministrador, IsAdminOrCajero
 
 
+class PedidoPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class PedidoViewSet(viewsets.ModelViewSet):
     """ViewSet para gestión de pedidos de cocina"""
     queryset = Pedido.objects.select_related('mesa', 'reserva', 'cliente').prefetch_related('detalles__plato')
     filter_backends = [DjangoFilterBackend]
     filterset_class = PedidoFilter
     permission_classes = [IsAuthenticated]
+    pagination_class = PedidoPagination
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -85,21 +94,28 @@ class ColaCocinaPedidosView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Obtener pedidos pendientes y en preparación ordenados"""
+        """Obtener pedidos pendientes y en preparación. Soporta ?horas_recientes=N"""
         estados_cola = [
             EstadoPedido.CREADO,
             EstadoPedido.URGENTE,
             EstadoPedido.EN_PREPARACION
         ]
 
-        # Ordenar: urgentes primero, luego por antigüedad
         pedidos = Pedido.objects.filter(
             estado__in=estados_cola
-        ).select_related('mesa').prefetch_related('detalles__plato').order_by(
-            # Urgentes primero
-            '-estado',  # URGENTE viene después de CREADO alfabéticamente, así que usamos -
-            'fecha_creacion'  # Más antiguos primero
-        )
+        ).select_related('mesa').prefetch_related('detalles__plato')
+
+        # NUEVO: Filtro opcional por últimas N horas
+        horas_recientes = request.query_params.get('horas_recientes')
+        if horas_recientes:
+            try:
+                horas = int(horas_recientes)
+                limite = timezone.now() - timedelta(hours=horas)
+                pedidos = pedidos.filter(fecha_creacion__gte=limite)
+            except (ValueError, TypeError):
+                pass
+
+        pedidos = pedidos.order_by('fecha_creacion')
 
         # Reordenar manualmente para que URGENTE sea primero
         pedidos_ordenados = sorted(
@@ -162,3 +178,118 @@ class EstadisticasCocinaView(APIView):
             'pedidos_entregados': resumen_estados.get('ENTREGADO', 0),
             'pedidos_cancelados': resumen_estados.get('CANCELADO', 0),
         })
+
+
+class PedidosListosView(APIView):
+    """Vista para pedidos LISTO (meseros). Soporta paginación, ordenamiento, filtros."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        pedidos = Pedido.objects.filter(
+            estado=EstadoPedido.LISTO
+        ).select_related('mesa', 'reserva', 'cliente').prefetch_related('detalles__plato')
+
+        # Filtros
+        mesa = request.query_params.get('mesa')
+        if mesa:
+            pedidos = pedidos.filter(mesa_id=mesa)
+
+        cliente = request.query_params.get('cliente')
+        if cliente:
+            pedidos = pedidos.filter(cliente_id=cliente)
+
+        busqueda = request.query_params.get('busqueda')
+        if busqueda:
+            from django.db.models import Q
+            pedidos = pedidos.filter(
+                Q(id__icontains=busqueda) |
+                Q(mesa__numero__icontains=busqueda) |
+                Q(cliente__username__icontains=busqueda) |
+                Q(cliente__first_name__icontains=busqueda) |
+                Q(cliente__last_name__icontains=busqueda)
+            )
+
+        # Ordenamiento (default: más antiguos primero)
+        ordering = request.query_params.get('ordering', 'fecha_listo')
+        # Validar campos permitidos para evitar ordenamientos arbitrarios
+        ordering_permitidos = ['fecha_listo', '-fecha_listo', 'mesa__numero', '-mesa__numero']
+        if ordering in ordering_permitidos:
+            pedidos = pedidos.order_by(ordering)
+        else:
+            pedidos = pedidos.order_by('fecha_listo')  # Default seguro
+
+        # Paginación
+        paginator = PedidoPagination()
+        page = paginator.paginate_queryset(pedidos, request)
+
+        if page is not None:
+            serializer = PedidoSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        serializer = PedidoSerializer(pedidos, many=True)
+        return Response(serializer.data)
+
+
+class PedidosEntregadosView(APIView):
+    """Vista para pedidos ENTREGADOS del día. Soporta paginación, ordenamiento, filtros."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Default: solo del día actual
+        hoy = timezone.now().date()
+
+        fecha = request.query_params.get('fecha')
+        if fecha:
+            from datetime import datetime
+            try:
+                hoy = datetime.strptime(fecha, '%Y-%m-%d').date()
+            except ValueError:
+                return Response(
+                    {'error': 'Formato de fecha inválido. Use YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        pedidos = Pedido.objects.filter(
+            estado=EstadoPedido.ENTREGADO,
+            fecha_entregado__date=hoy
+        ).select_related('mesa', 'reserva', 'cliente').prefetch_related('detalles__plato')
+
+        # Filtros
+        mesa = request.query_params.get('mesa')
+        if mesa:
+            pedidos = pedidos.filter(mesa_id=mesa)
+
+        cliente = request.query_params.get('cliente')
+        if cliente:
+            pedidos = pedidos.filter(cliente_id=cliente)
+
+        busqueda = request.query_params.get('busqueda')
+        if busqueda:
+            from django.db.models import Q
+            pedidos = pedidos.filter(
+                Q(id__icontains=busqueda) |
+                Q(mesa__numero__icontains=busqueda) |
+                Q(cliente__username__icontains=busqueda) |
+                Q(cliente__first_name__icontains=busqueda) |
+                Q(cliente__last_name__icontains=busqueda)
+            )
+
+        # Ordenamiento (default: más recientes primero)
+        ordering = request.query_params.get('ordering', '-fecha_entregado')
+        # Validar campos permitidos
+        ordering_permitidos = ['fecha_entregado', '-fecha_entregado', 'mesa__numero', '-mesa__numero', 'fecha_listo', '-fecha_listo']
+        if ordering in ordering_permitidos:
+            pedidos = pedidos.order_by(ordering)
+        else:
+            pedidos = pedidos.order_by('-fecha_entregado')  # Default seguro
+
+        # Paginación
+        paginator = PedidoPagination()
+        page = paginator.paginate_queryset(pedidos, request)
+
+        if page is not None:
+            serializer = PedidoSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        serializer = PedidoSerializer(pedidos, many=True)
+        return Response(serializer.data)

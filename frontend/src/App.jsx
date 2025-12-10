@@ -18,6 +18,7 @@ import GestionMenu from "./components/menu/GestionMenu";
 import GestionStock from "./components/menu/GestionStock";
 import PanelCocina from "./components/cocina/PanelCocina";
 import CrearPedido from "./components/cocina/CrearPedido";
+import PanelPedidosMesero from "./components/cocina/PanelPedidosMesero";
 
 const getDefaultTab = (rol) => {
   if (rol === 'cliente') return 'mis-reservas';
@@ -82,7 +83,7 @@ function App() {
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
         { id: 'gestion-mesas', label: 'Gestión de Mesas', icon: 'bi-grid-3x3' },
         { id: 'crear-pedido', label: 'Crear Pedido', icon: 'bi-cart-plus' },
-        { id: 'cocina', label: 'Cocina', icon: 'bi-fire' }
+        { id: 'pedidos', label: 'Pedidos', icon: 'bi-receipt' }
       ],
       cajero: [
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
@@ -139,7 +140,9 @@ function App() {
       case 'gestion-stock':
         return <GestionStock />;
       case 'crear-pedido':
-        return <CrearPedido onPedidoCreado={() => setActiveTab('cocina')} />;
+        return <CrearPedido onPedidoCreado={() => setActiveTab(user?.rol === 'mesero' ? 'pedidos' : 'cocina')} />;
+      case 'pedidos':
+        return <PanelPedidosMesero />;
       case 'cocina':
         return <PanelCocina />;
       default:

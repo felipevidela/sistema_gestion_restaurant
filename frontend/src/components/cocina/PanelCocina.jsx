@@ -14,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 const styles = `
   .pedido-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    will-change: transform;
   }
   .pedido-card:hover {
     transform: translateY(-4px);
@@ -21,12 +22,15 @@ const styles = `
   }
   .pedido-urgente {
     animation: pulseUrgente 1.5s ease-in-out infinite;
+    will-change: transform, box-shadow;
   }
   @keyframes pulseUrgente {
     0%, 100% {
+      transform: scale(1);
       box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
     }
     50% {
+      transform: scale(1.02);
       box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
     }
   }
@@ -102,7 +106,7 @@ function PanelCocina() {
   const cargarPedidos = useCallback(async () => {
     try {
       setError(null);
-      const data = await getColaCocina();
+      const data = await getColaCocina({ horas_recientes: 3 });
       setPedidos(data || []);
     } catch (err) {
       setError(err.message);
@@ -113,10 +117,17 @@ function PanelCocina() {
 
   useEffect(() => {
     cargarPedidos();
-    // Refrescar cada 30 segundos como fallback
-    const interval = setInterval(cargarPedidos, 30000);
-    return () => clearInterval(interval);
-  }, [cargarPedidos]);
+
+    // Solo polling si WebSocket NO conectado
+    let interval;
+    if (!isConnected) {
+      interval = setInterval(cargarPedidos, 60000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [cargarPedidos, isConnected]);
 
   // Cambiar estado de pedido
   const handleCambiarEstado = async (pedido, nuevoEstado) => {

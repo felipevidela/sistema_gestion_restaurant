@@ -23,18 +23,46 @@ class PedidoSerializer(serializers.ModelSerializer):
     transiciones_permitidas = serializers.SerializerMethodField()
     total = serializers.ReadOnlyField()
     cliente_username = serializers.CharField(source='cliente.username', read_only=True, default=None)
+    tiempo_desde_creacion = serializers.SerializerMethodField()
+    tiempo_desde_listo = serializers.SerializerMethodField()
+    tiempo_total = serializers.SerializerMethodField()
 
     class Meta:
         model = Pedido
         fields = [
             'id', 'mesa', 'mesa_numero', 'reserva', 'cliente', 'cliente_username',
             'estado', 'notas', 'fecha_creacion', 'fecha_actualizacion',
+            'fecha_listo', 'fecha_entregado',
+            'tiempo_desde_creacion', 'tiempo_desde_listo', 'tiempo_total',
             'detalles', 'transiciones_permitidas', 'total'
         ]
-        read_only_fields = ['estado', 'fecha_creacion', 'fecha_actualizacion']
+        read_only_fields = ['estado', 'fecha_creacion', 'fecha_actualizacion', 'fecha_listo', 'fecha_entregado']
 
     def get_transiciones_permitidas(self, obj):
         return TRANSICIONES_VALIDAS.get(obj.estado, [])
+
+    def get_tiempo_desde_creacion(self, obj):
+        """Minutos desde creación hasta ahora (o hasta entregado)"""
+        from django.utils import timezone
+        fecha_fin = obj.fecha_entregado if obj.fecha_entregado else timezone.now()
+        delta = fecha_fin - obj.fecha_creacion
+        return int(delta.total_seconds() / 60)
+
+    def get_tiempo_desde_listo(self, obj):
+        """Minutos desde LISTO hasta ahora (o hasta entregado). None si no ha llegado a LISTO"""
+        if not obj.fecha_listo:
+            return None
+        from django.utils import timezone
+        fecha_fin = obj.fecha_entregado if obj.fecha_entregado else timezone.now()
+        delta = fecha_fin - obj.fecha_listo
+        return int(delta.total_seconds() / 60)
+
+    def get_tiempo_total(self, obj):
+        """Minutos totales desde creación hasta entregado. None si no está ENTREGADO"""
+        if not obj.fecha_entregado:
+            return None
+        delta = obj.fecha_entregado - obj.fecha_creacion
+        return int(delta.total_seconds() / 60)
 
 
 class PedidoListSerializer(serializers.ModelSerializer):
@@ -42,16 +70,27 @@ class PedidoListSerializer(serializers.ModelSerializer):
     mesa_numero = serializers.IntegerField(source='mesa.numero', read_only=True)
     total = serializers.ReadOnlyField()
     num_items = serializers.SerializerMethodField()
+    tiempo_desde_listo = serializers.SerializerMethodField()
 
     class Meta:
         model = Pedido
         fields = [
             'id', 'mesa_numero', 'estado', 'fecha_creacion',
+            'fecha_listo', 'tiempo_desde_listo',
             'total', 'num_items'
         ]
 
     def get_num_items(self, obj):
         return obj.detalles.count()
+
+    def get_tiempo_desde_listo(self, obj):
+        """Minutos desde LISTO hasta ahora (o hasta entregado). None si no ha llegado a LISTO"""
+        if not obj.fecha_listo:
+            return None
+        from django.utils import timezone
+        fecha_fin = obj.fecha_entregado if obj.fecha_entregado else timezone.now()
+        delta = fecha_fin - obj.fecha_listo
+        return int(delta.total_seconds() / 60)
 
 
 class DetalleInputSerializer(serializers.Serializer):

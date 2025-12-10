@@ -27,8 +27,13 @@ export default function GestionMesas() {
 
   useEffect(() => {
     cargarMesas();
-    // Auto-actualizar cada 30 segundos
-    const interval = setInterval(cargarMesas, 30000);
+    cargarBloqueosHoy();
+
+    const interval = setInterval(() => {
+      cargarMesas();
+      cargarBloqueosHoy();
+    }, 60000);
+
     return () => clearInterval(interval);
   }, []);
 
@@ -39,13 +44,6 @@ export default function GestionMesas() {
       cargarBloqueosPorFecha();
     }
   }, [fechaFiltro, mostrarDisponibilidad]);
-
-  // Cargar bloqueos activos HOY y actualizar cada 30 segundos
-  useEffect(() => {
-    cargarBloqueosHoy();
-    const interval = setInterval(cargarBloqueosHoy, 30000); // Actualizar cada 30s
-    return () => clearInterval(interval);
-  }, []);
 
   const cargarMesas = async () => {
     try {

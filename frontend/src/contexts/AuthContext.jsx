@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import { login as apiLogin, logout as apiLogout, getCurrentUser, isAuthenticated, validateToken } from '../services/reservasApi';
 
 const AuthContext = createContext(null);
@@ -178,7 +178,7 @@ export function AuthProvider({ children }) {
     return userPermissions.includes(permission);
   }, [user]);
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     isAuthenticated: !!user,
     isLoading,
@@ -188,7 +188,7 @@ export function AuthProvider({ children }) {
     registerAndLogin,
     hasRole,
     hasPermission,
-  };
+  }), [user, isLoading, login, logout, updateUser, registerAndLogin, hasRole, hasPermission]);
 
   return (
     <AuthContext.Provider value={value}>

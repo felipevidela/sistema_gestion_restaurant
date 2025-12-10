@@ -56,6 +56,17 @@ class Pedido(models.Model):
     # Timestamps
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
+    # Timestamps de transiciones de estado
+    fecha_listo = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha y hora cuando el pedido pasó a estado LISTO"
+    )
+    fecha_entregado = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha y hora cuando el pedido fue entregado"
+    )
 
     def puede_transicionar_a(self, nuevo_estado):
         """Verifica si la transición de estado es válida"""
@@ -76,6 +87,9 @@ class Pedido(models.Model):
         indexes = [
             models.Index(fields=['estado', 'fecha_creacion']),
             models.Index(fields=['mesa', 'estado']),
+            models.Index(fields=['fecha_listo']),
+            models.Index(fields=['fecha_entregado']),
+            models.Index(fields=['estado', 'fecha_listo']),
         ]
 
 

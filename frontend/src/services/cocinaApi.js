@@ -163,9 +163,18 @@ export async function cancelarPedido(id) {
 
 /**
  * Obtener cola de pedidos pendientes/en preparación
+ * @param {Object} opciones - { horas_recientes }
  */
-export async function getColaCocina() {
-  const response = await fetch(`${API_BASE_URL}/cocina/cola/`, {
+export async function getColaCocina(opciones = {}) {
+  const params = new URLSearchParams();
+  if (opciones.horas_recientes) {
+    params.append('horas_recientes', opciones.horas_recientes);
+  }
+
+  const queryString = params.toString();
+  const url = `${API_BASE_URL}/cocina/cola/${queryString ? `?${queryString}` : ''}`;
+
+  const response = await fetch(url, {
     headers: getAuthHeaders()
   });
   return handleResponse(response);
@@ -179,6 +188,71 @@ export async function getPedidosUrgentes() {
     headers: getAuthHeaders()
   });
   return handleResponse(response);
+}
+
+/**
+ * Obtener pedidos LISTO (meseros)
+ * @param {Object} opciones - { page, page_size, mesa, ordering, busqueda }
+ */
+export async function getPedidosListos(opciones = {}) {
+  const params = new URLSearchParams();
+  if (opciones.page) params.append('page', opciones.page);
+  if (opciones.page_size) params.append('page_size', opciones.page_size);
+  if (opciones.mesa) params.append('mesa', opciones.mesa);
+  if (opciones.ordering) params.append('ordering', opciones.ordering);
+  if (opciones.busqueda) params.append('busqueda', opciones.busqueda);
+
+  const queryString = params.toString();
+  const url = `${API_BASE_URL}/cocina/pedidos/listos/${queryString ? `?${queryString}` : ''}`;
+
+  const response = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || data.error || `Error ${response.status}`);
+  }
+
+  return {
+    results: data.results || data,
+    count: data.count,
+    next: data.next,
+    previous: data.previous
+  };
+}
+
+/**
+ * Obtener pedidos ENTREGADOS del día
+ * @param {Object} opciones - { page, page_size, fecha, mesa, ordering, busqueda }
+ */
+export async function getPedidosEntregados(opciones = {}) {
+  const params = new URLSearchParams();
+  if (opciones.page) params.append('page', opciones.page);
+  if (opciones.page_size) params.append('page_size', opciones.page_size);
+  if (opciones.fecha) params.append('fecha', opciones.fecha);
+  if (opciones.mesa) params.append('mesa', opciones.mesa);
+  if (opciones.ordering) params.append('ordering', opciones.ordering);
+  if (opciones.busqueda) params.append('busqueda', opciones.busqueda);
+
+  const queryString = params.toString();
+  const url = `${API_BASE_URL}/cocina/pedidos/entregados/${queryString ? `?${queryString}` : ''}`;
+
+  const response = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || data.error || `Error ${response.status}`);
+  }
+
+  return {
+    results: data.results || data,
+    count: data.count,
+    next: data.next,
+    previous: data.previous
+  };
 }
 
 // ==================== ESTADÍSTICAS ====================
