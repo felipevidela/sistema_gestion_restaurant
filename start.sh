@@ -1,8 +1,15 @@
 #!/bin/bash
 # Script de inicio para Railway
 
+echo "Construyendo frontend..."
+cd frontend && npm install && npm run build && cd ..
+
+echo "Copiando build del frontend a staticfiles..."
+mkdir -p backend/staticfiles
+cp -r dist backend/staticfiles/
+
 echo "Ejecutando migraciones..."
-python manage.py migrate --noinput
+cd backend && python manage.py migrate --noinput
 
 echo "Recopilando archivos estáticos..."
 python manage.py collectstatic --noinput
