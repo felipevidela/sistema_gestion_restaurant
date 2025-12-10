@@ -2,10 +2,10 @@
 # Script de inicio para Railway
 
 echo "Ejecutando migraciones..."
-python manage.py migrate --noinput
+cd backend && python manage.py migrate --noinput
 
 echo "Recopilando archivos estáticos..."
 python manage.py collectstatic --noinput
 
-echo "Iniciando servidor Gunicorn..."
-gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 4 --log-file - --log-level info
+echo "Iniciando servidor Daphne (ASGI para WebSockets)..."
+cd backend && daphne -b 0.0.0.0 -p ${PORT:-8000} config.asgi:application
