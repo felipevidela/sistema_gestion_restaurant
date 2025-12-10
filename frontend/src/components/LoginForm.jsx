@@ -241,20 +241,17 @@ export default function LoginForm({ onLoginSuccess }) {
         <Col lg={10}>
           <Row className="g-4 align-items-stretch">
             <Col lg={5}>
-              <div className="auth-hero h-100 rounded-4 shadow-sm p-4">
-                <div className="auth-hero__pill text-uppercase small">Plataforma</div>
-                <h3 className="text-white fw-bold mt-3">Gestiona tus reservas sin fricción</h3>
+              <div className="auth-hero h-100 rounded-4 shadow-sm p-5 d-flex flex-column justify-content-center">
+                <h3 className="text-white fw-bold mb-3">
+                  Bienvenido a Sistema de Gestión de Restaurant
+                </h3>
                 <p className="text-white-50 mb-4">
-                  Centraliza tus turnos, confirma asistentes y da una bienvenida más rápida a tus clientes.
+                  Gestiona reservas, mesas y pedidos en un solo lugar
                 </p>
-                <ul className="list-unstyled auth-checklist mb-4">
-                    <li><i className="bi bi-check-circle-fill me-2"></i>Confirmaciones en segundos</li>
-                    <li><i className="bi bi-check-circle-fill me-2"></i>Visión diaria y mensual</li>
-                    <li><i className="bi bi-check-circle-fill me-2"></i>Usuarios y roles listos</li>
+                <ul className="list-unstyled auth-checklist mb-0">
+                    <li><i className="bi bi-check-circle-fill me-2"></i>Control total de tu restaurante</li>
+                    <li><i className="bi bi-check-circle-fill me-2"></i>Datos seguros y protegidos</li>
                 </ul>
-                <div className="d-flex align-items-center gap-2 text-white-50 small">
-                  <i className="bi bi-shield-lock"></i> Datos protegidos y sesión segura
-                </div>
               </div>
             </Col>
             <Col lg={7}>
