@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Container, Row, Col, Card, Badge, Button, Spinner, Alert, Form, InputGroup, Tabs, Tab, Pagination } from 'react-bootstrap';
-import { getPedidos, getPedidosListos, getPedidosEntregados, cambiarEstadoPedido, ESTADOS_PEDIDO } from '../../services/cocinaApi';
+import { getPedidos, getPedidosListos, getPedidosEntregados, getPedidosCancelados, cambiarEstadoPedido, cancelarPedido, ESTADOS_PEDIDO } from '../../services/cocinaApi';
 import { useToast } from '../../contexts/ToastContext';
+import ModalCancelarPedido from './ModalCancelarPedido';
 
 function PanelPedidosMesero() {
   const toast = useToast();
@@ -31,11 +32,16 @@ function PanelPedidosMesero() {
     pendientes: 0,
     en_preparacion: 0,
     listos: 0,
-    entregados: 0
+    entregados: 0,
+    cancelados: 0
   });
 
   // Timestamp de última actualización
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
+
+  // Estados para modal de cancelación
+  const [showModalCancelar, setShowModalCancelar] = useState(false);
+  const [pedidoACancelar, setPedidoACancelar] = useState(null);
 
   // Cargar pedidos según tab activo
   const cargarPedidos = useCallback(async () => {
@@ -80,6 +86,16 @@ function PanelPedidosMesero() {
           });
           break;
 
+        case 'cancelados':
+          data = await getPedidosCancelados({
+            periodo: 'semana',  // Mostrar cancelados de la semana
+            page,
+            page_size: pageSize,
+            busqueda: busqueda || undefined,
+            ordering: ordenamiento || undefined
+          });
+          break;
+
         default:
           data = { results: [], count: 0 };
       }
@@ -101,18 +117,20 @@ function PanelPedidosMesero() {
   // Cargar contadores
   const cargarContadores = useCallback(async () => {
     try {
-      const [pendientes, enPrep, listos, entregados] = await Promise.all([
+      const [pendientes, enPrep, listos, entregados, cancelados] = await Promise.all([
         getPedidos({ estado: 'CREADO' }),
         getPedidos({ estado: 'EN_PREPARACION' }),
         getPedidosListos({ page_size: 1 }),
-        getPedidosEntregados({ page_size: 1 })
+        getPedidosEntregados({ page_size: 1 }),
+        getPedidosCancelados({ periodo: 'hoy', page_size: 1 })
       ]);
 
       setContadores({
         pendientes: pendientes.length,
         en_preparacion: enPrep.length,
         listos: listos.count || 0,
-        entregados: entregados.count || 0
+        entregados: entregados.count || 0,
+        cancelados: cancelados.count || 0
       });
     } catch (err) {
       console.error('Error al cargar contadores:', err);
@@ -131,6 +149,25 @@ function PanelPedidosMesero() {
       toast.error(`Error: ${err.message}`);
     } finally {
       setProcesando(null);
+    }
+  };
+
+  // Solicitar cancelación (abre modal)
+  const handleSolicitarCancelacion = (pedido) => {
+    setPedidoACancelar(pedido);
+    setShowModalCancelar(true);
+  };
+
+  // Confirmar cancelación con motivo
+  const handleCancelar = async (pedidoId, motivo) => {
+    try {
+      await cancelarPedido(pedidoId, motivo);
+      toast.success('Pedido cancelado exitosamente');
+      await cargarPedidos();
+      await cargarContadores();
+    } catch (err) {
+      toast.error(`Error al cancelar: ${err.message}`);
+      throw err; // Re-lanzar para que el modal lo maneje
     }
   };
 
@@ -211,6 +248,13 @@ function PanelPedidosMesero() {
         return [
           { value: '-fecha_entregado', label: 'Más recientes primero' },
           { value: 'fecha_entregado', label: 'Más antiguos primero' },
+          { value: 'mesa__numero', label: 'Mesa (ascendente)' },
+          { value: '-mesa__numero', label: 'Mesa (descendente)' }
+        ];
+      case 'cancelados':
+        return [
+          { value: '-cancelacion__fecha_cancelacion', label: 'Más recientes primero' },
+          { value: 'cancelacion__fecha_cancelacion', label: 'Más antiguos primero' },
           { value: 'mesa__numero', label: 'Mesa (ascendente)' },
           { value: '-mesa__numero', label: 'Mesa (descendente)' }
         ];
@@ -297,11 +341,28 @@ function PanelPedidosMesero() {
       <Card key={pedido.id} className="mb-3 shadow-sm">
         <Card.Body>
           <Row className="align-items-center">
-            <Col md={2}>
+            <Col md={3}>
               <h5 className="mb-0">
                 <Badge bg="primary">Pedido #{pedido.id}</Badge>
               </h5>
-              <small className="text-muted">Mesa {pedido.mesa_numero}</small>
+              <div className="d-flex align-items-center gap-2 flex-wrap mt-1">
+                <small className="text-muted">Mesa {pedido.mesa_numero}</small>
+                {pedido.cliente_nombre && (
+                  <>
+                    <span className="text-muted">•</span>
+                    <strong
+                      className="text-dark text-truncate"
+                      style={{
+                        fontSize: '0.9rem',
+                        maxWidth: '200px'
+                      }}
+                      title={pedido.cliente_nombre}
+                    >
+                      {pedido.cliente_nombre}
+                    </strong>
+                  </>
+                )}
+              </div>
             </Col>
 
             <Col md={2}>
@@ -311,7 +372,7 @@ function PanelPedidosMesero() {
               </Badge>
             </Col>
 
-            <Col md={3}>
+            <Col md={2}>
               {tabActivo === 'listos' && tiempoListo !== null && (
                 <div>
                   <small className="text-muted d-block">Tiempo en LISTO:</small>
@@ -331,6 +392,21 @@ function PanelPedidosMesero() {
                 <div>
                   <small className="text-muted d-block">Tiempo total:</small>
                   <Badge bg="info">{formatearTiempo(pedido.tiempo_total)}</Badge>
+                </div>
+              )}
+
+              {/* Info de cancelación */}
+              {pedido.estado === 'CANCELADO' && pedido.cancelacion && (
+                <div>
+                  <small className="text-muted d-block">Cancelado:</small>
+                  <small className="text-danger d-block">
+                    {new Date(pedido.cancelacion.fecha_cancelacion).toLocaleString('es-CL')}
+                  </small>
+                  {pedido.cancelacion.cancelado_por_nombre && (
+                    <small className="text-muted d-block">
+                      Por: {pedido.cancelacion.cancelado_por_nombre}
+                    </small>
+                  )}
                 </div>
               )}
             </Col>
@@ -374,6 +450,19 @@ function PanelPedidosMesero() {
                   )}
                 </Button>
               )}
+
+              {/* Botón cancelar para pedidos pendientes o en preparación */}
+              {(tabActivo === 'pendientes' || tabActivo === 'en_preparacion') && (
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={() => handleSolicitarCancelacion(pedido)}
+                  disabled={procesando === pedido.id}
+                >
+                  <i className="bi bi-x-circle me-1"></i>
+                  Cancelar
+                </Button>
+              )}
             </Col>
           </Row>
 
@@ -384,6 +473,19 @@ function PanelPedidosMesero() {
                   <i className="bi bi-chat-left-text me-1"></i>
                   {pedido.notas}
                 </small>
+              </Col>
+            </Row>
+          )}
+
+          {/* Mostrar motivo de cancelación */}
+          {pedido.estado === 'CANCELADO' && pedido.cancelacion && pedido.cancelacion.motivo && (
+            <Row className="mt-2">
+              <Col>
+                <Alert variant="warning" className="mb-0 py-2">
+                  <small>
+                    <strong>Motivo de cancelación:</strong> {pedido.cancelacion.motivo}
+                  </small>
+                </Alert>
               </Col>
             </Row>
           )}
@@ -517,6 +619,21 @@ function PanelPedidosMesero() {
         >
           {/* Contenido se renderiza abajo */}
         </Tab>
+
+        <Tab
+          eventKey="cancelados"
+          title={
+            <span>
+              <i className="bi bi-x-circle me-1"></i>
+              Cancelados
+              {contadores.cancelados > 0 && (
+                <Badge bg="danger" className="ms-2">{contadores.cancelados}</Badge>
+              )}
+            </span>
+          }
+        >
+          {/* Contenido se renderiza abajo */}
+        </Tab>
       </Tabs>
 
       {/* Contenido del tab activo */}
@@ -584,6 +701,14 @@ function PanelPedidosMesero() {
           )}
         </>
       )}
+
+      {/* Modal de cancelación */}
+      <ModalCancelarPedido
+        show={showModalCancelar}
+        onHide={() => setShowModalCancelar(false)}
+        pedido={pedidoACancelar}
+        onCancelar={handleCancelar}
+      />
     </Container>
   );
 }

@@ -72,15 +72,50 @@ class PedidoViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def estado(self, request, pk=None):
-        """Cambiar estado del pedido"""
+        """
+        Cambiar estado del pedido.
+
+        ⚠️ IMPORTANTE - TRAZABILIDAD DE CANCELACIONES:
+
+        Para registrar auditoría completa (RECOMENDADO):
+        {
+            "estado": "CANCELADO",
+            "motivo": "Cliente solicitó cancelación, ingredientes no disponibles, etc."
+        }
+        → Requisitos: motivo ≥10 caracteres
+        → Guarda: usuario (auth), fecha, motivo, snapshot de productos
+
+        Sin auditoría (compatibilidad con código legacy):
+        {
+            "estado": "CANCELADO"
+        }
+        → ⚠️ NO se registra quién canceló, cuándo, ni por qué
+        → ⚠️ NO hay trazabilidad ni control de gestión
+        → Solo para flujos existentes que no pueden enviar motivo
+
+        REGLA DE NEGOCIO: Para trazabilidad completa, SIEMPRE enviar motivo (≥10 caracteres).
+        """
         pedido = self.get_object()
         serializer = CambiarEstadoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         nuevo_estado = serializer.validated_data['estado']
 
+        # Capturar motivo de cancelación si aplica
+        motivo = request.data.get('motivo', '')
+
         try:
-            pedido = PedidoService.cambiar_estado(pedido, nuevo_estado)
+            # Si es cancelación con motivo, llamar directamente al servicio con parámetros
+            if nuevo_estado == 'CANCELADO' and motivo:
+                pedido = PedidoService.cancelar_pedido(
+                    pedido,
+                    usuario=request.user,
+                    motivo=motivo
+                )
+            else:
+                # Llamar al método estándar para otros estados
+                pedido = PedidoService.cambiar_estado(pedido, nuevo_estado)
+
             return Response(PedidoSerializer(pedido).data)
         except ValidationError as e:
             return Response(
@@ -187,7 +222,7 @@ class PedidosListosView(APIView):
     def get(self, request):
         pedidos = Pedido.objects.filter(
             estado=EstadoPedido.LISTO
-        ).select_related('mesa', 'reserva', 'cliente').prefetch_related('detalles__plato')
+        ).select_related('mesa', 'reserva', 'cliente', 'cliente__perfil').prefetch_related('detalles__plato')
 
         # Filtros
         mesa = request.query_params.get('mesa')
@@ -206,7 +241,8 @@ class PedidosListosView(APIView):
                 Q(mesa__numero__icontains=busqueda) |
                 Q(cliente__username__icontains=busqueda) |
                 Q(cliente__first_name__icontains=busqueda) |
-                Q(cliente__last_name__icontains=busqueda)
+                Q(cliente__last_name__icontains=busqueda) |
+                Q(cliente__perfil__nombre_completo__icontains=busqueda)
             )
 
         # Ordenamiento (default: más antiguos primero)
@@ -252,7 +288,7 @@ class PedidosEntregadosView(APIView):
         pedidos = Pedido.objects.filter(
             estado=EstadoPedido.ENTREGADO,
             fecha_entregado__date=hoy
-        ).select_related('mesa', 'reserva', 'cliente').prefetch_related('detalles__plato')
+        ).select_related('mesa', 'reserva', 'cliente', 'cliente__perfil').prefetch_related('detalles__plato')
 
         # Filtros
         mesa = request.query_params.get('mesa')
@@ -271,7 +307,8 @@ class PedidosEntregadosView(APIView):
                 Q(mesa__numero__icontains=busqueda) |
                 Q(cliente__username__icontains=busqueda) |
                 Q(cliente__first_name__icontains=busqueda) |
-                Q(cliente__last_name__icontains=busqueda)
+                Q(cliente__last_name__icontains=busqueda) |
+                Q(cliente__perfil__nombre_completo__icontains=busqueda)
             )
 
         # Ordenamiento (default: más recientes primero)
@@ -293,3 +330,160 @@ class PedidosEntregadosView(APIView):
 
         serializer = PedidoSerializer(pedidos, many=True)
         return Response(serializer.data)
+
+
+class PedidosCanceladosView(APIView):
+    """Vista para pedidos CANCELADOS con filtros de auditoría"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        GET /api/cocina/pedidos/cancelados/
+
+        Parámetros:
+        - fecha: fecha específica (YYYY-MM-DD)
+        - periodo: 'hoy' | 'semana' | 'mes' (default: semana)
+        - usuario: ID del usuario que canceló
+        - busqueda: buscar por ID, mesa o cliente
+        - ordering: campo de ordenamiento
+        """
+        # Base queryset con relaciones correctas
+        pedidos = Pedido.objects.filter(
+            estado=EstadoPedido.CANCELADO
+        ).select_related(
+            'mesa', 'reserva', 'cliente', 'cliente__perfil',
+            # IMPORTANTE: Cargar relación de cancelación
+            'cancelacion', 'cancelacion__cancelado_por', 'cancelacion__cancelado_por__perfil'
+        ).prefetch_related('detalles__plato')
+
+        # Filtro por periodo (default: semana para tener datos útiles)
+        periodo = request.query_params.get('periodo', 'semana')
+        hoy = timezone.now().date()
+
+        if periodo == 'hoy':
+            # Filtrar por pedidos con auditoría de cancelación de hoy
+            pedidos = pedidos.filter(cancelacion__fecha_cancelacion__date=hoy)
+        elif periodo == 'semana':
+            # Últimos 7 días
+            hace_7_dias = hoy - timedelta(days=7)
+            pedidos = pedidos.filter(cancelacion__fecha_cancelacion__date__gte=hace_7_dias)
+        elif periodo == 'mes':
+            # Últimos 30 días
+            hace_30_dias = hoy - timedelta(days=30)
+            pedidos = pedidos.filter(cancelacion__fecha_cancelacion__date__gte=hace_30_dias)
+
+        # Filtro por fecha específica
+        fecha = request.query_params.get('fecha')
+        if fecha:
+            from datetime import datetime
+            try:
+                fecha_obj = datetime.strptime(fecha, '%Y-%m-%d').date()
+                pedidos = pedidos.filter(cancelacion__fecha_cancelacion__date=fecha_obj)
+            except ValueError:
+                pass
+
+        # Filtro por usuario que canceló
+        usuario_id = request.query_params.get('usuario')
+        if usuario_id:
+            pedidos = pedidos.filter(cancelacion__cancelado_por_id=usuario_id)
+
+        # Búsqueda
+        busqueda = request.query_params.get('busqueda')
+        if busqueda:
+            from django.db.models import Q
+            pedidos = pedidos.filter(
+                Q(id__icontains=busqueda) |
+                Q(mesa__numero__icontains=busqueda) |
+                Q(cliente__username__icontains=busqueda) |
+                Q(cliente__perfil__nombre_completo__icontains=busqueda) |
+                Q(cancelacion__motivo__icontains=busqueda)
+            )
+
+        # Ordenamiento (default: más recientes primero)
+        ordering = request.query_params.get('ordering', '-cancelacion__fecha_cancelacion')
+        ordering_permitidos = [
+            'cancelacion__fecha_cancelacion', '-cancelacion__fecha_cancelacion',
+            'mesa__numero', '-mesa__numero',
+            'fecha_creacion', '-fecha_creacion'
+        ]
+        if ordering in ordering_permitidos:
+            pedidos = pedidos.order_by(ordering)
+        else:
+            pedidos = pedidos.order_by('-cancelacion__fecha_cancelacion')
+
+        # Paginación
+        paginator = PedidoPagination()
+        page = paginator.paginate_queryset(pedidos, request)
+
+        if page is not None:
+            serializer = PedidoSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        serializer = PedidoSerializer(pedidos, many=True)
+        return Response(serializer.data)
+
+
+class EstadisticasCancelacionesView(APIView):
+    """Vista para estadísticas de pedidos cancelados"""
+    permission_classes = [IsAuthenticated, IsAdminOrCajero]
+
+    def get(self, request):
+        """
+        GET /api/cocina/estadisticas/cancelaciones/
+
+        Parámetros:
+        - periodo: 'dia' | 'semana' | 'mes' (default: dia)
+        """
+        periodo = request.query_params.get('periodo', 'dia')
+        hoy = timezone.now().date()
+
+        # Determinar rango de fechas
+        if periodo == 'dia':
+            fecha_inicio = hoy
+            fecha_fin = hoy
+        elif periodo == 'semana':
+            # Últimos 7 días
+            fecha_inicio = hoy - timedelta(days=7)
+            fecha_fin = hoy
+        elif periodo == 'mes':
+            # Últimos 30 días
+            fecha_inicio = hoy - timedelta(days=30)
+            fecha_fin = hoy
+        else:
+            fecha_inicio = hoy
+            fecha_fin = hoy
+
+        # Query de cancelaciones en el periodo
+        # IMPORTANTE: Usar modelo relacionado PedidoCancelacion
+        from .models import PedidoCancelacion
+        cancelaciones = PedidoCancelacion.objects.filter(
+            fecha_cancelacion__date__gte=fecha_inicio,
+            fecha_cancelacion__date__lte=fecha_fin
+        ).select_related('cancelado_por', 'cancelado_por__perfil', 'pedido')
+
+        total_cancelados = cancelaciones.count()
+
+        # Cancelaciones por usuario
+        por_usuario = cancelaciones.values(
+            'cancelado_por__username',
+            'cancelado_por__perfil__nombre_completo'
+        ).annotate(
+            count=Count('id')
+        ).order_by('-count')
+
+        # Motivos más frecuentes (limitar a 100 caracteres por motivo y máximo 20 motivos)
+        motivos_raw = cancelaciones.values_list('motivo', flat=True)
+        motivos_truncados = [
+            m[:97] + '...' if len(m) > 100 else m
+            for m in motivos_raw if m
+        ][:20]  # Máximo 20 motivos para evitar respuestas enormes
+
+        return Response({
+            'periodo': periodo,
+            'fecha_inicio': fecha_inicio.isoformat(),
+            'fecha_fin': fecha_fin.isoformat(),
+            'total_cancelados': total_cancelados,
+            'por_usuario': list(por_usuario),
+            'motivos_sample': motivos_truncados,
+            'motivos_total': len(motivos_raw)  # Total de motivos disponibles
+        })

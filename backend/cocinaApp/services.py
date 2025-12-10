@@ -1,8 +1,9 @@
 from django.db import transaction
 from django.db.models import F
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
-from .models import Pedido, DetallePedido, TRANSICIONES_VALIDAS
+from .models import Pedido, DetallePedido, PedidoCancelacion, TRANSICIONES_VALIDAS
 from menuApp.models import Ingrediente
 
 
@@ -74,21 +75,36 @@ class PedidoService:
 
     @staticmethod
     @transaction.atomic
-    def cancelar_pedido(pedido):
+    def cancelar_pedido(pedido, usuario=None, motivo=None):
         """
         Cancela pedido y revierte stock en una transacción.
+        Captura datos de auditoría si se proporcionan.
+
+        Reglas de validación:
+        - Si se proporciona 'usuario', entonces 'motivo' es OBLIGATORIO y debe tener ≥10 caracteres
+        - Si NO se proporciona 'usuario', se permite cancelación sin motivo (compatibilidad con código existente)
 
         Args:
             pedido: Instancia de Pedido
+            usuario: Usuario que cancela (opcional para compatibilidad, recomendado proporcionar)
+            motivo: Motivo de cancelación (opcional para compatibilidad, recomendado proporcionar)
 
         Returns:
             Pedido actualizado
 
         Raises:
-            ValidationError si la transición no es válida
+            ValidationError si la transición no es válida o si falta motivo cuando se requiere auditoría
         """
         if not pedido.puede_transicionar_a('CANCELADO'):
             raise ValidationError(f"No se puede cancelar pedido en estado {pedido.estado}")
+
+        # VALIDACIÓN: Si se proporciona usuario (auditoría), motivo es OBLIGATORIO
+        if usuario and not motivo:
+            raise ValidationError("Debe especificar el motivo de cancelación")
+
+        # VALIDACIÓN: Si se proporciona usuario, motivo debe tener al menos 10 caracteres
+        if usuario and motivo and len(motivo.strip()) < 10:
+            raise ValidationError("El motivo de cancelación debe tener al menos 10 caracteres")
 
         # Revertir stock de cada detalle ANTES de cambiar estado
         for detalle in pedido.detalles.all():
@@ -100,6 +116,45 @@ class PedidoService:
 
         pedido.estado = 'CANCELADO'
         pedido.save()
+
+        # NUEVO: Guardar auditoría de cancelación si se proporcionan datos
+        if usuario and motivo:
+            # Capturar snapshot de datos
+            cliente_nombre = ''
+            if pedido.cliente and hasattr(pedido.cliente, 'perfil'):
+                cliente_nombre = pedido.cliente.perfil.nombre_completo
+
+            # Crear snapshots de productos (texto y JSON)
+            detalles = pedido.detalles.all()
+
+            # Resumen en texto legible
+            productos_resumen = ', '.join([
+                f"{d.cantidad}x {d.plato.nombre}"
+                for d in detalles
+            ])
+
+            # Detalle estructurado en JSON para análisis futuro
+            productos_detalle = [
+                {
+                    'plato_id': d.plato.id,
+                    'plato_nombre': d.plato.nombre,
+                    'cantidad': d.cantidad,
+                    'precio_unitario': float(d.precio_unitario),
+                    'subtotal': float(d.subtotal)
+                }
+                for d in detalles
+            ]
+
+            PedidoCancelacion.objects.create(
+                pedido=pedido,
+                cancelado_por=usuario,
+                motivo=motivo.strip()[:500],
+                mesa_numero=pedido.mesa.numero,
+                cliente_nombre=cliente_nombre,
+                total_pedido=pedido.total,
+                productos_resumen=productos_resumen[:500],  # Límite de seguridad
+                productos_detalle=productos_detalle
+            )
 
         # Actualizar disponibilidad de platos
         PedidoService._actualizar_disponibilidad_platos(pedido)

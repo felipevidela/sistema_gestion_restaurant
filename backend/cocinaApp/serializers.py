@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Pedido, DetallePedido, TRANSICIONES_VALIDAS
+from .models import Pedido, DetallePedido, PedidoCancelacion, TRANSICIONES_VALIDAS
 from mainApp.models import Mesa, Reserva
 from menuApp.models import Plato
 
@@ -17,26 +17,62 @@ class DetallePedidoSerializer(serializers.ModelSerializer):
         read_only_fields = ['precio_unitario']
 
 
+class PedidoCancelacionSerializer(serializers.ModelSerializer):
+    """Serializer para datos de cancelación"""
+    cancelado_por_username = serializers.CharField(
+        source='cancelado_por.username',
+        read_only=True,
+        default=None
+    )
+    cancelado_por_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PedidoCancelacion
+        fields = [
+            'id', 'pedido',
+            'cancelado_por', 'cancelado_por_username', 'cancelado_por_nombre',
+            'fecha_cancelacion', 'motivo',
+            'mesa_numero', 'cliente_nombre', 'total_pedido',
+            'productos_resumen', 'productos_detalle'
+        ]
+        read_only_fields = ['cancelado_por', 'fecha_cancelacion']
+
+    def get_cancelado_por_nombre(self, obj):
+        """Obtener nombre completo del usuario que canceló"""
+        if obj.cancelado_por and hasattr(obj.cancelado_por, 'perfil'):
+            return obj.cancelado_por.perfil.nombre_completo
+        return None
+
+
 class PedidoSerializer(serializers.ModelSerializer):
     detalles = DetallePedidoSerializer(many=True, read_only=True)
     mesa_numero = serializers.IntegerField(source='mesa.numero', read_only=True)
     transiciones_permitidas = serializers.SerializerMethodField()
     total = serializers.ReadOnlyField()
     cliente_username = serializers.CharField(source='cliente.username', read_only=True, default=None)
+    cliente_nombre = serializers.SerializerMethodField()
     tiempo_desde_creacion = serializers.SerializerMethodField()
     tiempo_desde_listo = serializers.SerializerMethodField()
     tiempo_total = serializers.SerializerMethodField()
+    cancelacion = PedidoCancelacionSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = Pedido
         fields = [
-            'id', 'mesa', 'mesa_numero', 'reserva', 'cliente', 'cliente_username',
+            'id', 'mesa', 'mesa_numero', 'reserva', 'cliente', 'cliente_username', 'cliente_nombre',
             'estado', 'notas', 'fecha_creacion', 'fecha_actualizacion',
             'fecha_listo', 'fecha_entregado',
             'tiempo_desde_creacion', 'tiempo_desde_listo', 'tiempo_total',
-            'detalles', 'transiciones_permitidas', 'total'
+            'detalles', 'transiciones_permitidas', 'total',
+            'cancelacion'
         ]
         read_only_fields = ['estado', 'fecha_creacion', 'fecha_actualizacion', 'fecha_listo', 'fecha_entregado']
+
+    def get_cliente_nombre(self, obj):
+        """Obtener nombre completo del cliente desde perfil"""
+        if obj.cliente and hasattr(obj.cliente, 'perfil'):
+            return obj.cliente.perfil.nombre_completo
+        return None
 
     def get_transiciones_permitidas(self, obj):
         return TRANSICIONES_VALIDAS.get(obj.estado, [])

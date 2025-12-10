@@ -307,3 +307,279 @@ class PedidoServiceTests(TestCase):
             ingrediente2.cantidad_disponible,
             Decimal('7.400')
         )
+
+
+# ======================================================================
+# TESTS NUEVOS - AUDITORÍA DE CANCELACIONES (pytest style)
+# ======================================================================
+
+import pytest
+from cocinaApp.models import PedidoCancelacion
+from cocinaApp.tests.factories import (
+    PedidoFactory, DetallePedidoFactory, PlatoFactory,
+    IngredienteFactory, RecetaFactory
+)
+
+
+@pytest.mark.django_db
+@pytest.mark.unit
+class TestPedidoServiceCancelacion:
+    """Tests para la funcionalidad de cancelar_pedido con auditoría"""
+
+    def test_cancelar_con_usuario_y_motivo_valido(self, pedido_creado, user_admin):
+        """Cancelar con usuario + motivo válido crea registro de auditoría"""
+        motivo = 'Cliente solicitó cancelación por tiempo de espera excesivo'
+
+        pedido = PedidoService.cancelar_pedido(
+            pedido_creado,
+            usuario=user_admin,
+            motivo=motivo
+        )
+
+        # Pedido cancelado
+        assert pedido.estado == 'CANCELADO'
+
+        # Auditoría creada
+        assert hasattr(pedido, 'cancelacion')
+        assert pedido.cancelacion is not None
+        assert pedido.cancelacion.cancelado_por == user_admin
+        assert pedido.cancelacion.motivo == motivo
+
+    def test_cancelar_con_usuario_sin_motivo_error(self, pedido_creado, user_admin):
+        """Cancelar con usuario SIN motivo lanza ValidationError"""
+        with pytest.raises(ValidationError) as exc_info:
+            PedidoService.cancelar_pedido(pedido_creado, usuario=user_admin)
+
+        assert 'motivo' in str(exc_info.value).lower()
+
+    def test_cancelar_con_motivo_corto_error(self, pedido_creado, user_admin):
+        """Cancelar con motivo <10 caracteres lanza ValidationError"""
+        motivo_corto = 'Corto'
+
+        with pytest.raises(ValidationError) as exc_info:
+            PedidoService.cancelar_pedido(
+                pedido_creado,
+                usuario=user_admin,
+                motivo=motivo_corto
+            )
+
+        assert '10 caracteres' in str(exc_info.value).lower()
+
+    def test_cancelar_sin_usuario_legacy_ok(self, pedido_creado):
+        """Cancelar sin usuario (legacy) funciona sin crear auditoría"""
+        pedido = PedidoService.cancelar_pedido(pedido_creado)
+
+        # Pedido cancelado
+        assert pedido.estado == 'CANCELADO'
+
+        # NO hay auditoría
+        assert not hasattr(pedido, 'cancelacion') or pedido.cancelacion is None
+
+    def test_snapshot_cliente_nombre_con_perfil(self, user_cliente):
+        """Snapshot incluye cliente_nombre cuando hay perfil"""
+        pedido = PedidoFactory(cliente=user_cliente)
+        DetallePedidoFactory(pedido=pedido)
+
+        pedido = PedidoService.cancelar_pedido(
+            pedido,
+            usuario=user_cliente,
+            motivo='Motivo válido de prueba para cancelación'
+        )
+
+        assert pedido.cancelacion.cliente_nombre == user_cliente.perfil.nombre_completo
+
+    def test_snapshot_cliente_nombre_sin_perfil(self):
+        """Snapshot tiene cliente_nombre vacío si cliente no tiene perfil"""
+        from mainApp.tests.factories import UserFactory
+
+        user_sin_perfil = UserFactory.build()
+        user_sin_perfil.save()
+        # No crear perfil
+
+        pedido = PedidoFactory(cliente=user_sin_perfil)
+        DetallePedidoFactory(pedido=pedido)
+
+        pedido = PedidoService.cancelar_pedido(
+            pedido,
+            usuario=user_sin_perfil,
+            motivo='Motivo válido de prueba para cancelación'
+        )
+
+        assert pedido.cancelacion.cliente_nombre == ''
+
+    def test_snapshot_productos_resumen_correcto(self):
+        """productos_resumen tiene formato '2x Plato, 1x Otro'"""
+        plato1 = PlatoFactory(nombre='Pizza Napolitana')
+        plato2 = PlatoFactory(nombre='Ensalada César')
+
+        pedido = PedidoFactory()
+        DetallePedidoFactory(pedido=pedido, plato=plato1, cantidad=2)
+        DetallePedidoFactory(pedido=pedido, plato=plato2, cantidad=1)
+
+        pedido = PedidoService.cancelar_pedido(
+            pedido,
+            usuario=pedido.cliente,
+            motivo='Motivo válido de prueba para cancelación'
+        )
+
+        # Formato correcto
+        assert '2x Pizza Napolitana' in pedido.cancelacion.productos_resumen
+        assert '1x Ensalada César' in pedido.cancelacion.productos_resumen
+        assert ',' in pedido.cancelacion.productos_resumen
+
+    def test_snapshot_productos_detalle_json_correcto(self):
+        """productos_detalle tiene estructura JSON correcta"""
+        plato = PlatoFactory(nombre='Pizza Margherita', precio=Decimal('12500'))
+        pedido = PedidoFactory()
+        DetallePedidoFactory(
+            pedido=pedido,
+            plato=plato,
+            cantidad=2,
+            precio_unitario=Decimal('12500')
+        )
+
+        pedido = PedidoService.cancelar_pedido(
+            pedido,
+            usuario=pedido.cliente,
+            motivo='Motivo válido de prueba para cancelación'
+        )
+
+        # Validar estructura JSON
+        detalle = pedido.cancelacion.productos_detalle[0]
+        assert detalle['plato_id'] == plato.id
+        assert detalle['plato_nombre'] == 'Pizza Margherita'
+        assert detalle['cantidad'] == 2
+        assert float(detalle['precio_unitario']) == 12500.00
+        assert float(detalle['subtotal']) == 25000.00
+
+    def test_motivo_largo_truncado_500_chars(self, pedido_creado, user_admin):
+        """motivo largo se trunca a 500 caracteres"""
+        motivo_largo = 'x' * 600
+
+        pedido = PedidoService.cancelar_pedido(
+            pedido_creado,
+            usuario=user_admin,
+            motivo=motivo_largo
+        )
+
+        assert len(pedido.cancelacion.motivo) == 500
+        assert pedido.cancelacion.motivo == 'x' * 500
+
+    def test_productos_resumen_largo_truncado_500_chars(self, user_admin):
+        """productos_resumen largo se trunca a 500 caracteres"""
+        # Crear muchos detalles para superar 500 chars
+        pedido = PedidoFactory()
+        for i in range(50):
+            plato = PlatoFactory(nombre=f'Plato número {i} con nombre muy largo')
+            DetallePedidoFactory(pedido=pedido, plato=plato, cantidad=1)
+
+        pedido = PedidoService.cancelar_pedido(
+            pedido,
+            usuario=user_admin,
+            motivo='Motivo válido de prueba para cancelación'
+        )
+
+        assert len(pedido.cancelacion.productos_resumen) <= 500
+
+    def test_reversion_stock_al_cancelar_con_auditoria(self):
+        """Stock se revierte correctamente al cancelar con auditoría"""
+        ingrediente = IngredienteFactory(cantidad_disponible=Decimal('1000'))
+        plato = PlatoFactory()
+        RecetaFactory(plato=plato, ingrediente=ingrediente, cantidad_requerida=Decimal('100'))
+
+        pedido = PedidoFactory()
+        DetallePedidoFactory(pedido=pedido, plato=plato, cantidad=2)
+
+        # Simular descuento previo de stock
+        ingrediente.cantidad_disponible = Decimal('800')  # 1000 - (2 × 100)
+        ingrediente.save()
+
+        # Cancelar con auditoría
+        pedido = PedidoService.cancelar_pedido(
+            pedido,
+            usuario=pedido.cliente,
+            motivo='Motivo válido de prueba para cancelación'
+        )
+
+        # Stock revertido
+        ingrediente.refresh_from_db()
+        assert ingrediente.cantidad_disponible == Decimal('1000')
+
+        # Y auditoría creada
+        assert pedido.cancelacion is not None
+
+    def test_disponibilidad_plato_actualizada(self):
+        """disponibilidad del plato se actualiza después de cancelar"""
+        ingrediente = IngredienteFactory(cantidad_disponible=Decimal('50'))
+        plato = PlatoFactory(disponible=False)
+        RecetaFactory(plato=plato, ingrediente=ingrediente, cantidad_requerida=Decimal('100'))
+
+        pedido = PedidoFactory()
+        DetallePedidoFactory(pedido=pedido, plato=plato, cantidad=1)
+
+        # Simular que se había descontado stock
+        ingrediente.cantidad_disponible = Decimal('0')  # Insuficiente
+        ingrediente.save()
+
+        # Cancelar debería revertir y hacer disponible el plato
+        PedidoService.cancelar_pedido(
+            pedido,
+            usuario=pedido.cliente,
+            motivo='Motivo válido de prueba para cancelación'
+        )
+
+        ingrediente.refresh_from_db()
+        assert ingrediente.cantidad_disponible >= Decimal('50')
+
+    def test_snapshot_mesa_numero_correcto(self, mesa_disponible, user_admin):
+        """Snapshot guarda el número de mesa correctamente"""
+        pedido = PedidoFactory(mesa=mesa_disponible)
+        DetallePedidoFactory(pedido=pedido)
+
+        pedido = PedidoService.cancelar_pedido(
+            pedido,
+            usuario=user_admin,
+            motivo='Motivo válido de prueba para cancelación'
+        )
+
+        assert pedido.cancelacion.mesa_numero == mesa_disponible.numero
+
+    def test_snapshot_total_pedido_correcto(self, user_admin):
+        """Snapshot guarda el total del pedido correctamente"""
+        pedido = PedidoFactory()
+        DetallePedidoFactory(
+            pedido=pedido,
+            precio_unitario=Decimal('5000'),
+            cantidad=2
+        )
+        DetallePedidoFactory(
+            pedido=pedido,
+            precio_unitario=Decimal('3000'),
+            cantidad=1
+        )
+
+        pedido = PedidoService.cancelar_pedido(
+            pedido,
+            usuario=user_admin,
+            motivo='Motivo válido de prueba para cancelación'
+        )
+
+        # Total = 5000*2 + 3000*1 = 13000
+        assert pedido.cancelacion.total_pedido == pedido.total
+
+    def test_fecha_cancelacion_automatica(self, pedido_creado, user_admin):
+        """fecha_cancelacion se asigna automáticamente"""
+        from django.utils import timezone
+
+        antes_cancelar = timezone.now()
+
+        pedido = PedidoService.cancelar_pedido(
+            pedido_creado,
+            usuario=user_admin,
+            motivo='Motivo válido de prueba para cancelación'
+        )
+
+        despues_cancelar = timezone.now()
+
+        # Fecha está entre antes y después
+        assert antes_cancelar <= pedido.cancelacion.fecha_cancelacion <= despues_cancelar

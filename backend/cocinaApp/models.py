@@ -124,3 +124,61 @@ class DetallePedido(models.Model):
         verbose_name = "Detalle de Pedido"
         verbose_name_plural = "Detalles de Pedido"
         ordering = ['id']
+
+
+class PedidoCancelacion(models.Model):
+    """Auditoría de cancelaciones de pedidos"""
+    pedido = models.OneToOneField(
+        Pedido,
+        on_delete=models.CASCADE,
+        related_name='cancelacion',
+        help_text="Pedido cancelado"
+    )
+    cancelado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='pedidos_cancelados',
+        help_text="Usuario que canceló el pedido"
+    )
+    fecha_cancelacion = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Fecha y hora de la cancelación"
+    )
+    motivo = models.TextField(
+        max_length=500,
+        help_text="Motivo de la cancelación"
+    )
+    # Snapshot de datos al momento de cancelación
+    mesa_numero = models.IntegerField()
+    cliente_nombre = models.CharField(max_length=200, blank=True)
+    total_pedido = models.DecimalField(max_digits=10, decimal_places=2)
+    productos_resumen = models.TextField(
+        blank=True,
+        help_text="Resumen de productos del pedido (snapshot en texto)"
+    )
+    productos_detalle = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Detalle estructurado de productos (snapshot en JSON)"
+    )
+
+    # DECISIÓN TÉCNICA:
+    # - Usar JSONField (nativo de Django 3.1+)
+    # - Funciona en SQLite (desarrollo) y PostgreSQL (producción)
+    # - En SQLite es menos eficiente pero suficiente para desarrollo
+    # - En PostgreSQL es nativo, indexable y eficiente
+    # - No requiere serialización manual (json.dumps/loads)
+    # - Permite queries nativas si se necesitan en el futuro
+
+    def __str__(self):
+        return f"Cancelación Pedido #{self.pedido.id} - {self.fecha_cancelacion}"
+
+    class Meta:
+        verbose_name = "Cancelación de Pedido"
+        verbose_name_plural = "Cancelaciones de Pedidos"
+        ordering = ['-fecha_cancelacion']
+        indexes = [
+            models.Index(fields=['fecha_cancelacion']),
+            models.Index(fields=['cancelado_por', 'fecha_cancelacion']),
+        ]

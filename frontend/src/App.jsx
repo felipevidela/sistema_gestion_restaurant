@@ -19,6 +19,7 @@ import GestionStock from "./components/menu/GestionStock";
 import PanelCocina from "./components/cocina/PanelCocina";
 import CrearPedido from "./components/cocina/CrearPedido";
 import PanelPedidosMesero from "./components/cocina/PanelPedidosMesero";
+import EstadisticasCancelaciones from "./components/cocina/EstadisticasCancelaciones";
 
 const getDefaultTab = (rol) => {
   if (rol === 'cliente') return 'mis-reservas';
@@ -90,7 +91,8 @@ function App() {
         { id: 'todas-reservas', label: 'Todas las Reservas', icon: 'bi-list-check' },
         { id: 'nueva-reserva', label: 'Nueva Reserva', icon: 'bi-plus-circle' },
         { id: 'crear-pedido', label: 'Crear Pedido', icon: 'bi-cart-plus' },
-        { id: 'cocina', label: 'Cocina', icon: 'bi-fire' }
+        { id: 'cocina', label: 'Cocina', icon: 'bi-fire' },
+        { id: 'estadisticas-cancelaciones', label: 'Cancelaciones', icon: 'bi-graph-up' }
       ],
       admin: [
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
@@ -101,7 +103,8 @@ function App() {
         { id: 'gestion-stock', label: 'Stock', icon: 'bi-box-seam' },
         { id: 'crear-pedido', label: 'Crear Pedido', icon: 'bi-cart-plus' },
         { id: 'pedidos', label: 'Pedidos', icon: 'bi-receipt' },
-        { id: 'cocina', label: 'Cocina', icon: 'bi-fire' }
+        { id: 'cocina', label: 'Cocina', icon: 'bi-fire' },
+        { id: 'estadisticas-cancelaciones', label: 'Cancelaciones', icon: 'bi-graph-up', roles: ['admin', 'cajero'] }
       ]
     };
 
@@ -155,6 +158,8 @@ function App() {
         return <PanelPedidosMesero />;
       case 'cocina':
         return <PanelCocina />;
+      case 'estadisticas-cancelaciones':
+        return <EstadisticasCancelaciones />;
       default:
         return <Alert variant="warning">Sección no encontrada</Alert>;
     }

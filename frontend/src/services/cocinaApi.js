@@ -196,9 +196,22 @@ export async function cambiarEstadoPedido(id, nuevoEstado) {
 
 /**
  * Cancelar pedido (atajo para cambiar a CANCELADO)
+ * @param {number} id - ID del pedido
+ * @param {string} motivo - Motivo de cancelación (opcional)
  */
-export async function cancelarPedido(id) {
-  return cambiarEstadoPedido(id, 'CANCELADO');
+export async function cancelarPedido(id, motivo = '') {
+  const body = { estado: 'CANCELADO' };
+  // Solo agregar motivo si se proporciona
+  if (motivo && motivo.trim()) {
+    body.motivo = motivo.trim();
+  }
+
+  const response = await fetch(`${API_BASE_URL}/cocina/pedidos/${id}/estado/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(body)
+  });
+  return handleResponse(response);
 }
 
 // ==================== COLA DE COCINA ====================
@@ -340,5 +353,58 @@ export async function getPedidosReserva(reservaId) {
   const response = await fetch(`${API_BASE_URL}/cocina/pedidos/?reserva=${reservaId}`, {
     headers: getAuthHeaders()
   });
+  return handleResponse(response);
+}
+
+// ==================== PEDIDOS CANCELADOS ====================
+
+/**
+ * Obtener pedidos CANCELADOS con filtros de auditoría
+ * @param {Object} opciones - { page, page_size, periodo, fecha, usuario, busqueda, ordering }
+ */
+export async function getPedidosCancelados(opciones = {}) {
+  const params = new URLSearchParams();
+  if (opciones.page) params.append('page', opciones.page);
+  if (opciones.page_size) params.append('page_size', opciones.page_size);
+  if (opciones.periodo) params.append('periodo', opciones.periodo);
+  if (opciones.fecha) params.append('fecha', opciones.fecha);
+  if (opciones.usuario) params.append('usuario', opciones.usuario);
+  if (opciones.busqueda) params.append('busqueda', opciones.busqueda);
+  if (opciones.ordering) params.append('ordering', opciones.ordering);
+
+  const queryString = params.toString();
+  const url = `${API_BASE_URL}/cocina/pedidos/cancelados/${queryString ? `?${queryString}` : ''}`;
+
+  const response = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || data.error || `Error ${response.status}`);
+  }
+
+  // Mapear estructura paginada igual que getPedidosListos
+  return {
+    results: data.results || data,
+    count: data.count,
+    next: data.next,
+    previous: data.previous
+  };
+}
+
+// ==================== ESTADÍSTICAS DE CANCELACIONES ====================
+
+/**
+ * Obtener estadísticas de pedidos cancelados
+ * @param {string} periodo - 'dia' | 'semana' | 'mes'
+ */
+export async function getEstadisticasCancelaciones(periodo = 'dia') {
+  const response = await fetch(
+    `${API_BASE_URL}/cocina/estadisticas/cancelaciones/?periodo=${periodo}`,
+    {
+      headers: getAuthHeaders()
+    }
+  );
   return handleResponse(response);
 }

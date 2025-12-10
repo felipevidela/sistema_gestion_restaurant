@@ -4,10 +4,12 @@ import {
   ButtonGroup, Modal
 } from 'react-bootstrap';
 import {
-  getColaCocina, getPedidosUrgentes, cambiarEstadoPedido,
+  getColaCocina, getPedidosUrgentes, cambiarEstadoPedido, cancelarPedido,
   ESTADOS_PEDIDO, puedeTransicionar
 } from '../../services/cocinaApi';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
+import ModalCancelarPedido from './ModalCancelarPedido';
 
 // Estilos CSS para animaciones del panel de cocina
 const styles = `
@@ -79,6 +81,7 @@ const styles = `
  */
 function PanelCocina() {
   const { user } = useAuth();
+  const toast = useToast();
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -87,6 +90,10 @@ function PanelCocina() {
   const [procesando, setProcesando] = useState(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
   const [refreshing, setRefreshing] = useState(false);
+
+  // Estados para modal de cancelación
+  const [showModalCancelar, setShowModalCancelar] = useState(false);
+  const [pedidoACancelar, setPedidoACancelar] = useState(null);
 
   // Cargar pedidos
   const cargarPedidos = useCallback(async () => {
@@ -131,6 +138,24 @@ function PanelCocina() {
       setError(err.message);
     } finally {
       setProcesando(null);
+    }
+  };
+
+  // Solicitar cancelación (abre modal)
+  const handleSolicitarCancelacion = (pedido) => {
+    setPedidoACancelar(pedido);
+    setShowModalCancelar(true);
+  };
+
+  // Confirmar cancelación con motivo
+  const handleCancelar = async (pedidoId, motivo) => {
+    try {
+      await cancelarPedido(pedidoId, motivo);
+      toast.success('Pedido cancelado exitosamente');
+      await cargarPedidos();
+    } catch (err) {
+      toast.error(`Error al cancelar: ${err.message}`);
+      throw err; // Re-lanzar para que el modal lo maneje
     }
   };
 
@@ -343,6 +368,23 @@ function PanelCocina() {
 
                         if (!puedeCambiar) return null;
 
+                        // Si es cancelación, usar modal especial
+                        if (transicion === 'CANCELADO') {
+                          return (
+                            <Button
+                              key={transicion}
+                              variant="outline-danger"
+                              size="sm"
+                              disabled={procesando === pedido.id}
+                              onClick={() => handleSolicitarCancelacion(pedido)}
+                            >
+                              <i className="bi bi-x-circle me-1"></i>
+                              Cancelar
+                            </Button>
+                          );
+                        }
+
+                        // Otras transiciones normales
                         return (
                           <Button
                             key={transicion}
@@ -400,6 +442,14 @@ function PanelCocina() {
           </Button>
         </div>
       )}
+
+      {/* Modal de cancelación */}
+      <ModalCancelarPedido
+        show={showModalCancelar}
+        onHide={() => setShowModalCancelar(false)}
+        pedido={pedidoACancelar}
+        onCancelar={handleCancelar}
+      />
     </Container>
   );
 }

@@ -29,6 +29,50 @@ Plataforma web completa para gestionar reservas, mesas, menú, stock de ingredie
 - **Menú y Stock (menuApp):** categorías, platos, ingredientes, recetas; control de stock con alertas y disponibilidad automática de platos.
 - **Pedidos y Cocina (cocinaApp):** pedidos por mesa y reserva, múltiples platos por pedido, transiciones de estado controladas, descuento/reversión de stock y actualización del panel de cocina.
 
+## Comunicación Inter-Módulos
+
+El sistema se comunica mediante **REST API pura** (sin WebSockets) con autenticación por token DRF. Todos los datos se intercambian en formato JSON con actualización por polling automático (30-60 segundos) y botones manuales de refrescar.
+
+📖 **[Ver Documentación Técnica Completa](docs/ARQUITECTURA.md)** - Arquitectura detallada, 73+ endpoints con ejemplos JSON, flujos de datos completos, transiciones de estado, modelo de datos relacional
+
+<details>
+<summary><b>Vista Rápida: Arquitectura del Sistema</b></summary>
+
+```
+┌───────────────────────┐   REST API    ┌─────────────────────┐
+│    REACT FRONTEND     │ ◄───────────► │   DJANGO BACKEND    │
+│      (Vite 7.2)       │  Token Auth   │    (Django 5.1)     │
+│                       │               │                     │
+│  Services:            │               │  Módulos:           │
+│  - reservasApi        │──────────────►│  - mainApp          │
+│  - menuApi            │──────────────►│  - menuApp          │
+│  - cocinaApi          │──────────────►│  - cocinaApp        │
+│                       │               │                     │
+│  Actualización:       │               │  PostgreSQL DB      │
+│  - Polling: 30-60s    │               │                     │
+│  - Manual: Botones    │               │                     │
+└───────────────────────┘               └─────────────────────┘
+```
+
+**Módulos Backend:**
+- **mainApp** (~40 endpoints) - Reservas, mesas, autenticación, perfiles, bloqueos
+- **menuApp** (~20 endpoints) - Menú, categorías, platos, ingredientes, recetas, stock
+- **cocinaApp** (~15 endpoints) - Pedidos, estados de cocina, cola, estadísticas, cancelaciones
+
+**Características de Comunicación:**
+- Autenticación: `Authorization: Token {token}` en headers
+- Polling: 30-60 segundos según componente (PanelCocina 60s, PanelMesero 30s)
+- Paginación: Endpoints retornan `{count, next, previous, results}`
+- Transacciones atómicas: Stock se descuenta/revierte con `F()` para integridad
+- Auditoría: Cancelaciones registran usuario, motivo, fecha y snapshots JSON
+
+**Flujos Documentados:**
+1. Ciclo completo de un pedido (6 pasos: llegada → toma → preparación → entrega → cancelación)
+2. Reserva con usuario invitado (registro público → token 48h → activación opcional)
+3. Control de stock e inventario (creación receta → verificación → descuento → reversión)
+
+</details>
+
 ## Endpoints destacados (prefix `/api/`)
 - Autenticación: `/login/`, `/register/`, `/register-and-reserve/`, `/activar-cuenta/`.
 - Reservas y mesas: `/reservas/`, `/consultar-mesas/`, `/horas-disponibles/`, `/bloqueos/`.
