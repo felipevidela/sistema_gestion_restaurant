@@ -148,18 +148,27 @@ class PedidoService:
 
     @staticmethod
     def _actualizar_disponibilidad_platos(pedido):
-        """Actualiza disponibilidad de platos según stock actual"""
+        """
+        Actualiza disponibilidad de platos según stock actual.
+        Optimizado para reducir queries usando prefetch_related.
+        """
+        # Solo actualizar los platos directamente en el pedido
+        # (no todos los platos que comparten ingredientes - demasiado costoso)
         platos_afectados = set()
-        for detalle in pedido.detalles.all():
-            platos_afectados.add(detalle.plato)
-            # También platos que usan los mismos ingredientes
-            for receta in detalle.plato.recetas.all():
-                for otra_receta in receta.ingrediente.recetas.all():
-                    platos_afectados.add(otra_receta.plato)
 
-        for plato in platos_afectados:
-            plato.disponible = plato.verificar_disponibilidad()
-            plato.save(update_fields=['disponible'])
+        # Obtener detalles con prefetch de relaciones para evitar N+1 queries
+        detalles = pedido.detalles.select_related('plato').prefetch_related('plato__recetas')
+
+        for detalle in detalles:
+            platos_afectados.add(detalle.plato.id)
+
+        # Actualizar solo los platos del pedido en una sola operación
+        if platos_afectados:
+            from menuApp.models import Plato
+            platos = Plato.objects.filter(id__in=platos_afectados)
+            for plato in platos:
+                plato.disponible = plato.verificar_disponibilidad()
+                plato.save(update_fields=['disponible'])
 
     @staticmethod
     def _notificar_websocket(tipo, pedido):

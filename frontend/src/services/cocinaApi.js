@@ -22,7 +22,8 @@ function getAuthHeaders() {
 }
 
 // Tiempo máximo para esperar respuestas de la API (ms)
-const DEFAULT_TIMEOUT = 12000;
+// NOTA: 30s temporal mientras se optimiza la actualización de disponibilidad en backend
+const DEFAULT_TIMEOUT = 30000;
 
 /**
  * fetch con timeout para evitar que el frontend quede bloqueado si el backend no responde
