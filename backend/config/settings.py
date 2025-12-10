@@ -1,6 +1,8 @@
 
 from pathlib import Path
 import os
+import sys
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -42,18 +44,28 @@ FRONTEND_INDEX = FRONTEND_DIR / "index.html"
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-this-key')
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# CAMBIO: Default False para evitar arrancar en debug si falta la env var
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
-# FIX #29 (MODERADO): Validar que SECRET_KEY no sea el valor por defecto en producción
-if not DEBUG and SECRET_KEY == 'django-insecure-change-this-key':
-    raise ValueError(
-        "SECRET_KEY insegura detectada en producción. "
-        "Debes configurar la variable de entorno DJANGO_SECRET_KEY con una clave única y secreta."
-    )
+# Detectar modo testing (manage.py test o pytest)
+TESTING = 'test' in sys.argv or 'pytest' in sys.modules
+
+# Modo desarrollo = DEBUG activo O ejecutando tests
+DEVELOPMENT_MODE = DEBUG or TESTING
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if DEVELOPMENT_MODE:
+        # Clave insegura solo para desarrollo/testing local
+        SECRET_KEY = 'dev-insecure-key-only-for-local-development'
+    else:
+        raise ValueError(
+            "DJANGO_SECRET_KEY no configurada.\n"
+            "Genera una con: python -c \"import secrets; print(secrets.token_urlsafe(50))\"\n"
+            "Y configúrala en variables de entorno."
+        )
 
 # Obtener hosts de variable de entorno y siempre incluir .railway.app
 _allowed_hosts = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
@@ -119,14 +131,19 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Configuración única: siempre usar Railway
-# DATABASE_URL se proporciona automáticamente en Railway o se puede configurar localmente
+# Configuración de base de datos
 import dj_database_url
 
-DATABASE_URL = os.environ.get(
-    'DATABASE_URL',
-    'postgresql://postgres:FAmZgtgkhBMKrGKDbPoWjfTbLjTwseLn@maglev.proxy.rlwy.net:59049/railway'
-)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    if DEVELOPMENT_MODE:  # DEBUG o TESTING
+        # Solo para desarrollo local y tests con SQLite
+        DATABASE_URL = 'sqlite:///db.sqlite3'
+    else:
+        raise ValueError(
+            "DATABASE_URL es requerida en producción. "
+            "Configúrala en las variables de entorno."
+        )
 
 DATABASES = {
     'default': dj_database_url.config(
@@ -327,7 +344,17 @@ if not DEBUG:
 # Configuración de django-encrypted-model-fields para encriptación
 # IMPORTANTE: Esta clave debe ser secreta en producción y guardarse en variables de entorno
 # Generar clave: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
-FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY', '4GmvO9dDiZCcJ-B1PglnW5nwn5pkQK3E5jYU-F517W0=')
+FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY')
+if not FIELD_ENCRYPTION_KEY:
+    if DEVELOPMENT_MODE:
+        # Clave Fernet válida para desarrollo/testing (generada con Fernet.generate_key())
+        FIELD_ENCRYPTION_KEY = 'gCwnvM_lUMw4I8oIlClPSh17YVnT3i_kjpaEuQ8Jk1k='
+    else:
+        raise ValueError(
+            "FIELD_ENCRYPTION_KEY no configurada.\n"
+            "En producción: Configúrala en variables de entorno de Railway.\n"
+            "En desarrollo: Ejecuta con DEBUG=True o configura la variable."
+        )
 
 # FIX #27 (MODERADO): Configuración de cache para mejorar rendimiento
 # En desarrollo: usar cache local en memoria

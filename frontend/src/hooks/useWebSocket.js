@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
- * Hook para conexión WebSocket con reconexión automática
+ * Hook para conexión WebSocket con reconexión automática y auth segura
  * @param {string} path - Ruta del WebSocket (ej: '/ws/cocina/')
  * @param {Object} options - Opciones de configuración
  * @param {boolean} options.enabled - Si el WebSocket debe conectarse
@@ -28,8 +28,27 @@ export function useWebSocket(path, options = {}) {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
   const wsRef = useRef(null);
-  const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef(null);
+
+  // IMPORTANTE: Usar SOLO useRef para estado en closures (evita valores desactualizados)
+  // NO usar variables let/const locales que se pierden entre reconexiones
+  const connectionStatusRef = useRef('disconnected');
+  const reconnectAttempts = useRef(0);
+  const authSentRef = useRef(false);  // ÚNICO lugar donde se trackea si se envió auth
+  const MAX_RECONNECT_ATTEMPTS = 5;
+
+  // Función helper para actualizar ambos (state para UI + ref para closures)
+  const updateConnectionStatus = useCallback((status) => {
+    connectionStatusRef.current = status;
+    setConnectionStatus(status);
+  }, []);
+
+  // RESETEAR ESTADO al iniciar nueva conexión
+  // IMPORTANTE: Llamar SIEMPRE justo antes de cada new WebSocket(...)
+  const resetConnectionState = useCallback(() => {
+    authSentRef.current = false;
+    // NO resetear reconnectAttempts aquí - se resetea solo al auth exitoso
+  }, []);
 
   // Construir URL del WebSocket
   const getWebSocketUrl = useCallback(() => {
@@ -44,60 +63,130 @@ export function useWebSocket(path, options = {}) {
 
     const token = localStorage.getItem('token');
     if (!token) {
-      setConnectionStatus('no_auth');
+      updateConnectionStatus('no_auth');
       return;
     }
 
     try {
-      setConnectionStatus('connecting');
+      // ========================================
+      // FLUJO DE CONEXIÓN (usar SOLO refs):
+      // ========================================
+      // 1. resetConnectionState() - SIEMPRE antes de new WebSocket
+      // 2. new WebSocket(url)
+      // 3. onopen -> envía auth -> authSentRef.current = true
+      // 4. onmessage 'authenticated' -> reconnectAttempts.current = 0
+      // ========================================
+
+      resetConnectionState();  // <-- SIEMPRE antes de crear WebSocket
+      updateConnectionStatus('connecting');
       const url = getWebSocketUrl();
 
-      // Incluir token en la URL como query param (el backend lo lee)
-      const wsUrl = `${url}?token=${token}`;
-      wsRef.current = new WebSocket(wsUrl);
+      // SIN token en URL - más seguro
+      wsRef.current = new WebSocket(url);
 
       wsRef.current.onopen = () => {
-        setIsConnected(true);
-        setConnectionStatus('connected');
-        reconnectAttemptsRef.current = 0;
-        onOpen?.();
+        updateConnectionStatus('authenticating');
+        // Enviar token en primer mensaje (no en URL)
+        wsRef.current.send(JSON.stringify({
+          type: 'authenticate',
+          token: token
+        }));
+        authSentRef.current = true;  // USAR REF, no variable local
       };
 
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+
+          // Manejar respuestas de autenticación
+          if (data.type === 'authenticated') {
+            setIsConnected(true);
+            updateConnectionStatus('connected');
+            reconnectAttempts.current = 0;  // <-- RESETEAR al autenticar exitosamente
+            onOpen?.();
+            return;
+          }
+
+          if (data.type === 'auth_failed') {
+            updateConnectionStatus('auth_failed');
+            console.error('WebSocket auth failed:', data.reason);
+            // NO llamar close() aquí - el servidor ya lo hará
+            return;
+          }
+
+          if (data.type === 'auth_required') {
+            // Servidor pidió autenticación, reenviar si no lo hicimos
+            if (!authSentRef.current) {
+              wsRef.current.send(JSON.stringify({
+                type: 'authenticate',
+                token: token
+              }));
+              authSentRef.current = true;
+            }
+            return;
+          }
+
+          // Mensaje normal de la aplicación
           setLastMessage(data);
           onMessage?.(data);
         } catch (e) {
-          console.error('Error parsing WebSocket message:', e);
+          console.error('Error procesando mensaje WebSocket:', e);
         }
       };
 
       wsRef.current.onclose = (event) => {
+        // Usar ref en lugar de state para evitar closure desactualizado
+        const currentStatus = connectionStatusRef.current;
         setIsConnected(false);
-        setConnectionStatus('disconnected');
+        let shouldAttemptReconnect = true;
+
+        if (event.code === 4001) {
+          updateConnectionStatus('auth_timeout');
+          shouldAttemptReconnect = true;  // Puede ser problema de red
+        } else if (event.code === 4002) {
+          updateConnectionStatus('auth_failed');
+          shouldAttemptReconnect = false;  // Token inválido
+        } else if (!authSentRef.current) {
+          updateConnectionStatus('connection_failed');
+          shouldAttemptReconnect = true;
+        } else if (currentStatus === 'authenticating') {
+          // Cerró mientras autenticábamos sin respuesta
+          updateConnectionStatus('auth_failed');
+          shouldAttemptReconnect = false;
+        } else {
+          updateConnectionStatus('disconnected');
+          shouldAttemptReconnect = true;
+        }
+
         onClose?.(event);
 
-        // Reconexión automática si no fue cierre intencional
-        if (enabled && reconnectAttemptsRef.current < maxReconnectAttempts) {
-          setConnectionStatus('reconnecting');
-          reconnectTimeoutRef.current = setTimeout(() => {
-            reconnectAttemptsRef.current += 1;
-            connect();
-          }, reconnectInterval);
+        // Reconexión con protección anti-loop
+        if (enabled && shouldAttemptReconnect) {
+          reconnectAttempts.current += 1;
+
+          if (reconnectAttempts.current <= MAX_RECONNECT_ATTEMPTS) {
+            updateConnectionStatus('reconnecting');
+            reconnectTimeoutRef.current = setTimeout(() => {
+              connect();
+            }, reconnectInterval);
+          } else {
+            updateConnectionStatus('max_retries_exceeded');
+            console.error('WebSocket: máximo de reintentos alcanzado');
+          }
         }
       };
 
       wsRef.current.onerror = (error) => {
-        setConnectionStatus('error');
+        console.error('WebSocket error:', error);
+        updateConnectionStatus('error');
         onError?.(error);
       };
 
     } catch (error) {
-      setConnectionStatus('error');
+      updateConnectionStatus('error');
       onError?.(error);
     }
-  }, [enabled, getWebSocketUrl, onMessage, onOpen, onClose, onError, reconnectInterval, maxReconnectAttempts]);
+  }, [enabled, getWebSocketUrl, onMessage, onOpen, onClose, onError, reconnectInterval, resetConnectionState, updateConnectionStatus]);
 
   // Función para desconectar
   const disconnect = useCallback(() => {
@@ -109,8 +198,8 @@ export function useWebSocket(path, options = {}) {
       wsRef.current = null;
     }
     setIsConnected(false);
-    setConnectionStatus('disconnected');
-  }, []);
+    updateConnectionStatus('disconnected');
+  }, [updateConnectionStatus]);
 
   // Función para enviar mensaje
   const sendMessage = useCallback((data) => {

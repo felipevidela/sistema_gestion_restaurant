@@ -138,20 +138,24 @@ def register_and_reserve(request):
     email = request.data.get('email')
     confirm_existing = request.data.get('confirm_existing', False)
 
-    # DEBUG: Log para diagnosticar
+    # Log genérico sin datos sensibles (útil para diagnóstico)
+    # NOTA: Sin emojis para compatibilidad con sistemas de logging
     import logging
+    from django.conf import settings
     logger = logging.getLogger(__name__)
-    logger.info(f"🔍 DEBUG - Email recibido: {email}")
-    logger.info(f"🔍 DEBUG - confirm_existing: {confirm_existing}")
+    logger.info("Procesando solicitud de registro/reserva")
+
+    # Solo en desarrollo mostrar detalles (sin PII)
+    if settings.DEBUG:
+        logger.debug(f"confirm_existing={confirm_existing}, usuario_existe={existing_user is not None if 'existing_user' in locals() else 'N/A'}")
+    # NUNCA loguear email, RUT, teléfono u otros datos personales
 
     try:
         # Verificar si el usuario existe
         existing_user = User.objects.filter(email=email).first() if email else None
-        logger.info(f"🔍 DEBUG - Usuario existente encontrado: {existing_user is not None}")
 
         # Si existe y NO fue confirmado, solicitar confirmación
         if existing_user and not confirm_existing:
-            logger.info(f"🔍 DEBUG - Retornando requires_confirmation")
             # Verificar que tenga perfil
             if not hasattr(existing_user, 'perfil'):
                 return Response({
@@ -268,9 +272,13 @@ def register_and_reserve(request):
             return Response(response_data, status=status.HTTP_201_CREATED)
 
     except Exception as e:
+        # Log interno completo (solo visible en servidor)
+        logger.exception("Error en register_and_reserve")  # Incluye stack trace
+
+        # Respuesta al cliente genérica (sin detalles internos)
         return Response({
-            'error': 'Error al procesar la reserva',
-            'details': str(e)
+            'error': 'Error al procesar la reserva. Por favor contacte soporte.'
+            # NO incluir 'details': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
