@@ -26,6 +26,27 @@ const EmptyState = ({ icon, title, subtitle }) => (
 );
 
 /**
+ * Determina el badge de estado único basado en activo y disponible
+ * @param {boolean} activo - Estado administrativo del plato
+ * @param {boolean} disponible - Disponibilidad de ingredientes
+ * @returns {Object} - { variant: string, label: string, textClass?: string }
+ */
+function obtenerEstadoBadge(activo, disponible) {
+  // Prioridad 1: Inactivo administrativamente
+  if (!activo) {
+    return { variant: 'dark', label: 'Inactivo' };
+  }
+
+  // Prioridad 2: Sin stock
+  if (!disponible) {
+    return { variant: 'warning', label: 'Sin Stock', textClass: 'text-dark' };
+  }
+
+  // Estado normal: Disponible
+  return { variant: 'success', label: 'Disponible' };
+}
+
+/**
  * Panel de administración del menú
  * Permite gestionar categorías, platos y recetas
  */
@@ -303,12 +324,17 @@ function GestionMenu() {
                         <td>${Number(plato.precio).toLocaleString('es-CL')}</td>
                         <td>{plato.tiempo_preparacion} min</td>
                         <td>
-                          {plato.disponible ? (
-                            <Badge bg="success">Disponible</Badge>
-                          ) : (
-                            <Badge bg="secondary">No disponible</Badge>
-                          )}
-                          {!plato.activo && <Badge bg="dark" className="ms-1">Inactivo</Badge>}
+                          {(() => {
+                            const estado = obtenerEstadoBadge(plato.activo, plato.disponible);
+                            return (
+                              <Badge
+                                bg={estado.variant}
+                                className={estado.textClass || ''}
+                              >
+                                {estado.label}
+                              </Badge>
+                            );
+                          })()}
                         </td>
                         <td className="text-end">
                           <OverlayTrigger placement="top" overlay={<Tooltip>Ver receta</Tooltip>}>
