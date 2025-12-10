@@ -1502,35 +1502,3 @@ class BloqueoMesaViewSet(viewsets.ModelViewSet):
             return Response({
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
-
-
-# ============ ENDPOINT TEMPORAL PARA POBLAR DATOS ============
-# NOTA: Este endpoint es temporal y debe eliminarse después de usarse
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdministrador])
-def poblar_datos_extendidos(request):
-    """
-    Endpoint temporal para poblar la base de datos con datos extendidos.
-    Solo accesible para administradores.
-    ⚠️ DESTRUCTIVO: Elimina todos los datos existentes.
-    """
-    from django.core.management import call_command
-    from io import StringIO
-
-    try:
-        # Capturar la salida del comando
-        output = StringIO()
-        call_command('poblar_datos_extendidos', stdout=output)
-
-        return Response({
-            'status': 'success',
-            'message': 'Base de datos poblada exitosamente',
-            'output': output.getvalue()
-        }, status=status.HTTP_200_OK)
-
-    except Exception as e:
-        return Response({
-            'status': 'error',
-            'message': f'Error al poblar la base de datos: {str(e)}'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
