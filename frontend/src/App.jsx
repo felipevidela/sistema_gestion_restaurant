@@ -139,8 +139,17 @@ function App() {
         return <GestionMenu />;
       case 'gestion-stock':
         return <GestionStock />;
-      case 'crear-pedido':
-        return <CrearPedido onPedidoCreado={() => setActiveTab(user?.rol === 'mesero' ? 'pedidos' : 'cocina')} />;
+      case 'crear-pedido': {
+        const handlePedidoCreado = (resultado) => {
+          // Esperar 3 segundos para que el usuario vea el mensaje de éxito
+          setTimeout(() => {
+            const targetTab = user?.rol === 'mesero' ? 'pedidos' : 'cocina';
+            setActiveTab(targetTab);
+          }, 3000);
+        };
+
+        return <CrearPedido onPedidoCreado={handlePedidoCreado} />;
+      }
       case 'pedidos':
         return <PanelPedidosMesero />;
       case 'cocina':
