@@ -100,6 +100,7 @@ function App() {
         { id: 'gestion-menu', label: 'Menú', icon: 'bi-journal-text' },
         { id: 'gestion-stock', label: 'Stock', icon: 'bi-box-seam' },
         { id: 'crear-pedido', label: 'Crear Pedido', icon: 'bi-cart-plus' },
+        { id: 'pedidos', label: 'Pedidos', icon: 'bi-receipt' },
         { id: 'cocina', label: 'Cocina', icon: 'bi-fire' }
       ]
     };

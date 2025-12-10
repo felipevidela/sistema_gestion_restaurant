@@ -34,6 +34,9 @@ function PanelPedidosMesero() {
     entregados: 0
   });
 
+  // Timestamp de última actualización
+  const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
+
   // Cargar pedidos según tab activo
   const cargarPedidos = useCallback(async () => {
     try {
@@ -91,6 +94,7 @@ function PanelPedidosMesero() {
       toast.error(`Error al cargar pedidos: ${err.message}`);
     } finally {
       setLoading(false);
+      setLastUpdateTime(new Date());
     }
   }, [tabActivo, page, pageSize, busqueda, ordenamiento, toast]);
 
@@ -162,6 +166,31 @@ function PanelPedidosMesero() {
     const interval = setInterval(cargarContadores, 30000);
     return () => clearInterval(interval);
   }, [cargarContadores]);
+
+  // Efecto: Polling de pedidos cada 30s (solo para tabs que requieren actualización frecuente)
+  useEffect(() => {
+    // Polling solo para tabs 'listos' y 'entregados' (requieren actualización frecuente)
+    if (tabActivo === 'listos' || tabActivo === 'entregados') {
+      const interval = setInterval(cargarPedidos, 30000); // 30 segundos
+      return () => clearInterval(interval);
+    }
+  }, [tabActivo, cargarPedidos]);
+
+  // Efecto: Actualizar inmediatamente cuando el usuario vuelve al tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Usuario volvió al tab, actualizar inmediatamente
+        cargarPedidos();
+        cargarContadores();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [cargarPedidos, cargarContadores]);
 
   // Reset pagination cuando cambia tab o búsqueda
   useEffect(() => {
@@ -371,6 +400,16 @@ function PanelPedidosMesero() {
             <i className="bi bi-receipt me-2"></i>
             Gestión de Pedidos - Mesero
           </h2>
+        </Col>
+        <Col className="text-end d-flex align-items-center justify-content-end">
+          <small className="text-muted">
+            <i className="bi bi-arrow-clockwise me-1"></i>
+            Última actualización: {lastUpdateTime.toLocaleTimeString('es-CL', {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            })}
+          </small>
         </Col>
       </Row>
 
