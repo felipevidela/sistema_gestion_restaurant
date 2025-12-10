@@ -209,7 +209,8 @@ class PedidoService:
         # Actualizar solo los platos del pedido en una sola operación
         if platos_afectados:
             from menuApp.models import Plato
-            platos = Plato.objects.filter(id__in=platos_afectados)
+            # Optimización: prefetch recetas e ingredientes para evitar queries adicionales
+            platos = Plato.objects.filter(id__in=platos_afectados).prefetch_related('recetas__ingrediente')
             for plato in platos:
                 plato.disponible = plato.verificar_disponibilidad()
                 plato.save(update_fields=['disponible'])

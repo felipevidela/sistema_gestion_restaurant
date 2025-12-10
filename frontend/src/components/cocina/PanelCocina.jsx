@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Container, Row, Col, Card, Badge, Button, Spinner, Alert,
   ButtonGroup, Modal
@@ -116,10 +116,10 @@ function PanelCocina() {
     await cargarPedidos();
   }, [cargarPedidos]);
 
-  // Cargar datos al montar el componente y actualizar cada 60 segundos
+  // Cargar datos al montar el componente y actualizar cada 90 segundos
   useEffect(() => {
     cargarPedidos();
-    const interval = setInterval(cargarPedidos, 60000);
+    const interval = setInterval(cargarPedidos, 90000); // 90s (optimizado desde 60s)
     return () => clearInterval(interval);
   }, [cargarPedidos]);
 
@@ -130,11 +130,30 @@ function PanelCocina() {
       return;
     }
 
+    // Guardar estado anterior para rollback
+    const estadoAnterior = pedido.estado;
+
     try {
       setProcesando(pedido.id);
+
+      // Actualización optimista: actualizar UI inmediatamente
+      setPedidos(prevPedidos =>
+        prevPedidos.map(p =>
+          p.id === pedido.id ? { ...p, estado: nuevoEstado } : p
+        )
+      );
+
+      // Llamada al backend en segundo plano
       await cambiarEstadoPedido(pedido.id, nuevoEstado);
-      await cargarPedidos();
+      toast.success(`Estado actualizado a ${ESTADOS_PEDIDO[nuevoEstado].label}`);
+
     } catch (err) {
+      // Rollback en caso de error
+      setPedidos(prevPedidos =>
+        prevPedidos.map(p =>
+          p.id === pedido.id ? { ...p, estado: estadoAnterior } : p
+        )
+      );
       setError(err.message);
     } finally {
       setProcesando(null);
@@ -149,11 +168,22 @@ function PanelCocina() {
 
   // Confirmar cancelación con motivo
   const handleCancelar = async (pedidoId, motivo) => {
+    // Guardar pedido para rollback
+    const pedidoAnterior = pedidos.find(p => p.id === pedidoId);
+
     try {
+      // Actualización optimista: remover pedido de la lista inmediatamente
+      setPedidos(prevPedidos => prevPedidos.filter(p => p.id !== pedidoId));
+
+      // Llamada al backend en segundo plano
       await cancelarPedido(pedidoId, motivo);
       toast.success('Pedido cancelado exitosamente');
-      await cargarPedidos();
+
     } catch (err) {
+      // Rollback en caso de error
+      if (pedidoAnterior) {
+        setPedidos(prevPedidos => [...prevPedidos, pedidoAnterior]);
+      }
       toast.error(`Error al cancelar: ${err.message}`);
       throw err; // Re-lanzar para que el modal lo maneje
     }
@@ -167,12 +197,14 @@ function PanelCocina() {
     return true;
   });
 
-  // Ordenar: urgentes primero, luego por fecha
-  const pedidosOrdenados = [...pedidosFiltrados].sort((a, b) => {
-    if (a.estado === 'URGENTE' && b.estado !== 'URGENTE') return -1;
-    if (b.estado === 'URGENTE' && a.estado !== 'URGENTE') return 1;
-    return new Date(a.fecha_creacion) - new Date(b.fecha_creacion);
-  });
+  // Ordenar: urgentes primero, luego por fecha (memoizado para evitar recálculos)
+  const pedidosOrdenados = useMemo(() => {
+    return [...pedidosFiltrados].sort((a, b) => {
+      if (a.estado === 'URGENTE' && b.estado !== 'URGENTE') return -1;
+      if (b.estado === 'URGENTE' && a.estado !== 'URGENTE') return 1;
+      return new Date(a.fecha_creacion) - new Date(b.fecha_creacion);
+    });
+  }, [pedidosFiltrados]);
 
   // Calcular tiempo transcurrido
   const calcularTiempo = (fecha) => {
@@ -182,14 +214,14 @@ function PanelCocina() {
     return `${horas}h ${minutos % 60}m`;
   };
 
-  // Contadores
-  const contadores = {
+  // Contadores (memoizados para evitar recálculos en cada render)
+  const contadores = useMemo(() => ({
     total: pedidos.length,
     urgentes: pedidos.filter(p => p.estado === 'URGENTE').length,
     creados: pedidos.filter(p => p.estado === 'CREADO').length,
     en_preparacion: pedidos.filter(p => p.estado === 'EN_PREPARACION').length,
     listos: pedidos.filter(p => p.estado === 'LISTO').length,
-  };
+  }), [pedidos]);
 
   if (loading) {
     return (

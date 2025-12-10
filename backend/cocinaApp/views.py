@@ -6,12 +6,12 @@ from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Prefetch, Case, When, IntegerField
 from django.db.models.functions import TruncDate
 from django.core.exceptions import ValidationError
 from datetime import timedelta
 
-from .models import Pedido, DetallePedido, EstadoPedido
+from .models import Pedido, DetallePedido, EstadoPedido, PedidoCancelacion
 from .serializers import (
     PedidoSerializer,
     PedidoListSerializer,
@@ -138,7 +138,17 @@ class ColaCocinaPedidosView(APIView):
 
         pedidos = Pedido.objects.filter(
             estado__in=estados_cola
-        ).select_related('mesa').prefetch_related('detalles__plato')
+        ).select_related(
+            'mesa',
+            'cliente',
+            'cliente__perfil'
+        ).prefetch_related(
+            'detalles__plato',
+            Prefetch('cancelacion', queryset=PedidoCancelacion.objects.select_related(
+                'cancelado_por',
+                'cancelado_por__perfil'
+            ))
+        )
 
         # NUEVO: Filtro opcional por últimas N horas
         horas_recientes = request.query_params.get('horas_recientes')
@@ -150,18 +160,16 @@ class ColaCocinaPedidosView(APIView):
             except (ValueError, TypeError):
                 pass
 
-        pedidos = pedidos.order_by('fecha_creacion')
-
-        # Reordenar manualmente para que URGENTE sea primero
-        pedidos_ordenados = sorted(
-            pedidos,
-            key=lambda p: (
-                0 if p.estado == 'URGENTE' else 1,
-                p.fecha_creacion
+        # Ordenar en SQL: URGENTE primero, luego por fecha de creación
+        pedidos = pedidos.annotate(
+            urgente_primero=Case(
+                When(estado='URGENTE', then=0),
+                default=1,
+                output_field=IntegerField()
             )
-        )
+        ).order_by('urgente_primero', 'fecha_creacion')
 
-        serializer = PedidoSerializer(pedidos_ordenados, many=True)
+        serializer = PedidoSerializer(pedidos, many=True)
         return Response(serializer.data)
 
 

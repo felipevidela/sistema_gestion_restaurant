@@ -84,7 +84,9 @@ class Plato(models.Model):
 
     def verificar_disponibilidad(self):
         """Verifica si todos los ingredientes tienen stock suficiente"""
-        for receta in self.recetas.all():
+        # Optimización: usar select_related para evitar N+1 queries
+        recetas = self.recetas.select_related('ingrediente')
+        for receta in recetas:
             if receta.ingrediente.cantidad_disponible < receta.cantidad_requerida:
                 return False
         return True
