@@ -179,7 +179,11 @@ function CrearPedido({ mesaPreseleccionada = null, reservaPreseleccionada = null
         }))
       };
 
+      console.log('📤 Enviando pedido:', pedidoData);
+
       const resultado = await crearPedido(pedidoData);
+
+      console.log('✅ Pedido creado exitosamente:', resultado);
 
       setSuccess(`Pedido #${resultado.id} creado exitosamente`);
       setShowConfirmacion(false);
@@ -195,7 +199,10 @@ function CrearPedido({ mesaPreseleccionada = null, reservaPreseleccionada = null
       onPedidoCreado?.(resultado);
 
     } catch (err) {
+      console.error('❌ Error al crear pedido:', err);
+      console.error('Stack trace:', err.stack);
       setError(err.message);
+      setShowConfirmacion(false);
     } finally {
       setEnviando(false);
     }

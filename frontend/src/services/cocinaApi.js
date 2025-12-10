@@ -52,7 +52,23 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = DEFAULT_TIMEOUT) 
 async function handleResponse(response) {
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || error.error || `Error ${response.status}`);
+
+    // Extraer mensaje de error de múltiples formatos posibles
+    let errorMessage = error.detail
+      || error.error
+      || error.message
+      || (error.detalles && JSON.stringify(error.detalles))
+      || `Error ${response.status}: ${response.statusText}`;
+
+    // Log detallado del error para debugging
+    console.error('API Error Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      errorBody: error
+    });
+
+    throw new Error(errorMessage);
   }
   const data = await response.json().catch(() => null);
   if (data && typeof data === 'object' && Array.isArray(data.results)) {
