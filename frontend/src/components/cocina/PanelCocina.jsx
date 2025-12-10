@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Container, Row, Col, Card, Badge, Button, Spinner, Alert,
   ButtonGroup, Modal, OverlayTrigger, Tooltip
@@ -99,6 +99,8 @@ function PanelCocina() {
   const [pedidoDetalle, setPedidoDetalle] = useState(null);
   const [procesando, setProcesando] = useState(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
+  const [showConnectionStatus, setShowConnectionStatus] = useState(false);
+  const disconnectionTimerRef = useRef(null);
 
   // WebSocket para actualizaciones en tiempo real
   const { isConnected, connectionStatus } = useCocinaWebSocket({
@@ -144,6 +146,34 @@ function PanelCocina() {
       if (interval) clearInterval(interval);
     };
   }, [cargarPedidos, isConnected]);
+
+  // Timer para mostrar indicador solo después de 10s de desconexión
+  useEffect(() => {
+    // Si está conectado, ocultar inmediatamente y cancelar timer
+    if (isConnected) {
+      setShowConnectionStatus(false);
+      if (disconnectionTimerRef.current) {
+        clearTimeout(disconnectionTimerRef.current);
+        disconnectionTimerRef.current = null;
+      }
+      return;
+    }
+
+    // Si está desconectado y no hay timer activo, iniciar uno
+    if (!isConnected && !disconnectionTimerRef.current) {
+      disconnectionTimerRef.current = setTimeout(() => {
+        setShowConnectionStatus(true);
+      }, 10000); // 10 segundos
+    }
+
+    // Cleanup: cancelar timer al desmontar
+    return () => {
+      if (disconnectionTimerRef.current) {
+        clearTimeout(disconnectionTimerRef.current);
+        disconnectionTimerRef.current = null;
+      }
+    };
+  }, [isConnected]);
 
   // Cambiar estado de pedido
   const handleCambiarEstado = async (pedido, nuevoEstado) => {
@@ -300,28 +330,32 @@ function PanelCocina() {
             Panel de Cocina
           </h3>
           <div className="d-flex align-items-center gap-2">
-            <OverlayTrigger
-              placement="bottom"
-              delay={{ show: 200, hide: 100 }}
-              overlay={
-                <Tooltip id="connection-status-tooltip">
-                  {getTooltipContent(connectionStatus, isConnected, lastUpdateTime)}
-                </Tooltip>
-              }
-            >
-              <div
-                className="connection-indicator d-inline-flex align-items-center"
-                style={{ cursor: 'help' }}
-              >
-                <i className={`bi bi-circle-fill connection-dot connection-dot-${getStatusColor(connectionStatus, isConnected)} me-1`}></i>
+            {showConnectionStatus && (
+              <>
+                <OverlayTrigger
+                  placement="bottom"
+                  delay={{ show: 200, hide: 100 }}
+                  overlay={
+                    <Tooltip id="connection-status-tooltip">
+                      {getTooltipContent(connectionStatus, isConnected, lastUpdateTime)}
+                    </Tooltip>
+                  }
+                >
+                  <div
+                    className="connection-indicator d-inline-flex align-items-center"
+                    style={{ cursor: 'help' }}
+                  >
+                    <i className={`bi bi-circle-fill connection-dot connection-dot-${getStatusColor(connectionStatus, isConnected)} me-1`}></i>
+                    <small className="text-muted">
+                      {getStatusMessage(connectionStatus, isConnected)}
+                    </small>
+                  </div>
+                </OverlayTrigger>
                 <small className="text-muted">
-                  {getStatusMessage(connectionStatus, isConnected)}
+                  Última actualización: {new Date(lastUpdateTime).toLocaleTimeString('es-CL')}
                 </small>
-              </div>
-            </OverlayTrigger>
-            <small className="text-muted">
-              Última actualización: {new Date(lastUpdateTime).toLocaleTimeString('es-CL')}
-            </small>
+              </>
+            )}
           </div>
         </div>
         <Button variant="outline-primary" onClick={cargarPedidos}>
