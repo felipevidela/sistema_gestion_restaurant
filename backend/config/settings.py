@@ -89,7 +89,6 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_cryptography',
     'django_filters',
-    'channels',
     # Local apps
     'mainApp',
     'menuApp',
@@ -249,45 +248,6 @@ REST_FRAMEWORK = {
     # Filtros django-filter
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
 }
-
-# ASGI Configuration para WebSockets (Channels)
-ASGI_APPLICATION = 'config.asgi.application'
-
-# Channel Layers - Redis para WebSockets en tiempo real
-# En Railway: agregar Redis como Add-on y configurar REDIS_URL
-
-# Obtener REDIS_URL y parsearlo para channels_redis
-REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
-
-# channels_redis requiere configuración específica cuando hay autenticación
-# Formato de REDIS_URL en Railway: redis://default:password@host:port
-if 'redis.railway.internal' in REDIS_URL or '@' in REDIS_URL:
-    # Parsear URL con autenticación para Railway
-    from urllib.parse import urlparse
-    parsed = urlparse(REDIS_URL)
-
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {
-                'hosts': [{
-                    'host': parsed.hostname,
-                    'port': parsed.port or 6379,
-                    'password': parsed.password,
-                }],
-            },
-        },
-    }
-else:
-    # Configuración simple para desarrollo local
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {
-                'hosts': ['redis://localhost:6379'],
-            },
-        },
-    }
 
 # Configuración CORS para permitir el frontend React
 # En desarrollo: localhost (para cuando corres backend y frontend separados)

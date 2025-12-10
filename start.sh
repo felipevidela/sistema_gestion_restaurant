@@ -10,5 +10,5 @@ cd backend && python manage.py migrate --noinput
 echo "Recopilando archivos estáticos (incluye frontend/dist)..."
 python manage.py collectstatic --noinput
 
-echo "Iniciando servidor Daphne (ASGI para WebSockets)..."
-daphne -b 0.0.0.0 -p ${PORT:-8000} config.asgi:application
+echo "Iniciando servidor Gunicorn..."
+gunicorn -w 4 -b 0.0.0.0:${PORT:-8000} config.wsgi:application

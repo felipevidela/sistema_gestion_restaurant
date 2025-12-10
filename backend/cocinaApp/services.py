@@ -1,8 +1,6 @@
 from django.db import transaction
 from django.db.models import F
 from django.core.exceptions import ValidationError
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 
 from .models import Pedido, DetallePedido, TRANSICIONES_VALIDAS
 from menuApp.models import Ingrediente
@@ -72,9 +70,6 @@ class PedidoService:
         # Actualizar disponibilidad de platos afectados
         PedidoService._actualizar_disponibilidad_platos(pedido)
 
-        # Notificar por WebSocket
-        PedidoService._notificar_websocket('pedido_creado', pedido)
-
         return pedido
 
     @staticmethod
@@ -109,9 +104,6 @@ class PedidoService:
         # Actualizar disponibilidad de platos
         PedidoService._actualizar_disponibilidad_platos(pedido)
 
-        # Notificar por WebSocket
-        PedidoService._notificar_websocket('pedido_actualizado', pedido)
-
         return pedido
 
     @staticmethod
@@ -141,9 +133,6 @@ class PedidoService:
         pedido.estado = nuevo_estado
         pedido.save()
 
-        # Notificar por WebSocket
-        PedidoService._notificar_websocket('pedido_actualizado', pedido)
-
         return pedido
 
     @staticmethod
@@ -169,36 +158,3 @@ class PedidoService:
             for plato in platos:
                 plato.disponible = plato.verificar_disponibilidad()
                 plato.save(update_fields=['disponible'])
-
-    @staticmethod
-    def _notificar_websocket(tipo, pedido):
-        """Envía notificación por WebSocket"""
-        try:
-            channel_layer = get_channel_layer()
-            if channel_layer is None:
-                return  # Channels no configurado
-
-            data = {
-                'id': pedido.id,
-                'mesa': pedido.mesa.numero,
-                'estado': pedido.estado,
-                'notas': pedido.notas,
-                'total': str(pedido.total),
-                'fecha_creacion': pedido.fecha_creacion.isoformat() if pedido.fecha_creacion else None,
-            }
-
-            # Notificar a cocina_cola
-            async_to_sync(channel_layer.group_send)(
-                'cocina_cola',
-                {'type': tipo, 'data': data}
-            )
-
-            # Notificar al mesero si hay cliente asociado
-            if pedido.cliente:
-                async_to_sync(channel_layer.group_send)(
-                    f'mesero_{pedido.cliente.id}',
-                    {'type': tipo, 'data': data}
-                )
-        except Exception:
-            # Si falla WebSocket, no interrumpir la operación principal
-            pass

@@ -1,13 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Container, Row, Col, Card, Badge, Button, Spinner, Alert,
-  ButtonGroup, Modal, OverlayTrigger, Tooltip
+  ButtonGroup, Modal
 } from 'react-bootstrap';
 import {
   getColaCocina, getPedidosUrgentes, cambiarEstadoPedido,
   ESTADOS_PEDIDO, puedeTransicionar
 } from '../../services/cocinaApi';
-import { useCocinaWebSocket } from '../../hooks/useWebSocket';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Estilos CSS para animaciones del panel de cocina
@@ -42,25 +41,6 @@ const styles = `
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
   }
-  .connection-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.5rem;
-    transition: background-color 0.2s ease;
-  }
-  .connection-indicator:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-  }
-  .connection-dot {
-    font-size: 0.6rem;
-    transition: color 0.3s ease;
-  }
-  .connection-dot-success { color: #198754; }
-  .connection-dot-warning { color: #ffc107; }
-  .connection-dot-danger { color: #dc3545; }
-  .connection-dot-secondary { color: #6c757d; }
   .contador-animado {
     display: inline-block;
     transition: transform 0.3s ease;
@@ -99,25 +79,6 @@ function PanelCocina() {
   const [pedidoDetalle, setPedidoDetalle] = useState(null);
   const [procesando, setProcesando] = useState(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
-  const [showConnectionStatus, setShowConnectionStatus] = useState(false);
-  const disconnectionTimerRef = useRef(null);
-
-  // WebSocket para actualizaciones en tiempo real
-  const { isConnected, connectionStatus } = useCocinaWebSocket({
-    enabled: true,
-    onPedidoCreado: async (data) => {
-      // Agregar nuevo pedido a la cola
-      await cargarPedidos();
-      setLastUpdateTime(new Date());
-    },
-    onPedidoActualizado: (data) => {
-      // Actualizar pedido en la lista
-      setPedidos(prev => prev.map(p =>
-        p.id === data.id ? { ...p, ...data } : p
-      ));
-      setLastUpdateTime(new Date());
-    }
-  });
 
   // Cargar pedidos
   const cargarPedidos = useCallback(async () => {
@@ -133,47 +94,12 @@ function PanelCocina() {
     }
   }, []);
 
+  // Cargar datos al montar el componente y actualizar cada 60 segundos
   useEffect(() => {
     cargarPedidos();
-
-    // Solo polling si WebSocket NO conectado
-    let interval;
-    if (!isConnected) {
-      interval = setInterval(cargarPedidos, 60000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [cargarPedidos, isConnected]);
-
-  // Timer para mostrar indicador solo después de 10s de desconexión
-  useEffect(() => {
-    // Si está conectado, ocultar inmediatamente y cancelar timer
-    if (isConnected) {
-      setShowConnectionStatus(false);
-      if (disconnectionTimerRef.current) {
-        clearTimeout(disconnectionTimerRef.current);
-        disconnectionTimerRef.current = null;
-      }
-      return;
-    }
-
-    // Si está desconectado y no hay timer activo, iniciar uno
-    if (!isConnected && !disconnectionTimerRef.current) {
-      disconnectionTimerRef.current = setTimeout(() => {
-        setShowConnectionStatus(true);
-      }, 10000); // 10 segundos
-    }
-
-    // Cleanup: cancelar timer al desmontar
-    return () => {
-      if (disconnectionTimerRef.current) {
-        clearTimeout(disconnectionTimerRef.current);
-        disconnectionTimerRef.current = null;
-      }
-    };
-  }, [isConnected]);
+    const interval = setInterval(cargarPedidos, 60000);
+    return () => clearInterval(interval);
+  }, [cargarPedidos]);
 
   // Cambiar estado de pedido
   const handleCambiarEstado = async (pedido, nuevoEstado) => {
@@ -225,76 +151,6 @@ function PanelCocina() {
     listos: pedidos.filter(p => p.estado === 'LISTO').length,
   };
 
-  const getStatusMessage = (status, isConnectedFlag) => {
-    if (isConnectedFlag || status === 'connected') return 'Conectado';
-
-    switch (status) {
-      case 'connecting':
-        return 'Conectando...';
-      case 'authenticating':
-        return 'Autenticando...';
-      case 'reconnecting':
-        return 'Reconectando...';
-      case 'auth_failed':
-        return 'Autenticación fallida';
-      case 'no_auth':
-        return 'Sin autenticación';
-      case 'auth_timeout':
-        return 'Autenticación expirada';
-      case 'connection_failed':
-        return 'Sin conexión';
-      case 'max_retries_exceeded':
-        return 'Conexión perdida';
-      case 'error':
-        return 'Error de conexión';
-      case 'disconnected':
-        return 'Desconectado';
-      default:
-        return 'Estado desconocido';
-    }
-  };
-
-  const getStatusColor = (status, isConnectedFlag) => {
-    if (isConnectedFlag || status === 'connected') return 'success';
-    if (['connecting', 'authenticating', 'reconnecting'].includes(status)) return 'warning';
-    if (['auth_failed', 'no_auth'].includes(status)) return 'secondary';
-    if (['connection_failed', 'max_retries_exceeded', 'error', 'disconnected', 'auth_timeout'].includes(status)) return 'danger';
-    return 'secondary';
-  };
-
-  const getTooltipContent = (status, isConnectedFlag, lastUpdate) => {
-    const message = getStatusMessage(status, isConnectedFlag);
-    const descriptions = {
-      connected: 'Recibiendo actualizaciones en vivo.',
-      connecting: 'Intentando establecer conexión...',
-      authenticating: 'Verificando credenciales...',
-      reconnecting: 'Intentando reconectar automáticamente...',
-      auth_failed: 'No se pudo validar tu sesión.',
-      no_auth: 'No hay token disponible para conectar.',
-      auth_timeout: 'La sesión expiró, vuelve a iniciar.',
-      connection_failed: 'No se pudo contactar al servidor.',
-      max_retries_exceeded: 'Se agotaron los intentos de reconexión.',
-      error: 'Ocurrió un error inesperado.',
-      disconnected: 'El socket está desconectado.',
-      default: 'Monitoreando estado de conexión.'
-    };
-    const lastUpdateLabel = lastUpdate
-      ? new Date(lastUpdate).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      : 'Sin datos';
-
-    return (
-      <div>
-        <div className="fw-bold mb-1">{message}</div>
-        <div className="small">
-          {descriptions[status] || descriptions.default}
-        </div>
-        <div className="small text-muted mt-1">
-          Última actualización: {lastUpdateLabel}
-        </div>
-      </div>
-    );
-  };
-
   if (loading) {
     return (
       <div className="text-center py-5">
@@ -329,34 +185,6 @@ function PanelCocina() {
             <i className="bi bi-fire me-2 text-danger"></i>
             Panel de Cocina
           </h3>
-          <div className="d-flex align-items-center gap-2">
-            {showConnectionStatus && (
-              <>
-                <OverlayTrigger
-                  placement="bottom"
-                  delay={{ show: 200, hide: 100 }}
-                  overlay={
-                    <Tooltip id="connection-status-tooltip">
-                      {getTooltipContent(connectionStatus, isConnected, lastUpdateTime)}
-                    </Tooltip>
-                  }
-                >
-                  <div
-                    className="connection-indicator d-inline-flex align-items-center"
-                    style={{ cursor: 'help' }}
-                  >
-                    <i className={`bi bi-circle-fill connection-dot connection-dot-${getStatusColor(connectionStatus, isConnected)} me-1`}></i>
-                    <small className="text-muted">
-                      {getStatusMessage(connectionStatus, isConnected)}
-                    </small>
-                  </div>
-                </OverlayTrigger>
-                <small className="text-muted">
-                  Última actualización: {new Date(lastUpdateTime).toLocaleTimeString('es-CL')}
-                </small>
-              </>
-            )}
-          </div>
         </div>
         <Button variant="outline-primary" onClick={cargarPedidos}>
           <i className="bi bi-arrow-clockwise me-1"></i>
