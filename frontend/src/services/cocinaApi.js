@@ -21,6 +21,31 @@ function getAuthHeaders() {
   };
 }
 
+// Tiempo máximo para esperar respuestas de la API (ms)
+const DEFAULT_TIMEOUT = 12000;
+
+/**
+ * fetch con timeout para evitar que el frontend quede bloqueado si el backend no responde
+ * @param {string} url
+ * @param {Object} options
+ * @param {number} timeoutMs
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = DEFAULT_TIMEOUT) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('La solicitud está tardando demasiado. Intenta nuevamente.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 /**
  * Manejar errores de respuesta
  */
@@ -118,7 +143,7 @@ export async function getPedido(id) {
  * @param {Object} data - { mesa, reserva?, notas?, detalles: [{plato, cantidad, notas?}] }
  */
 export async function crearPedido(data) {
-  const response = await fetch(`${API_BASE_URL}/cocina/pedidos/`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/cocina/pedidos/`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(data)
