@@ -96,6 +96,7 @@ function App() {
       ],
       admin: [
         { id: 'reservas-dia', label: 'Reservas del Día', icon: 'bi-calendar-day' },
+        { id: 'todas-reservas', label: 'Todas las Reservas', icon: 'bi-list-check' },
         { id: 'nueva-reserva', label: 'Nueva Reserva', icon: 'bi-plus-circle' },
         { id: 'gestion-usuarios', label: 'Usuarios', icon: 'bi-people' },
         { id: 'gestion-mesas', label: 'Mesas', icon: 'bi-grid-3x3' },
