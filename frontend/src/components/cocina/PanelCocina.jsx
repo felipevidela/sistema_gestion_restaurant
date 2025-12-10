@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Container, Row, Col, Card, Badge, Button, Spinner, Alert,
-  ButtonGroup, Modal
+  ButtonGroup, Modal, OverlayTrigger, Tooltip
 } from 'react-bootstrap';
 import {
   getColaCocina, getPedidosUrgentes, cambiarEstadoPedido,
@@ -42,13 +42,25 @@ const styles = `
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
   }
-  .badge-conexion-conectando {
-    animation: blink 1s ease-in-out infinite;
+  .connection-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s ease;
   }
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+  .connection-indicator:hover {
+    background-color: rgba(0, 0, 0, 0.05);
   }
+  .connection-dot {
+    font-size: 0.6rem;
+    transition: color 0.3s ease;
+  }
+  .connection-dot-success { color: #198754; }
+  .connection-dot-warning { color: #ffc107; }
+  .connection-dot-danger { color: #dc3545; }
+  .connection-dot-secondary { color: #6c757d; }
   .contador-animado {
     display: inline-block;
     transition: transform 0.3s ease;
@@ -86,19 +98,22 @@ function PanelCocina() {
   const [filtro, setFiltro] = useState('todos'); // todos, urgentes, en_preparacion
   const [pedidoDetalle, setPedidoDetalle] = useState(null);
   const [procesando, setProcesando] = useState(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
 
   // WebSocket para actualizaciones en tiempo real
   const { isConnected, connectionStatus } = useCocinaWebSocket({
     enabled: true,
-    onPedidoCreado: (data) => {
+    onPedidoCreado: async (data) => {
       // Agregar nuevo pedido a la cola
-      cargarPedidos();
+      await cargarPedidos();
+      setLastUpdateTime(new Date());
     },
     onPedidoActualizado: (data) => {
       // Actualizar pedido en la lista
       setPedidos(prev => prev.map(p =>
         p.id === data.id ? { ...p, ...data } : p
       ));
+      setLastUpdateTime(new Date());
     }
   });
 
@@ -108,6 +123,7 @@ function PanelCocina() {
       setError(null);
       const data = await getColaCocina({ horas_recientes: 3 });
       setPedidos(data || []);
+      setLastUpdateTime(new Date());
     } catch (err) {
       setError(err.message);
     } finally {
