@@ -92,7 +92,7 @@ function PanelCocina() {
   const cargarPedidos = useCallback(async () => {
     try {
       setError(null);
-      const data = await getColaCocina({ horas_recientes: 3 });
+      const data = await getColaCocina();
       setPedidos(data || []);
       setLastUpdateTime(new Date());
     } catch (err) {
