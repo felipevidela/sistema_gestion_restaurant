@@ -52,6 +52,13 @@ const styles = `
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.2); }
   }
+  .spin {
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
   .summary-card {
     transition: transform 0.15s ease, border-color 0.15s ease;
   }
@@ -79,6 +86,7 @@ function PanelCocina() {
   const [pedidoDetalle, setPedidoDetalle] = useState(null);
   const [procesando, setProcesando] = useState(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
+  const [refreshing, setRefreshing] = useState(false);
 
   // Cargar pedidos
   const cargarPedidos = useCallback(async () => {
@@ -91,8 +99,15 @@ function PanelCocina() {
       setError(err.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
+
+  // Actualización manual con feedback
+  const handleManualRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await cargarPedidos();
+  }, [cargarPedidos]);
 
   // Cargar datos al montar el componente y actualizar cada 60 segundos
   useEffect(() => {
@@ -186,9 +201,13 @@ function PanelCocina() {
             Panel de Cocina
           </h3>
         </div>
-        <Button variant="outline-primary" onClick={cargarPedidos}>
-          <i className="bi bi-arrow-clockwise me-1"></i>
-          Actualizar
+        <Button
+          variant="outline-primary"
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+        >
+          <i className={`bi bi-arrow-clockwise me-1 ${refreshing ? 'spin' : ''}`}></i>
+          {refreshing ? 'Actualizando...' : 'Actualizar'}
         </Button>
       </div>
 
