@@ -195,6 +195,76 @@ function PanelCocina() {
     listos: pedidos.filter(p => p.estado === 'LISTO').length,
   };
 
+  const getStatusMessage = (status, isConnectedFlag) => {
+    if (isConnectedFlag || status === 'connected') return 'Conectado';
+
+    switch (status) {
+      case 'connecting':
+        return 'Conectando...';
+      case 'authenticating':
+        return 'Autenticando...';
+      case 'reconnecting':
+        return 'Reconectando...';
+      case 'auth_failed':
+        return 'Autenticación fallida';
+      case 'no_auth':
+        return 'Sin autenticación';
+      case 'auth_timeout':
+        return 'Autenticación expirada';
+      case 'connection_failed':
+        return 'Sin conexión';
+      case 'max_retries_exceeded':
+        return 'Conexión perdida';
+      case 'error':
+        return 'Error de conexión';
+      case 'disconnected':
+        return 'Desconectado';
+      default:
+        return 'Estado desconocido';
+    }
+  };
+
+  const getStatusColor = (status, isConnectedFlag) => {
+    if (isConnectedFlag || status === 'connected') return 'success';
+    if (['connecting', 'authenticating', 'reconnecting'].includes(status)) return 'warning';
+    if (['auth_failed', 'no_auth'].includes(status)) return 'secondary';
+    if (['connection_failed', 'max_retries_exceeded', 'error', 'disconnected', 'auth_timeout'].includes(status)) return 'danger';
+    return 'secondary';
+  };
+
+  const getTooltipContent = (status, isConnectedFlag, lastUpdate) => {
+    const message = getStatusMessage(status, isConnectedFlag);
+    const descriptions = {
+      connected: 'Recibiendo actualizaciones en vivo.',
+      connecting: 'Intentando establecer conexión...',
+      authenticating: 'Verificando credenciales...',
+      reconnecting: 'Intentando reconectar automáticamente...',
+      auth_failed: 'No se pudo validar tu sesión.',
+      no_auth: 'No hay token disponible para conectar.',
+      auth_timeout: 'La sesión expiró, vuelve a iniciar.',
+      connection_failed: 'No se pudo contactar al servidor.',
+      max_retries_exceeded: 'Se agotaron los intentos de reconexión.',
+      error: 'Ocurrió un error inesperado.',
+      disconnected: 'El socket está desconectado.',
+      default: 'Monitoreando estado de conexión.'
+    };
+    const lastUpdateLabel = lastUpdate
+      ? new Date(lastUpdate).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      : 'Sin datos';
+
+    return (
+      <div>
+        <div className="fw-bold mb-1">{message}</div>
+        <div className="small">
+          {descriptions[status] || descriptions.default}
+        </div>
+        <div className="small text-muted mt-1">
+          Última actualización: {lastUpdateLabel}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="text-center py-5">
@@ -230,15 +300,27 @@ function PanelCocina() {
             Panel de Cocina
           </h3>
           <div className="d-flex align-items-center gap-2">
-            <Badge
-              bg={isConnected ? 'success' : 'secondary'}
-              className={!isConnected && connectionStatus === 'Conectando...' ? 'badge-conexion-conectando' : ''}
+            <OverlayTrigger
+              placement="bottom"
+              delay={{ show: 200, hide: 100 }}
+              overlay={
+                <Tooltip id="connection-status-tooltip">
+                  {getTooltipContent(connectionStatus, isConnected, lastUpdateTime)}
+                </Tooltip>
+              }
             >
-              <i className={`bi bi-${isConnected ? 'wifi' : 'wifi-off'} me-1`}></i>
-              {isConnected ? 'En vivo' : connectionStatus}
-            </Badge>
+              <div
+                className="connection-indicator d-inline-flex align-items-center"
+                style={{ cursor: 'help' }}
+              >
+                <i className={`bi bi-circle-fill connection-dot connection-dot-${getStatusColor(connectionStatus, isConnected)} me-1`}></i>
+                <small className="text-muted">
+                  {getStatusMessage(connectionStatus, isConnected)}
+                </small>
+              </div>
+            </OverlayTrigger>
             <small className="text-muted">
-              Última actualización: {new Date().toLocaleTimeString('es-CL')}
+              Última actualización: {new Date(lastUpdateTime).toLocaleTimeString('es-CL')}
             </small>
           </div>
         </div>
