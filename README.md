@@ -1,11 +1,28 @@
 # Sistema Integral de Gestión de Restaurante
 
-Plataforma web completa para gestionar reservas, mesas, menú, stock de ingredientes, pedidos y panel de cocina. El backend está construido en Django + Django REST Framework; el frontend en React (Vite) con actualización manual y automática cada 60 segundos.
+Plataforma web completa para gestionar reservas, mesas, menú, stock de ingredientes, pedidos y panel de cocina. El backend está construido en Django + Django REST Framework; el frontend en React con actualización manual mediante botones de refrescar.
 
 ## Arquitectura
-- Backend: Django 5 + DRF (WSGI con Gunicorn), PostgreSQL, WhiteNoise para estáticos.
-- Frontend: React 19 con Vite, consumo de API REST para toda la funcionalidad.
-- Despliegue pensado para Railway (PostgreSQL); scripts `start.sh` y `Procfile` incluidos.
+
+### Backend
+- **Django 5.1** + Django REST Framework
+- **PostgreSQL** como base de datos
+- **Gunicorn** como servidor WSGI
+- **WhiteNoise** para servir archivos estáticos
+- Autenticación basada en tokens (DRF Token Authentication)
+
+### Frontend
+- **React 19.2** - Biblioteca principal para UI
+- **Vite 7.2** - Build tool y dev server
+- **React Router DOM 7.9** - Enrutamiento y navegación
+- **React Bootstrap 2.10** + Bootstrap 5.3 - Componentes UI y estilos
+- **Context API** - Manejo de estado global (AuthContext, ToastContext)
+- Consumo de API REST para toda la funcionalidad
+
+### Despliegue
+- Pensado para Railway (PostgreSQL managed)
+- Scripts `start.sh` y `Procfile` incluidos
+- Build de frontend servido desde `backend/static` con WhiteNoise
 
 ## Módulos principales
 - **Reservas y Mesas (mainApp):** creación y gestión de reservas, validación de solapamientos, estados de mesas, bloqueos por rango de fecha y horario, roles y perfiles de usuario.
