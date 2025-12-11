@@ -124,17 +124,33 @@ function GestionStock() {
 
     try {
       if (ingredienteEditar) {
-        await actualizarIngrediente(ingredienteEditar.id, data);
+        const ingredienteActualizado = await actualizarIngrediente(ingredienteEditar.id, data);
+        // Actualización optimista: actualizar en la lista inmediatamente
+        setIngredientes(ingredientes.map(i => i.id === ingredienteActualizado.id ? ingredienteActualizado : i));
+        // Actualizar también la lista de bajo stock si aplica
+        const bajosActualizada = ingredienteActualizado.bajo_stock
+          ? ingredientesBajoStock.some(i => i.id === ingredienteActualizado.id)
+            ? ingredientesBajoStock.map(i => i.id === ingredienteActualizado.id ? ingredienteActualizado : i)
+            : [...ingredientesBajoStock, ingredienteActualizado]
+          : ingredientesBajoStock.filter(i => i.id !== ingredienteActualizado.id);
+        setIngredientesBajoStock(bajosActualizada);
         setSuccess('Ingrediente actualizado');
       } else {
-        await crearIngrediente(data);
+        const nuevoIngrediente = await crearIngrediente(data);
+        // Actualización optimista: agregar inmediatamente
+        setIngredientes([...ingredientes, nuevoIngrediente]);
+        // Si está bajo stock, agregarlo también a esa lista
+        if (nuevoIngrediente.bajo_stock) {
+          setIngredientesBajoStock([...ingredientesBajoStock, nuevoIngrediente]);
+        }
         setSuccess('Ingrediente creado');
       }
-      await cargarDatos();
       setShowModal(false);
       setIngredienteEditar(null);
     } catch (err) {
       setError(err.message);
+      // En caso de error, recargar para asegurar consistencia
+      await cargarDatos();
     }
   };
 
@@ -149,10 +165,14 @@ function GestionStock() {
     showConfirm(`¿Eliminar el ingrediente "${nombre}"?`, async () => {
       try {
         await eliminarIngrediente(id);
+        // Actualización optimista: eliminar inmediatamente
+        setIngredientes(ingredientes.filter(i => i.id !== id));
+        setIngredientesBajoStock(ingredientesBajoStock.filter(i => i.id !== id));
         setSuccess('Ingrediente eliminado');
-        await cargarDatos();
       } catch (err) {
         setError(err.message);
+        // En caso de error, recargar para asegurar consistencia
+        await cargarDatos();
       }
     });
   };
@@ -177,15 +197,30 @@ function GestionStock() {
     }
 
     try {
-      await actualizarIngrediente(ingredienteAjuste.id, {
+      const ingredienteActualizado = await actualizarIngrediente(ingredienteAjuste.id, {
         cantidad_disponible: nuevaCantidad
       });
+
+      // Actualización optimista: actualizar inmediatamente
+      setIngredientes(ingredientes.map(i =>
+        i.id === ingredienteActualizado.id ? ingredienteActualizado : i
+      ));
+
+      // Actualizar lista de bajo stock según el nuevo estado
+      const bajosActualizada = ingredienteActualizado.bajo_stock
+        ? ingredientesBajoStock.some(i => i.id === ingredienteActualizado.id)
+          ? ingredientesBajoStock.map(i => i.id === ingredienteActualizado.id ? ingredienteActualizado : i)
+          : [...ingredientesBajoStock, ingredienteActualizado]
+        : ingredientesBajoStock.filter(i => i.id !== ingredienteActualizado.id);
+      setIngredientesBajoStock(bajosActualizada);
+
       setSuccess(`Stock actualizado: ${ingredienteAjuste.nombre}`);
-      await cargarDatos();
       setShowAjusteModal(false);
       setIngredienteAjuste(null);
     } catch (err) {
       setError(err.message);
+      // En caso de error, recargar para asegurar consistencia
+      await cargarDatos();
     }
   };
 
