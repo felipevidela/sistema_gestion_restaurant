@@ -15,9 +15,15 @@ class PedidoConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         # Verificar autenticación
         user = self.scope.get('user')
+        print(f"[WS Consumer] Conexión recibida - Usuario: {user}, Tipo: {type(user)}")
+        print(f"[WS Consumer] Query string: {self.scope.get('query_string', b'').decode()}")
+
         if not user or isinstance(user, AnonymousUser):
+            print(f"[WS Consumer] Rechazando conexión - Usuario no autenticado")
             await self.close(code=4001)
             return
+
+        print(f"[WS Consumer] Usuario autenticado: {user.username}")
 
         # Determinar grupos según URL
         self.room_groups = []

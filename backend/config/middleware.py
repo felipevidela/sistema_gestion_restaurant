@@ -36,10 +36,15 @@ class TokenAuthMiddleware(BaseMiddleware):
         query_params = parse_qs(query_string)
         token_key = query_params.get('token', [None])[0]
 
+        print(f"[TokenAuthMiddleware] Query string: {query_string}")
+        print(f"[TokenAuthMiddleware] Token extraído: {token_key[:10] if token_key else None}...")
+
         # Autenticar con token
         if token_key:
             scope['user'] = await get_user_from_token(token_key)
+            print(f"[TokenAuthMiddleware] Usuario obtenido: {scope['user']}")
         else:
             scope['user'] = AnonymousUser()
+            print(f"[TokenAuthMiddleware] No se encontró token, asignando AnonymousUser")
 
         return await super().__call__(scope, receive, send)
