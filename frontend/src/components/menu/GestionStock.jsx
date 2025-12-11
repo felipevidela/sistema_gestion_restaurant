@@ -78,7 +78,7 @@ function GestionStock() {
   const [confirmAction, setConfirmAction] = useState(null);
 
   // Filtros
-  const [filtro, setFiltro] = useState('todos'); // todos, bajo_stock, activos
+  const [filtro, setFiltro] = useState('todos'); // todos, bajo_stock, sin_stock, activos
 
   // Cargar datos
   useEffect(() => {
@@ -185,7 +185,8 @@ function GestionStock() {
 
   // Filtrar ingredientes
   const ingredientesFiltrados = ingredientes.filter(ing => {
-    if (filtro === 'bajo_stock') return ing.bajo_stock;
+    if (filtro === 'sin_stock') return parseFloat(ing.cantidad_disponible) === 0;
+    if (filtro === 'bajo_stock') return ing.bajo_stock && parseFloat(ing.cantidad_disponible) > 0;
     if (filtro === 'activos') return ing.activo;
     return true;
   });
@@ -297,7 +298,7 @@ function GestionStock() {
       {/* Filtros */}
       <Card className="mb-4">
         <Card.Body className="py-2">
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-2 flex-wrap">
             <Button
               variant={filtro === 'todos' ? 'primary' : 'outline-primary'}
               size="sm"
@@ -306,11 +307,18 @@ function GestionStock() {
               Todos ({ingredientes.length})
             </Button>
             <Button
+              variant={filtro === 'sin_stock' ? 'warning' : 'outline-warning'}
+              size="sm"
+              onClick={() => setFiltro('sin_stock')}
+            >
+              Sin Stock ({ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length})
+            </Button>
+            <Button
               variant={filtro === 'bajo_stock' ? 'danger' : 'outline-danger'}
               size="sm"
               onClick={() => setFiltro('bajo_stock')}
             >
-              Bajo Stock ({ingredientesBajoStock.length})
+              Bajo Stock ({ingredientes.filter(i => i.bajo_stock && parseFloat(i.cantidad_disponible) > 0).length})
             </Button>
             <Button
               variant={filtro === 'activos' ? 'success' : 'outline-success'}
@@ -368,7 +376,9 @@ function GestionStock() {
                     </td>
                     <td>${Number(ing.precio_unitario).toLocaleString('es-CL')}</td>
                     <td>
-                      {ing.bajo_stock ? (
+                      {parseFloat(ing.cantidad_disponible) === 0 ? (
+                        <Badge bg="warning">Sin Stock</Badge>
+                      ) : ing.bajo_stock ? (
                         <Badge bg="danger">Bajo Stock</Badge>
                       ) : ing.activo ? (
                         <Badge bg="success">OK</Badge>
