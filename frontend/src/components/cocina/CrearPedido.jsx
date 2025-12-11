@@ -188,15 +188,15 @@ function CrearPedido({ mesaPreseleccionada = null, reservaPreseleccionada = null
       setSuccess(`Pedido #${resultado.id} creado exitosamente`);
       setShowConfirmacion(false);
 
-      // Limpiar formulario
+      // Callback primero (antes de limpiar formulario)
+      onPedidoCreado?.(resultado);
+
+      // Limpiar formulario después
       setCarrito([]);
       setNotasPedido('');
       if (!mesaPreseleccionada) {
         setMesaSeleccionada(null);
       }
-
-      // Callback
-      onPedidoCreado?.(resultado);
 
     } catch (err) {
       console.error('❌ Error al crear pedido:', err);

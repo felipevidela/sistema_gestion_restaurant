@@ -46,8 +46,8 @@ export default function MisReservas() {
       setCancelModal(prev => ({ ...prev, isLoading: true }));
       await updateEstadoReserva({ id: cancelModal.reservaId, nuevoEstado: 'cancelada' });
       await cargarReservas();
-      toast.success('Reserva cancelada exitosamente');
       setCancelModal({ isOpen: false, reservaId: null, isLoading: false });
+      toast.success('Reserva cancelada exitosamente');
     } catch (err) {
       const errorMsg = formatErrorMessage(err);
       toast.error(errorMsg);
