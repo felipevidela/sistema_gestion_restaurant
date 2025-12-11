@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Container, Row, Col, Card, Badge, Button, Spinner, Alert,
-  ButtonGroup, Modal
+  ButtonGroup, Modal, Form
 } from 'react-bootstrap';
 import {
   getColaCocina, getPedidosUrgentes, cambiarEstadoPedido, cancelarPedido,
@@ -85,7 +85,12 @@ function PanelCocina() {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filtro, setFiltro] = useState('todos'); // todos, urgentes, en_preparacion
+  const [filtros, setFiltros] = useState({
+    estados: ['CREADO', 'URGENTE', 'EN_PREPARACION'], // Array de estados
+    mesa: null,
+    ultimas_horas: null,
+    ordering: 'urgente_primero' // Default: ordenamiento urgentes primero (se hace en frontend)
+  });
   const [pedidoDetalle, setPedidoDetalle] = useState(null);
   const [procesando, setProcesando] = useState(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
@@ -99,7 +104,13 @@ function PanelCocina() {
   const cargarPedidos = useCallback(async () => {
     try {
       setError(null);
-      const data = await getColaCocina();
+      const data = await getColaCocina({
+        estados: filtros.estados,
+        mesa: filtros.mesa,
+        ultimas_horas: filtros.ultimas_horas,
+        // Solo enviar ordering si no es 'urgente_primero' (ese se hace en frontend)
+        ordering: filtros.ordering === 'urgente_primero' ? null : filtros.ordering
+      });
       setPedidos(data || []);
       setLastUpdateTime(new Date());
     } catch (err) {
@@ -108,7 +119,7 @@ function PanelCocina() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [filtros]);
 
   // Actualización manual con feedback
   const handleManualRefresh = useCallback(async () => {
@@ -189,22 +200,19 @@ function PanelCocina() {
     }
   };
 
-  // Filtrar pedidos
-  const pedidosFiltrados = pedidos.filter(p => {
-    if (filtro === 'urgentes') return p.estado === 'URGENTE';
-    if (filtro === 'en_preparacion') return p.estado === 'EN_PREPARACION';
-    if (filtro === 'creados') return p.estado === 'CREADO';
-    return true;
-  });
-
-  // Ordenar: urgentes primero, luego por fecha (memoizado para evitar recálculos)
+  // Ordenar: urgentes primero si es el ordenamiento seleccionado, sino backend ya ordenó
   const pedidosOrdenados = useMemo(() => {
-    return [...pedidosFiltrados].sort((a, b) => {
-      if (a.estado === 'URGENTE' && b.estado !== 'URGENTE') return -1;
-      if (b.estado === 'URGENTE' && a.estado !== 'URGENTE') return 1;
-      return new Date(a.fecha_creacion) - new Date(b.fecha_creacion);
-    });
-  }, [pedidosFiltrados]);
+    // Si el ordenamiento es "urgente_primero", hacerlo en frontend
+    if (filtros.ordering === 'urgente_primero') {
+      return [...pedidos].sort((a, b) => {
+        if (a.estado === 'URGENTE' && b.estado !== 'URGENTE') return -1;
+        if (b.estado === 'URGENTE' && a.estado !== 'URGENTE') return 1;
+        return new Date(a.fecha_creacion) - new Date(b.fecha_creacion);
+      });
+    }
+    // Backend ya ordenó
+    return pedidos;
+  }, [pedidos, filtros.ordering]);
 
   // Calcular tiempo transcurrido
   const calcularTiempo = (fecha) => {
@@ -268,14 +276,135 @@ function PanelCocina() {
         </Button>
       </div>
 
+      {/* Barra de Filtros */}
+      <Row className="mb-3">
+        <Col>
+          <Card className="shadow-sm">
+            <Card.Body>
+              <Row className="align-items-end g-3">
+                {/* Filtros por Estado */}
+                <Col xs={12} md={6}>
+                  <small className="text-muted d-block mb-2">Filtrar por estado:</small>
+                  <ButtonGroup size="sm">
+                    <Button
+                      variant={filtros.estados.length === 3 ? 'primary' : 'outline-primary'}
+                      onClick={() => setFiltros({...filtros, estados: ['CREADO', 'URGENTE', 'EN_PREPARACION']})}
+                    >
+                      Todos <Badge bg="light" text="dark">{contadores.total}</Badge>
+                    </Button>
+                    <Button
+                      variant={filtros.estados.includes('URGENTE') && filtros.estados.length === 1 ? 'danger' : 'outline-danger'}
+                      onClick={() => setFiltros({...filtros, estados: ['URGENTE']})}
+                    >
+                      Urgentes <Badge bg="light" text="dark">{contadores.urgentes}</Badge>
+                    </Button>
+                    <Button
+                      variant={filtros.estados.includes('EN_PREPARACION') && filtros.estados.length === 1 ? 'warning' : 'outline-warning'}
+                      onClick={() => setFiltros({...filtros, estados: ['EN_PREPARACION']})}
+                    >
+                      En Prep. <Badge bg="light" text="dark">{contadores.en_preparacion}</Badge>
+                    </Button>
+                    <Button
+                      variant={filtros.estados.includes('CREADO') && filtros.estados.length === 1 ? 'secondary' : 'outline-secondary'}
+                      onClick={() => setFiltros({...filtros, estados: ['CREADO']})}
+                    >
+                      Pendientes <Badge bg="light" text="dark">{contadores.creados}</Badge>
+                    </Button>
+                  </ButtonGroup>
+                </Col>
+
+                {/* Filtro por Mesa */}
+                <Col xs={6} md={2}>
+                  <Form.Group>
+                    <Form.Label className="small text-muted mb-1">Mesa:</Form.Label>
+                    <Form.Select
+                      size="sm"
+                      value={filtros.mesa || ''}
+                      onChange={(e) => setFiltros({...filtros, mesa: e.target.value || null})}
+                    >
+                      <option value="">Todas</option>
+                      {/* Filtrar pedidos que tienen mesa_numero antes de crear el Set */}
+                      {Array.from(
+                        new Set(
+                          pedidos
+                            .filter(p => p.mesa_numero && p.mesa) // Solo pedidos con mesa válida
+                            .map(p => p.mesa_numero)
+                        )
+                      )
+                        .sort((a, b) => a - b)
+                        .map(num => (
+                          <option key={num} value={pedidos.find(p => p.mesa_numero === num)?.mesa}>
+                            Mesa {num}
+                          </option>
+                        ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+
+                {/* Filtro por Tiempo */}
+                <Col xs={6} md={2}>
+                  <Form.Group>
+                    <Form.Label className="small text-muted mb-1">Período:</Form.Label>
+                    <Form.Select
+                      size="sm"
+                      value={filtros.ultimas_horas || ''}
+                      onChange={(e) => setFiltros({...filtros, ultimas_horas: e.target.value || null})}
+                    >
+                      <option value="">Todo el día</option>
+                      <option value="1">Última hora</option>
+                      <option value="3">Últimas 3h</option>
+                      <option value="6">Últimas 6h</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+
+                {/* Ordenamiento */}
+                <Col xs={6} md={2}>
+                  <Form.Group>
+                    <Form.Label className="small text-muted mb-1">Ordenar:</Form.Label>
+                    <Form.Select
+                      size="sm"
+                      value={filtros.ordering || 'urgente_primero'}
+                      onChange={(e) => setFiltros({...filtros, ordering: e.target.value || null})}
+                    >
+                      <option value="urgente_primero">Urgentes 1º</option>
+                      <option value="-fecha_creacion">Más recientes</option>
+                      <option value="fecha_creacion">Más antiguos</option>
+                      <option value="mesa__numero">Mesa (asc)</option>
+                      <option value="-mesa__numero">Mesa (desc)</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              {/* Botón Limpiar Filtros */}
+              <Row className="mt-2">
+                <Col className="text-end">
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="text-muted"
+                    onClick={() => setFiltros({
+                      estados: ['CREADO', 'URGENTE', 'EN_PREPARACION'],
+                      mesa: null,
+                      ultimas_horas: null,
+                      ordering: 'urgente_primero'
+                    })}
+                  >
+                    <i className="bi bi-x-circle me-1"></i>
+                    Limpiar filtros
+                  </Button>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
       {/* Resumen con iconos */}
       <Row className="mb-4">
         <Col xs={6} md={3} lg={2}>
-          <Card
-            className={`text-center summary-card ${filtro === 'urgentes' ? 'border-danger border-2' : ''}`}
-            onClick={() => setFiltro(filtro === 'urgentes' ? 'todos' : 'urgentes')}
-            style={{ cursor: 'pointer' }}
-          >
+          <Card className="text-center summary-card">
             <Card.Body className="py-3">
               <i className="bi bi-exclamation-triangle text-danger d-block mb-1" style={{ fontSize: '1.3rem' }}></i>
               <div className="h3 mb-0 text-danger contador-animado" key={contadores.urgentes}>{contadores.urgentes}</div>
@@ -284,11 +413,7 @@ function PanelCocina() {
           </Card>
         </Col>
         <Col xs={6} md={3} lg={2}>
-          <Card
-            className={`text-center summary-card ${filtro === 'creados' ? 'border-secondary border-2' : ''}`}
-            onClick={() => setFiltro(filtro === 'creados' ? 'todos' : 'creados')}
-            style={{ cursor: 'pointer' }}
-          >
+          <Card className="text-center summary-card">
             <Card.Body className="py-3">
               <i className="bi bi-hourglass-split text-secondary d-block mb-1" style={{ fontSize: '1.3rem' }}></i>
               <div className="h3 mb-0 text-secondary contador-animado" key={contadores.creados}>{contadores.creados}</div>
@@ -297,11 +422,7 @@ function PanelCocina() {
           </Card>
         </Col>
         <Col xs={6} md={3} lg={2}>
-          <Card
-            className={`text-center summary-card ${filtro === 'en_preparacion' ? 'border-warning border-2' : ''}`}
-            onClick={() => setFiltro(filtro === 'en_preparacion' ? 'todos' : 'en_preparacion')}
-            style={{ cursor: 'pointer' }}
-          >
+          <Card className="text-center summary-card">
             <Card.Body className="py-3">
               <i className="bi bi-fire text-warning d-block mb-1" style={{ fontSize: '1.3rem' }}></i>
               <div className="h3 mb-0 text-warning contador-animado" key={contadores.en_preparacion}>{contadores.en_preparacion}</div>
@@ -459,20 +580,6 @@ function PanelCocina() {
             );
           })}
         </Row>
-      )}
-
-      {/* Filtro activo */}
-      {filtro !== 'todos' && (
-        <div className="text-center mt-3">
-          <Button
-            variant="link"
-            className="text-muted"
-            onClick={() => setFiltro('todos')}
-          >
-            <i className="bi bi-x-circle me-1"></i>
-            Quitar filtro - Ver todos los pedidos
-          </Button>
-        </div>
       )}
 
       {/* Modal de cancelación */}

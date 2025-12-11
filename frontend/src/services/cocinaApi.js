@@ -218,16 +218,34 @@ export async function cancelarPedido(id, motivo = '') {
 
 /**
  * Obtener cola de pedidos pendientes/en preparación
- * @param {Object} opciones - { horas_recientes }
+ * @param {Object} opciones - { estados, mesa, ultimas_horas, ordering }
  */
 export async function getColaCocina(opciones = {}) {
   const params = new URLSearchParams();
-  if (opciones.horas_recientes) {
-    params.append('horas_recientes', opciones.horas_recientes);
+
+  // Filtrar por estados (default: cola de cocina)
+  const estadosDefecto = ['CREADO', 'URGENTE', 'EN_PREPARACION'];
+  const estados = opciones.estados || estadosDefecto;
+  estados.forEach(e => params.append('estado', e));
+
+  // Otros filtros opcionales (solo agregar si tienen valor)
+  if (opciones.mesa) params.append('mesa', opciones.mesa);
+
+  // ultimas_horas: convertir a número si viene como string del select
+  if (opciones.ultimas_horas) {
+    const horas = typeof opciones.ultimas_horas === 'string'
+      ? parseInt(opciones.ultimas_horas, 10)
+      : opciones.ultimas_horas;
+    params.append('ultimas_horas', horas);
+  }
+
+  // ordering: solo enviar si tiene valor (no cadena vacía)
+  if (opciones.ordering && opciones.ordering !== '') {
+    params.append('ordering', opciones.ordering);
   }
 
   const queryString = params.toString();
-  const url = `${API_BASE_URL}/cocina/cola/${queryString ? `?${queryString}` : ''}`;
+  const url = `${API_BASE_URL}/cocina/pedidos/${queryString ? `?${queryString}` : ''}`;
 
   const response = await fetch(url, {
     headers: getAuthHeaders()
