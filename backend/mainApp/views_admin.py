@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.management import call_command
 from io import StringIO
 import sys
+import json
 
 
 # Token secreto temporal - cambiar antes de deploy
@@ -37,9 +38,15 @@ def poblar_datos_railway(request):
         sys.stdout = output
         sys.stderr = output
 
+        # Parsear JSON del body
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except:
+            data = {}
+
         # Ejecutar comando
-        verbose = request.POST.get('verbose', 'true') == 'true'
-        dry_run = request.POST.get('dry_run', 'false') == 'true'
+        verbose = data.get('verbose', 'true') == 'true'
+        dry_run = data.get('dry_run', 'false') == 'true'
 
         call_command(
             'poblar_railway_seguro',
