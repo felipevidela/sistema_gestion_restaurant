@@ -9,6 +9,8 @@ import {
 } from '../../services/cocinaApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useWebSocket } from '../../hooks/useWebSocket';
+import { WebSocketStatus } from '../common/WebSocketStatus';
 import ModalCancelarPedido from './ModalCancelarPedido';
 
 // Estilos CSS para animaciones del panel de cocina
@@ -127,12 +129,71 @@ function PanelCocina() {
     await cargarPedidos();
   }, [cargarPedidos]);
 
-  // Cargar datos al montar el componente y actualizar cada 90 segundos
+  // NUEVO: Handler de mensajes WebSocket (DECLARAR PRIMERO)
+  const handleWebSocketMessage = useCallback((data) => {
+    const { event, pedido } = data;
+
+    switch (event) {
+      case 'creado':
+        if (['CREADO', 'URGENTE', 'EN_PREPARACION'].includes(pedido.estado)) {
+          setPedidos(prev => {
+            const existe = prev.some(p => p.id === pedido.id);
+            if (existe) return prev;
+            return [pedido, ...prev];
+          });
+          toast.info(`Nuevo pedido #${pedido.id}`, { autoClose: 3000 });
+        }
+        break;
+
+      case 'actualizado':
+        setPedidos(prev => {
+          if (!['CREADO', 'URGENTE', 'EN_PREPARACION'].includes(pedido.estado)) {
+            return prev.filter(p => p.id !== pedido.id);
+          }
+
+          const index = prev.findIndex(p => p.id === pedido.id);
+          if (index >= 0) {
+            const updated = [...prev];
+            updated[index] = pedido;
+            return updated;
+          }
+
+          return [pedido, ...prev];
+        });
+        break;
+
+      case 'cancelado':
+        setPedidos(prev => prev.filter(p => p.id !== pedido.id));
+        toast.warning(`Pedido #${pedido.id} cancelado`, { autoClose: 3000 });
+        break;
+    }
+  }, [toast]);
+
+  // NUEVO: WebSocket (DECLARAR DESPUÉS del handler)
+  const { isConnected: wsConnected, error: wsError } = useWebSocket(
+    '/ws/cocina/cola/',
+    {
+      onMessage: handleWebSocketMessage,
+      onConnect: () => toast.success('Tiempo real activado', { autoClose: 2000 }),
+      onError: (err) => toast.warning('Usando modo fallback', { autoClose: 3000 }),
+    }
+  );
+
+  // MODIFICADO: useEffect con lógica híbrida (WS + polling fallback)
   useEffect(() => {
-    cargarPedidos();
-    const interval = setInterval(cargarPedidos, 90000); // 90s (optimizado desde 60s)
-    return () => clearInterval(interval);
-  }, [cargarPedidos]);
+    cargarPedidos(); // Carga inicial
+
+    // Polling solo si WS desconectado
+    let interval = null;
+    if (!wsConnected) {
+      console.log('[PanelCocina] Usando polling fallback');
+      interval = setInterval(cargarPedidos, 90000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [cargarPedidos, wsConnected]);
 
   // Cambiar estado de pedido
   const handleCambiarEstado = async (pedido, nuevoEstado) => {
@@ -260,11 +321,12 @@ function PanelCocina() {
 
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h3 className="mb-1">
+        <div className="d-flex align-items-center">
+          <h3 className="mb-0">
             <i className="bi bi-fire me-2 text-danger"></i>
             Panel de Cocina
           </h3>
+          <WebSocketStatus isConnected={wsConnected} error={wsError} className="ms-3" />
         </div>
         <Button
           variant="outline-primary"

@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from .models import Pedido, DetallePedido, PedidoCancelacion, TRANSICIONES_VALIDAS
 from menuApp.models import Ingrediente
+from .websocket_utils import enviar_notificacion_pedido
 
 
 class PedidoService:
@@ -70,6 +71,9 @@ class PedidoService:
 
         # Actualizar disponibilidad de platos afectados
         PedidoService._actualizar_disponibilidad_platos(pedido)
+
+        # NUEVO: Enviar notificación WebSocket
+        enviar_notificacion_pedido(pedido, 'creado')
 
         return pedido
 
@@ -159,6 +163,12 @@ class PedidoService:
         # Actualizar disponibilidad de platos
         PedidoService._actualizar_disponibilidad_platos(pedido)
 
+        # NUEVO: Enviar notificación WebSocket
+        enviar_notificacion_pedido(pedido, 'cancelado', {
+            'motivo': motivo if motivo else 'Sin motivo especificado',
+            'cancelado_por': usuario.username if usuario else None
+        })
+
         return pedido
 
     @staticmethod
@@ -187,6 +197,9 @@ class PedidoService:
 
         pedido.estado = nuevo_estado
         pedido.save()
+
+        # NUEVO: Enviar notificación WebSocket
+        enviar_notificacion_pedido(pedido, 'actualizado')
 
         return pedido
 

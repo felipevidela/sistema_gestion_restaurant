@@ -16,3 +16,12 @@ cryptography==46.0.3
 gunicorn==23.0.0
 whitenoise==6.9.0
 dj-database-url==2.3.0
+
+# WebSockets y ASGI
+channels==4.0.0
+channels-redis==4.2.0
+daphne==4.1.2
+
+# Redis client
+redis==5.2.1
+hiredis==3.0.0  # Parser C (10x más rápido)

@@ -77,6 +77,7 @@ ALLOWED_HOSTS = _allowed_hosts
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',  # PRIMERO - Override de runserver para ASGI
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -89,6 +90,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_cryptography',
     'django_filters',
+    'channels',  # Django Channels para WebSockets
     # Local apps
     'mainApp',
     'menuApp',
@@ -125,6 +127,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'  # Para WebSockets
 
 
 # Database
@@ -235,8 +238,8 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         # Anónimos: máximo 20 requests por hora (previene spam en registro/login)
         'anon': '20/hour',
-        # Usuarios autenticados: 100 requests por hora
-        'user': '100/hour',
+        # CAMBIO: Usuarios autenticados aumentado de 100 a 500/hour (WebSocket fallback)
+        'user': '500/hour',
         # Rate especial para registro: 5 intentos por hora
         'register': '5/hour',
         # Rate especial para login: 10 intentos por hora
@@ -468,3 +471,35 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@restaurante.c
 # URL del frontend para construir links en emails
 # En desarrollo: localhost, en producción: dominio real
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+
+# ==================== WEBSOCKETS - DJANGO CHANNELS ====================
+
+# Configuración de Redis para Django Channels (WebSocket message broker)
+REDIS_URL = os.environ.get('REDIS_URL')
+
+if REDIS_URL:
+    # Producción: Redis de Railway como message broker
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+                'capacity': 1500,  # Mensajes máximos por canal
+                'expiry': 10,      # TTL de mensajes (10s)
+            },
+        },
+    }
+elif DEVELOPMENT_MODE:
+    # Desarrollo: InMemory (solo testing simple, NO producción)
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer'
+        }
+    }
+else:
+    # Producción sin REDIS_URL: ERROR explicito
+    raise ValueError(
+        "REDIS_URL es requerida en producción para WebSockets.\n"
+        "En Railway: Agrega servicio Redis desde el dashboard.\n"
+        "En desarrollo: Usa docker-compose.dev.yml o configura DEBUG=True"
+    )
