@@ -5,18 +5,9 @@
 if [ -d "backend" ]; then
     BASE_DIR="."
     BACKEND_DIR="backend"
-    FRONTEND_DIR="frontend"
 else
     BASE_DIR=".."
     BACKEND_DIR="."
-    FRONTEND_DIR="../frontend"
-fi
-
-echo "Construyendo frontend..."
-if [ -d "$FRONTEND_DIR" ]; then
-    (cd "$FRONTEND_DIR" && npm install && npm run build)
-else
-    echo "Frontend directory not found, skipping build"
 fi
 
 echo "Ejecutando migraciones..."
@@ -31,5 +22,5 @@ echo "🚀 Poblando base de datos con datos de prueba..."
 python manage.py poblar_railway_seguro --verbose || echo "⚠️  Error al poblar datos (ignorando...)"
 # FIN TEMPORAL
 
-echo "Iniciando servidor Gunicorn..."
-gunicorn -w 4 -b 0.0.0.0:${PORT:-8000} config.wsgi:application
+echo "Iniciando servidor Daphne (ASGI para WebSockets)..."
+daphne -b 0.0.0.0 -p ${PORT:-8000} config.asgi:application
