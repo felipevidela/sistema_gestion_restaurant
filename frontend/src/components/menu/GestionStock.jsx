@@ -136,7 +136,7 @@ function GestionStock() {
             ? ingredientesBajoStock.map(i => i.id === ingredienteActualizado.id ? ingredienteActualizado : i)
             : [...ingredientesBajoStock, ingredienteActualizado]
           : ingredientesBajoStock.filter(i => i.id !== ingredienteActualizado.id);
-        setIngredientesBajoStock(bajosActualizada);
+        setIngredientesBajoStock(dedupeById(bajosActualizada));
         setSuccess('Ingrediente actualizado');
       } else {
         const nuevoIngrediente = await crearIngrediente(data);
@@ -144,7 +144,7 @@ function GestionStock() {
         setIngredientes([...ingredientes, nuevoIngrediente]);
         // Si está bajo stock, agregarlo también a esa lista
         if (nuevoIngrediente.bajo_stock) {
-          setIngredientesBajoStock([...ingredientesBajoStock, nuevoIngrediente]);
+          setIngredientesBajoStock(dedupeById([...ingredientesBajoStock, nuevoIngrediente]));
         }
         setSuccess('Ingrediente creado');
       }
@@ -215,7 +215,7 @@ function GestionStock() {
           ? ingredientesBajoStock.map(i => i.id === ingredienteActualizado.id ? ingredienteActualizado : i)
           : [...ingredientesBajoStock, ingredienteActualizado]
         : ingredientesBajoStock.filter(i => i.id !== ingredienteActualizado.id);
-      setIngredientesBajoStock(bajosActualizada);
+      setIngredientesBajoStock(dedupeById(bajosActualizada));
 
       setSuccess(`Stock actualizado: ${ingredienteAjuste.nombre}`);
       setShowAjusteModal(false);
