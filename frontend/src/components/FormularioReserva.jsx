@@ -238,19 +238,19 @@ export default function FormularioReserva({ onReservaCreada }) {
 
       console.log('📋 Datos preparados para modal:', datosReserva);
 
+      // Recargar mesas primero
+      try {
+        await cargarMesas();
+      } catch (reloadErr) {
+        console.error('Error al recargar mesas:', reloadErr);
+      }
+
       // Establecer datos y abrir modal
       setDatosReservaConfirmada(datosReserva);
       setMostrarModalConfirmacion(true);
       console.log('🎯 Modal abierto con datos de reserva');
 
       toast.success('¡Reserva creada exitosamente!');
-
-      // Recargar mesas
-      try {
-        await cargarMesas();
-      } catch (reloadErr) {
-        console.error('Error al recargar mesas:', reloadErr);
-      }
 
       // Guardar para callback posterior
       window._nuevaReserva = nuevaReserva;

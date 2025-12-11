@@ -143,11 +143,11 @@ export default function MiPerfil() {
         rut: formData.rut
       });
 
-      setSuccess(response.message || 'Perfil actualizado exitosamente');
-      setEditMode(false);
-
       // Recargar el perfil para obtener los datos actualizados
       await cargarPerfil();
+
+      setSuccess(response.message || 'Perfil actualizado exitosamente');
+      setEditMode(false);
 
       // Limpiar mensaje de éxito después de 3 segundos
       setTimeout(() => setSuccess(''), 3000);

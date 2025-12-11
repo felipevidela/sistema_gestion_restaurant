@@ -142,9 +142,8 @@ function PanelPedidosMesero() {
     try {
       setProcesando(pedidoId);
       await cambiarEstadoPedido(pedidoId, 'ENTREGADO');
+      await Promise.all([cargarPedidos(), cargarContadores()]);
       toast.success('Pedido marcado como entregado');
-      await cargarPedidos();
-      await cargarContadores();
     } catch (err) {
       toast.error(`Error: ${err.message}`);
     } finally {
@@ -162,9 +161,8 @@ function PanelPedidosMesero() {
   const handleCancelar = async (pedidoId, motivo) => {
     try {
       await cancelarPedido(pedidoId, motivo);
+      await Promise.all([cargarPedidos(), cargarContadores()]);
       toast.success('Pedido cancelado exitosamente');
-      await cargarPedidos();
-      await cargarContadores();
     } catch (err) {
       toast.error(`Error al cancelar: ${err.message}`);
       throw err; // Re-lanzar para que el modal lo maneje

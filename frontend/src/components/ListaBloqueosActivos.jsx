@@ -217,10 +217,11 @@ export default function ListaBloqueosActivos() {
         console.error('Errores al crear bloqueos:', fallidos);
       } else {
         // Todos exitosos
+        await cargarBloqueos();
+
         const cantidadMesas = formData.mesas.length;
         toast.success(`${cantidadMesas} mesa${cantidadMesas > 1 ? 's' : ''} bloqueada${cantidadMesas > 1 ? 's' : ''} exitosamente`);
         setShowCreateModal(false);
-        await cargarBloqueos();
       }
     } catch (err) {
       // Error inesperado

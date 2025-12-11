@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Button, ButtonGroup, Alert, Spinner, Table, Badge, Form, Pagination } from 'react-bootstrap';
+import { useToast } from '../contexts/ToastContext';
 import { listarUsuarios, cambiarRolUsuario } from '../services/reservasApi';
 
 export default function GestionUsuarios() {
+  const toast = useToast();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -47,9 +49,9 @@ export default function GestionUsuarios() {
       await cargarUsuarios();
       setUsuarioEditando(null);
       setNuevoRol('');
-      alert('Rol actualizado correctamente');
+      toast.success('Rol actualizado correctamente');
     } catch (err) {
-      alert('Error al cambiar rol: ' + err.message);
+      toast.error('Error al cambiar rol: ' + err.message);
     }
   };
 
