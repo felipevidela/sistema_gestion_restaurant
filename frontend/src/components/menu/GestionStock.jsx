@@ -130,9 +130,9 @@ function GestionStock() {
         await crearIngrediente(data);
         setSuccess('Ingrediente creado');
       }
+      await cargarDatos();
       setShowModal(false);
       setIngredienteEditar(null);
-      cargarDatos();
     } catch (err) {
       setError(err.message);
     }
@@ -150,7 +150,7 @@ function GestionStock() {
       try {
         await eliminarIngrediente(id);
         setSuccess('Ingrediente eliminado');
-        cargarDatos();
+        await cargarDatos();
       } catch (err) {
         setError(err.message);
       }
@@ -181,9 +181,9 @@ function GestionStock() {
         cantidad_disponible: nuevaCantidad
       });
       setSuccess(`Stock actualizado: ${ingredienteAjuste.nombre}`);
+      await cargarDatos();
       setShowAjusteModal(false);
       setIngredienteAjuste(null);
-      cargarDatos();
     } catch (err) {
       setError(err.message);
     }
