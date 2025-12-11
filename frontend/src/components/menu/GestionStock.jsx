@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Container, Row, Col, Card, Table, Button, Modal, Form,
   Badge, Spinner, Alert, InputGroup, ProgressBar, OverlayTrigger, Tooltip
@@ -101,6 +101,12 @@ function GestionStock() {
       setLoading(false);
     }
   };
+
+  // Filtrar ingredientes bajo stock excluyendo los que tienen 0 stock
+  const ingredientesBajoStockSinCero = useMemo(
+    () => ingredientesBajoStock.filter(i => parseFloat(i.cantidad_disponible) > 0),
+    [ingredientesBajoStock]
+  );
 
   // Guardar ingrediente
   const handleGuardar = async (e) => {
@@ -285,13 +291,27 @@ function GestionStock() {
       </Row>
 
       {/* Alerta de bajo stock con animación */}
-      {ingredientesBajoStock.length > 0 && (
+      {(ingredientesBajoStockSinCero.length > 0 ||
+        ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length > 0) && (
         <Alert variant="warning" className="mb-4 pulse-alert">
           <i className="bi bi-exclamation-triangle me-2"></i>
-          <strong>{ingredientesBajoStock.length} ingredientes</strong> tienen stock por debajo del mínimo:
-          {' '}
-          {ingredientesBajoStock.slice(0, 3).map(i => i.nombre).join(', ')}
-          {ingredientesBajoStock.length > 3 && ` y ${ingredientesBajoStock.length - 3} más`}
+          {ingredientesBajoStockSinCero.length > 0 && (
+            <>
+              <strong>{ingredientesBajoStockSinCero.length} ingredientes</strong> con bajo stock
+              {ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length > 0 && ', '}
+            </>
+          )}
+          {ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length > 0 && (
+            <>
+              <strong>{ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length}</strong> sin stock
+            </>
+          )}
+          {ingredientesBajoStockSinCero.length > 0 && (
+            <>
+              : {ingredientesBajoStockSinCero.slice(0, 3).map(i => i.nombre).join(', ')}
+              {ingredientesBajoStockSinCero.length > 3 && ` y ${ingredientesBajoStockSinCero.length - 3} más`}
+            </>
+          )}
         </Alert>
       )}
 
@@ -318,7 +338,7 @@ function GestionStock() {
               size="sm"
               onClick={() => setFiltro('bajo_stock')}
             >
-              Bajo Stock ({ingredientes.filter(i => i.bajo_stock && parseFloat(i.cantidad_disponible) > 0).length})
+              Bajo Stock ({ingredientesBajoStockSinCero.length})
             </Button>
             <Button
               variant={filtro === 'activos' ? 'success' : 'outline-success'}
