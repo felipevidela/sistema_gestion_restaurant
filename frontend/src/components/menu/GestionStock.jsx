@@ -53,6 +53,9 @@ const UNIDADES_MEDIDA = [
   { value: 'ml', label: 'Mililitros (ml)' },
 ];
 
+// Evita duplicados cuando el backend retorna el mismo ingrediente varias veces
+const dedupeById = (items = []) => Array.from(new Map(items.map(item => [item.id, item])).values());
+
 /**
  * Panel de gestión de stock de ingredientes
  */
@@ -93,8 +96,8 @@ function GestionStock() {
         getIngredientes(),
         getIngredientesBajoStock()
       ]);
-      setIngredientes(ings || []);
-      setIngredientesBajoStock(bajos || []);
+      setIngredientes(dedupeById(ings || []));
+      setIngredientesBajoStock(dedupeById(bajos || []));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -104,7 +107,7 @@ function GestionStock() {
 
   // Filtrar ingredientes bajo stock excluyendo los que tienen 0 stock
   const ingredientesBajoStockSinCero = useMemo(
-    () => ingredientesBajoStock.filter(i => parseFloat(i.cantidad_disponible) > 0),
+    () => dedupeById(ingredientesBajoStock).filter(i => parseFloat(i.cantidad_disponible) > 0),
     [ingredientesBajoStock]
   );
 
