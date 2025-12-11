@@ -137,9 +137,9 @@ function GestionMenu() {
         await crearCategoria(data);
         setSuccess('Categoría creada');
       }
+      await cargarDatos();
       setShowCategoriaModal(false);
       setCategoriaEditar(null);
-      cargarDatos();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -152,7 +152,7 @@ function GestionMenu() {
       try {
         await eliminarCategoria(id);
         setSuccess('Categoría eliminada');
-        cargarDatos();
+        await cargarDatos();
       } catch (err) {
         setError(err.message);
       }
@@ -183,9 +183,9 @@ function GestionMenu() {
         await crearPlato(data);
         setSuccess('Plato creado');
       }
+      await cargarDatos();
       setShowPlatoModal(false);
       setPlatoEditar(null);
-      cargarDatos();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -198,7 +198,7 @@ function GestionMenu() {
       try {
         await eliminarPlato(id);
         setSuccess('Plato eliminado');
-        cargarDatos();
+        await cargarDatos();
       } catch (err) {
         setError(err.message);
       }
