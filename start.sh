@@ -26,5 +26,10 @@ python manage.py migrate --noinput
 echo "Recopilando archivos estáticos (incluye frontend/dist)..."
 python manage.py collectstatic --noinput
 
+# TEMPORAL - Poblar base de datos con datos de prueba (REMOVER DESPUÉS DE EJECUTAR UNA VEZ)
+echo "🚀 Poblando base de datos con datos de prueba..."
+python manage.py poblar_railway_seguro --verbose || echo "⚠️  Error al poblar datos (ignorando...)"
+# FIN TEMPORAL
+
 echo "Iniciando servidor Gunicorn..."
 gunicorn -w 4 -b 0.0.0.0:${PORT:-8000} config.wsgi:application
