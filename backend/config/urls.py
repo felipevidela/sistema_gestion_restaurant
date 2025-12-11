@@ -6,6 +6,7 @@ from django.conf import settings
 from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken import views as authtoken_views
 from mainApp import views
+from mainApp import views_admin  # TEMPORAL - remover después de poblar
 
 # Configurar el router para ViewSets
 router = DefaultRouter()
@@ -28,6 +29,9 @@ urlpatterns = [
     # Endpoints de gestión de usuarios (Admin)
     path('api/usuarios/', views.listar_usuarios, name='listar-usuarios'),
     path('api/usuarios/<int:user_id>/cambiar-rol/', views.cambiar_rol_usuario, name='cambiar-rol-usuario'),
+
+    # TEMPORAL - Endpoint para poblar datos (REMOVER DESPUÉS)
+    path('api/admin/poblar-datos/', views_admin.poblar_datos_railway, name='poblar-datos-temp'),
 
     # Endpoints para usuarios invitados (sin autenticación)
     path('api/verificar-token/<str:token>/', views.verificar_token_invitado, name='verificar-token'),
