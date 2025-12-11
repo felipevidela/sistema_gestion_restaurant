@@ -29,48 +29,35 @@ def poblar_datos_railway(request):
             'error': 'Token inválido o faltante'
         }, status=401)
 
-    # Capturar output del comando
-    output = StringIO()
-    old_stdout = sys.stdout
-    old_stderr = sys.stderr
+    # Parsear JSON del body
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except:
+        data = {}
+
+    # Parámetros del comando
+    verbose = data.get('verbose', 'true') == 'true'
+    dry_run = data.get('dry_run', 'false') == 'true'
 
     try:
-        sys.stdout = output
-        sys.stderr = output
-
-        # Parsear JSON del body
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-        except:
-            data = {}
-
-        # Ejecutar comando
-        verbose = data.get('verbose', 'true') == 'true'
-        dry_run = data.get('dry_run', 'false') == 'true'
-
+        # Ejecutar comando sin capturar output
+        # (el output irá a los logs de Railway)
         call_command(
             'poblar_railway_seguro',
-            verbosity=2 if verbose else 1,
             dry_run=dry_run,
             verbose=verbose
         )
 
-        result = output.getvalue()
-
         return JsonResponse({
             'success': True,
-            'message': 'Comando ejecutado correctamente',
-            'output': result,
+            'message': 'Comando ejecutado correctamente. Revisa los logs de Railway para ver el output.',
             'dry_run': dry_run
         })
 
     except Exception as e:
+        import traceback
         return JsonResponse({
             'success': False,
             'error': str(e),
-            'output': output.getvalue()
+            'traceback': traceback.format_exc()
         }, status=500)
-
-    finally:
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
