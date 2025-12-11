@@ -92,10 +92,15 @@ function GestionMenu() {
         getPlatos(),
         getIngredientes()
       ]);
+      console.log('📊 Datos cargados desde API:');
+      console.log('  - Categorías:', cats?.length || 0);
+      console.log('  - Platos:', plts?.length || 0, plts);
+      console.log('  - Ingredientes:', ings?.length || 0);
       setCategorias(cats || []);
       setPlatos(plts || []);
       setIngredientes(ings || []);
     } catch (err) {
+      console.error('❌ Error al cargar datos:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -131,17 +136,22 @@ function GestionMenu() {
     try {
       setSaving(true);
       if (categoriaEditar) {
-        await actualizarCategoria(categoriaEditar.id, data);
+        const categoriaActualizada = await actualizarCategoria(categoriaEditar.id, data);
+        // Actualización optimista: actualizar la categoría en la lista inmediatamente
+        setCategorias(categorias.map(c => c.id === categoriaActualizada.id ? categoriaActualizada : c));
         setSuccess('Categoría actualizada');
       } else {
-        await crearCategoria(data);
+        const nuevaCategoria = await crearCategoria(data);
+        // Actualización optimista: agregar la nueva categoría inmediatamente
+        setCategorias([...categorias, nuevaCategoria]);
         setSuccess('Categoría creada');
       }
-      await cargarDatos();
       setShowCategoriaModal(false);
       setCategoriaEditar(null);
     } catch (err) {
       setError(err.message);
+      // En caso de error, recargar datos para asegurar consistencia
+      await cargarDatos();
     } finally {
       setSaving(false);
     }
@@ -151,10 +161,13 @@ function GestionMenu() {
     showConfirm('¿Estás seguro de eliminar esta categoría? Esta acción no se puede deshacer.', async () => {
       try {
         await eliminarCategoria(id);
+        // Actualización optimista: eliminar de la lista inmediatamente
+        setCategorias(categorias.filter(c => c.id !== id));
         setSuccess('Categoría eliminada');
-        await cargarDatos();
       } catch (err) {
         setError(err.message);
+        // En caso de error, recargar datos para asegurar consistencia
+        await cargarDatos();
       }
     });
   };
@@ -177,17 +190,26 @@ function GestionMenu() {
     try {
       setSaving(true);
       if (platoEditar) {
-        await actualizarPlato(platoEditar.id, data);
+        const platoActualizado = await actualizarPlato(platoEditar.id, data);
+        console.log('🔄 Plato actualizado:', platoActualizado);
+        // Actualización optimista: actualizar el plato en la lista inmediatamente
+        setPlatos(platos.map(p => p.id === platoActualizado.id ? platoActualizado : p));
         setSuccess('Plato actualizado');
       } else {
-        await crearPlato(data);
+        const nuevoPlato = await crearPlato(data);
+        console.log('✅ Plato creado:', nuevoPlato);
+        // Actualización optimista: agregar el nuevo plato inmediatamente
+        setPlatos([...platos, nuevoPlato]);
         setSuccess('Plato creado');
       }
-      await cargarDatos();
+
       setShowPlatoModal(false);
       setPlatoEditar(null);
     } catch (err) {
+      console.error('❌ Error al guardar plato:', err);
       setError(err.message);
+      // En caso de error, recargar datos para asegurar consistencia
+      await cargarDatos();
     } finally {
       setSaving(false);
     }
@@ -197,10 +219,13 @@ function GestionMenu() {
     showConfirm('¿Estás seguro de eliminar este plato? Esta acción no se puede deshacer.', async () => {
       try {
         await eliminarPlato(id);
+        // Actualización optimista: eliminar de la lista inmediatamente
+        setPlatos(platos.filter(p => p.id !== id));
         setSuccess('Plato eliminado');
-        await cargarDatos();
       } catch (err) {
         setError(err.message);
+        // En caso de error, recargar datos para asegurar consistencia
+        await cargarDatos();
       }
     });
   };
