@@ -190,12 +190,19 @@ function GestionStock() {
   };
 
   // Filtrar ingredientes
-  const ingredientesFiltrados = ingredientes.filter(ing => {
-    if (filtro === 'sin_stock') return parseFloat(ing.cantidad_disponible) === 0;
-    if (filtro === 'bajo_stock') return ing.bajo_stock && parseFloat(ing.cantidad_disponible) > 0;
-    if (filtro === 'activos') return ing.activo;
-    return true;
-  });
+  const ingredientesFiltrados = (() => {
+    if (filtro === 'sin_stock') {
+      return ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0);
+    }
+    if (filtro === 'bajo_stock') {
+      // Usar array dedicado del endpoint /bajo_minimo/ para consistencia con contador
+      return ingredientesBajoStockSinCero;
+    }
+    if (filtro === 'activos') {
+      return ingredientes.filter(i => i.activo);
+    }
+    return ingredientes;
+  })();
 
   // Calcular porcentaje de stock
   const calcularPorcentajeStock = (ing) => {
@@ -271,7 +278,7 @@ function GestionStock() {
             <Card.Body>
               <i className="bi bi-exclamation-triangle text-danger" style={{ fontSize: '1.5rem' }}></i>
               <div className="h2 mb-0 text-danger">
-                {ingredientesBajoStock.length.toLocaleString('es-CL')}
+                {ingredientesBajoStockSinCero.length.toLocaleString('es-CL')}
               </div>
               <small className="text-muted">Bajo Stock</small>
             </Card.Body>
