@@ -1007,17 +1007,9 @@ function PanelReservas({ user, onLogout, showAllReservations = false, setActiveT
                     </p>
                 </div>
 
-                <div className="d-flex align-items-center gap-3">
-                    <div className="text-end">
-                        <div className="fw-semibold">{user?.nombre_completo || user?.username}</div>
-                        <small className="text-muted">{user?.rol_display}</small>
-                    </div>
-                    <button
-                        className="btn btn-outline-danger btn-sm"
-                        onClick={onLogout}
-                    >
-                        Cerrar Sesión
-                    </button>
+                <div className="text-end">
+                    <div className="fw-semibold">{user?.nombre_completo || user?.username}</div>
+                    <small className="text-muted">{user?.rol_display}</small>
                 </div>
             </div>
 
