@@ -4,8 +4,8 @@ import {
   Badge, Spinner, Alert, InputGroup, ProgressBar, OverlayTrigger, Tooltip
 } from 'react-bootstrap';
 import {
-  getIngredientes, crearIngrediente, actualizarIngrediente,
-  eliminarIngrediente, getIngredientesBajoStock
+  crearIngrediente, actualizarIngrediente,
+  eliminarIngrediente, getIngredientesPaginated
 } from '../../services/menuApi';
 
 // Estilos CSS para animaciones
@@ -60,8 +60,8 @@ const dedupeById = (items = []) => Array.from(new Map(items.map(item => [item.id
  * Panel de gestión de stock de ingredientes
  */
 function GestionStock() {
+  // ✅ Single source of truth: SOLO ingredientes
   const [ingredientes, setIngredientes] = useState([]);
-  const [ingredientesBajoStock, setIngredientesBajoStock] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -80,24 +80,42 @@ function GestionStock() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
 
-  // Filtros
-  const [filtro, setFiltro] = useState('todos'); // todos, bajo_stock, sin_stock, activos
+  // ✅ Nuevo estado de filtros unificado
+  const [filtros, setFiltros] = useState({
+    tipo: 'todos',           // todos | bajo_stock | sin_stock | activos
+    busqueda: '',            // texto de búsqueda
+    ordenarPor: 'nombre',    // nombre | stock | precio
+    ordenarDir: 'asc'        // asc | desc
+  });
 
   // Cargar datos
   useEffect(() => {
     cargarDatos();
   }, []);
 
+  // ✅ Cargar TODOS los ingredientes para contadores consistentes
   const cargarDatos = async () => {
     try {
       setLoading(true);
       setError(null);
-      const [ings, bajos] = await Promise.all([
-        getIngredientes(),
-        getIngredientesBajoStock()
-      ]);
-      setIngredientes(dedupeById(ings || []));
-      setIngredientesBajoStock(dedupeById(bajos || []));
+
+      const pageSize = 1000; // Aumentado para <200 ingredientes
+      let page = 1;
+      let allIngredientes = [];
+      let hasNext = true;
+
+      while (hasNext) {
+        const { results, next } = await getIngredientesPaginated({
+          page,
+          page_size: pageSize
+        });
+        allIngredientes = allIngredientes.concat(results || []);
+        hasNext = Boolean(next);
+        page += 1;
+      }
+
+      // ✅ ÚNICO setState: datos completos sin dedup (backend no debería duplicar)
+      setIngredientes(allIngredientes);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -105,11 +123,56 @@ function GestionStock() {
     }
   };
 
-  // Filtrar ingredientes bajo stock excluyendo los que tienen 0 stock
-  const ingredientesBajoStockSinCero = useMemo(
-    () => dedupeById(ingredientesBajoStock).filter(i => parseFloat(i.cantidad_disponible) > 0),
-    [ingredientesBajoStock]
-  );
+  // ✅ Contadores derivados de ingredientes (single source of truth)
+  const contadores = useMemo(() => ({
+    total: ingredientes.length,
+    activos: ingredientes.filter(i => i.activo).length,
+    bajoStock: ingredientes.filter(i => i.bajo_stock && i.cantidad_disponible > 0).length,
+    sinStock: ingredientes.filter(i => i.cantidad_disponible === 0).length
+  }), [ingredientes]);
+
+  // ✅ Filtrado + Búsqueda + Ordenamiento en un solo useMemo
+  const ingredientesFiltrados = useMemo(() => {
+    let resultado = [...ingredientes];
+
+    // 1. Aplicar filtro de tipo
+    if (filtros.tipo === 'bajo_stock') {
+      resultado = resultado.filter(i => i.bajo_stock && i.cantidad_disponible > 0);
+    } else if (filtros.tipo === 'sin_stock') {
+      resultado = resultado.filter(i => i.cantidad_disponible === 0);
+    } else if (filtros.tipo === 'activos') {
+      resultado = resultado.filter(i => i.activo);
+    }
+
+    // 2. Aplicar búsqueda por nombre
+    if (filtros.busqueda.trim()) {
+      const search = filtros.busqueda.toLowerCase();
+      resultado = resultado.filter(i =>
+        i.nombre.toLowerCase().includes(search)
+      );
+    }
+
+    // 3. Aplicar ordenamiento con Number() para evitar orden lexicográfico
+    resultado.sort((a, b) => {
+      let comparison = 0;
+      switch (filtros.ordenarPor) {
+        case 'nombre':
+          comparison = a.nombre.localeCompare(b.nombre);
+          break;
+        case 'stock':
+          comparison = Number(a.cantidad_disponible || 0) - Number(b.cantidad_disponible || 0);
+          break;
+        case 'precio':
+          comparison = Number(a.precio_unitario || 0) - Number(b.precio_unitario || 0);
+          break;
+        default:
+          comparison = 0;
+      }
+      return filtros.ordenarDir === 'asc' ? comparison : -comparison;
+    });
+
+    return resultado;
+  }, [ingredientes, filtros]);
 
   // Guardar ingrediente
   const handleGuardar = async (e) => {
@@ -128,24 +191,15 @@ function GestionStock() {
     try {
       if (ingredienteEditar) {
         const ingredienteActualizado = await actualizarIngrediente(ingredienteEditar.id, data);
-        // Actualización optimista: actualizar en la lista inmediatamente
-        setIngredientes(ingredientes.map(i => i.id === ingredienteActualizado.id ? ingredienteActualizado : i));
-        // Actualizar también la lista de bajo stock si aplica
-        const bajosActualizada = ingredienteActualizado.bajo_stock
-          ? ingredientesBajoStock.some(i => i.id === ingredienteActualizado.id)
-            ? ingredientesBajoStock.map(i => i.id === ingredienteActualizado.id ? ingredienteActualizado : i)
-            : [...ingredientesBajoStock, ingredienteActualizado]
-          : ingredientesBajoStock.filter(i => i.id !== ingredienteActualizado.id);
-        setIngredientesBajoStock(dedupeById(bajosActualizada));
+        // ✅ ÚNICO setState con prev => (evita race conditions)
+        setIngredientes(prev => prev.map(i =>
+          i.id === ingredienteActualizado.id ? ingredienteActualizado : i
+        ));
         setSuccess('Ingrediente actualizado');
       } else {
         const nuevoIngrediente = await crearIngrediente(data);
-        // Actualización optimista: agregar inmediatamente
-        setIngredientes([...ingredientes, nuevoIngrediente]);
-        // Si está bajo stock, agregarlo también a esa lista
-        if (nuevoIngrediente.bajo_stock) {
-          setIngredientesBajoStock(dedupeById([...ingredientesBajoStock, nuevoIngrediente]));
-        }
+        // ✅ ÚNICO setState con prev =>
+        setIngredientes(prev => [...prev, nuevoIngrediente]);
         setSuccess('Ingrediente creado');
       }
       setShowModal(false);
@@ -168,9 +222,8 @@ function GestionStock() {
     showConfirm(`¿Eliminar el ingrediente "${nombre}"?`, async () => {
       try {
         await eliminarIngrediente(id);
-        // Actualización optimista: eliminar inmediatamente
-        setIngredientes(ingredientes.filter(i => i.id !== id));
-        setIngredientesBajoStock(ingredientesBajoStock.filter(i => i.id !== id));
+        // ✅ ÚNICO setState con prev =>
+        setIngredientes(prev => prev.filter(i => i.id !== id));
         setSuccess('Ingrediente eliminado');
       } catch (err) {
         setError(err.message);
@@ -204,18 +257,10 @@ function GestionStock() {
         cantidad_disponible: nuevaCantidad
       });
 
-      // Actualización optimista: actualizar inmediatamente
-      setIngredientes(ingredientes.map(i =>
+      // ✅ ÚNICO setState con prev =>
+      setIngredientes(prev => prev.map(i =>
         i.id === ingredienteActualizado.id ? ingredienteActualizado : i
       ));
-
-      // Actualizar lista de bajo stock según el nuevo estado
-      const bajosActualizada = ingredienteActualizado.bajo_stock
-        ? ingredientesBajoStock.some(i => i.id === ingredienteActualizado.id)
-          ? ingredientesBajoStock.map(i => i.id === ingredienteActualizado.id ? ingredienteActualizado : i)
-          : [...ingredientesBajoStock, ingredienteActualizado]
-        : ingredientesBajoStock.filter(i => i.id !== ingredienteActualizado.id);
-      setIngredientesBajoStock(dedupeById(bajosActualizada));
 
       setSuccess(`Stock actualizado: ${ingredienteAjuste.nombre}`);
       setShowAjusteModal(false);
@@ -226,21 +271,6 @@ function GestionStock() {
       await cargarDatos();
     }
   };
-
-  // Filtrar ingredientes
-  const ingredientesFiltrados = (() => {
-    if (filtro === 'sin_stock') {
-      return ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0);
-    }
-    if (filtro === 'bajo_stock') {
-      // Usar array dedicado del endpoint /bajo_minimo/ para consistencia con contador
-      return ingredientesBajoStockSinCero;
-    }
-    if (filtro === 'activos') {
-      return ingredientes.filter(i => i.activo);
-    }
-    return ingredientes;
-  })();
 
   // Calcular porcentaje de stock
   const calcularPorcentajeStock = (ing) => {
@@ -289,13 +319,13 @@ function GestionStock() {
         </Button>
       </div>
 
-      {/* Resumen con iconos */}
+      {/* Resumen con iconos - ✅ Contadores derivados */}
       <Row className="mb-4">
         <Col md={3}>
           <Card className="text-center border-0 shadow-sm stock-card">
             <Card.Body>
               <i className="bi bi-archive text-primary" style={{ fontSize: '1.5rem' }}></i>
-              <div className="h2 mb-0 text-primary">{ingredientes.length.toLocaleString('es-CL')}</div>
+              <div className="h2 mb-0 text-primary">{contadores.total.toLocaleString('es-CL')}</div>
               <small className="text-muted">Total Ingredientes</small>
             </Card.Body>
           </Card>
@@ -305,7 +335,7 @@ function GestionStock() {
             <Card.Body>
               <i className="bi bi-check-circle text-success" style={{ fontSize: '1.5rem' }}></i>
               <div className="h2 mb-0 text-success">
-                {ingredientes.filter(i => i.activo).length.toLocaleString('es-CL')}
+                {contadores.activos.toLocaleString('es-CL')}
               </div>
               <small className="text-muted">Activos</small>
             </Card.Body>
@@ -316,7 +346,7 @@ function GestionStock() {
             <Card.Body>
               <i className="bi bi-exclamation-triangle text-danger" style={{ fontSize: '1.5rem' }}></i>
               <div className="h2 mb-0 text-danger">
-                {ingredientesBajoStockSinCero.length.toLocaleString('es-CL')}
+                {contadores.bajoStock.toLocaleString('es-CL')}
               </div>
               <small className="text-muted">Bajo Stock</small>
             </Card.Body>
@@ -327,7 +357,7 @@ function GestionStock() {
             <Card.Body>
               <i className="bi bi-x-circle text-warning" style={{ fontSize: '1.5rem' }}></i>
               <div className="h2 mb-0 text-warning">
-                {ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length.toLocaleString('es-CL')}
+                {contadores.sinStock.toLocaleString('es-CL')}
               </div>
               <small className="text-muted">Sin Stock</small>
             </Card.Body>
@@ -335,66 +365,118 @@ function GestionStock() {
         </Col>
       </Row>
 
-      {/* Alerta de bajo stock con animación */}
-      {(ingredientesBajoStockSinCero.length > 0 ||
-        ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length > 0) && (
+      {/* Alerta de bajo stock con animación - ✅ Contadores derivados */}
+      {(contadores.bajoStock > 0 || contadores.sinStock > 0) && (
         <Alert variant="warning" className="mb-4 pulse-alert">
           <i className="bi bi-exclamation-triangle me-2"></i>
-          {ingredientesBajoStockSinCero.length > 0 && (
+          {contadores.bajoStock > 0 && (
             <>
-              <strong>{ingredientesBajoStockSinCero.length} ingredientes</strong> con bajo stock
-              {ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length > 0 && ', '}
+              <strong>{contadores.bajoStock} ingrediente{contadores.bajoStock !== 1 ? 's' : ''}</strong> con bajo stock
+              {contadores.sinStock > 0 && ', '}
             </>
           )}
-          {ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length > 0 && (
+          {contadores.sinStock > 0 && (
             <>
-              <strong>{ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length}</strong> sin stock
+              <strong>{contadores.sinStock} ingrediente{contadores.sinStock !== 1 ? 's' : ''}</strong> sin stock
             </>
           )}
-          {ingredientesBajoStockSinCero.length > 0 && (
+          {contadores.bajoStock > 0 && (
             <>
-              : {ingredientesBajoStockSinCero.slice(0, 3).map(i => i.nombre).join(', ')}
-              {ingredientesBajoStockSinCero.length > 3 && ` y ${ingredientesBajoStockSinCero.length - 3} más`}
+              : {ingredientes
+                .filter(i => i.bajo_stock && i.cantidad_disponible > 0)
+                .slice(0, 3)
+                .map(i => i.nombre)
+                .join(', ')}
+              {contadores.bajoStock > 3 && ` y ${contadores.bajoStock - 3} más`}
             </>
           )}
         </Alert>
       )}
 
-      {/* Filtros */}
+      {/* Filtros - ✅ Usando filtros.tipo y contadores derivados */}
       <Card className="mb-4">
         <Card.Body className="py-2">
           <div className="d-flex gap-2 flex-wrap">
             <Button
-              variant={filtro === 'todos' ? 'primary' : 'outline-primary'}
+              variant={filtros.tipo === 'todos' ? 'primary' : 'outline-primary'}
               size="sm"
-              onClick={() => setFiltro('todos')}
+              onClick={() => setFiltros(prev => ({ ...prev, tipo: 'todos' }))}
             >
-              Todos ({ingredientes.length})
+              Todos ({contadores.total})
             </Button>
             <Button
-              variant={filtro === 'sin_stock' ? 'warning' : 'outline-warning'}
+              variant={filtros.tipo === 'sin_stock' ? 'warning' : 'outline-warning'}
               size="sm"
-              onClick={() => setFiltro('sin_stock')}
+              onClick={() => setFiltros(prev => ({ ...prev, tipo: 'sin_stock' }))}
             >
-              Sin Stock ({ingredientes.filter(i => parseFloat(i.cantidad_disponible) === 0).length})
+              Sin Stock ({contadores.sinStock})
             </Button>
             <Button
-              variant={filtro === 'bajo_stock' ? 'danger' : 'outline-danger'}
+              variant={filtros.tipo === 'bajo_stock' ? 'danger' : 'outline-danger'}
               size="sm"
-              onClick={() => setFiltro('bajo_stock')}
+              onClick={() => setFiltros(prev => ({ ...prev, tipo: 'bajo_stock' }))}
             >
-              Bajo Stock ({ingredientesBajoStockSinCero.length})
+              Bajo Stock ({contadores.bajoStock})
             </Button>
             <Button
-              variant={filtro === 'activos' ? 'success' : 'outline-success'}
+              variant={filtros.tipo === 'activos' ? 'success' : 'outline-success'}
               size="sm"
-              onClick={() => setFiltro('activos')}
+              onClick={() => setFiltros(prev => ({ ...prev, tipo: 'activos' }))}
             >
-              Activos ({ingredientes.filter(i => i.activo).length})
+              Activos ({contadores.activos})
             </Button>
           </div>
         </Card.Body>
       </Card>
+
+      {/* Búsqueda y ordenamiento - ✅ UI nueva */}
+      <Row className="mb-3">
+        <Col md={6}>
+          <InputGroup>
+            <InputGroup.Text>
+              <i className="bi bi-search"></i>
+            </InputGroup.Text>
+            <Form.Control
+              type="text"
+              placeholder="Buscar ingrediente por nombre..."
+              value={filtros.busqueda}
+              onChange={(e) => setFiltros(prev => ({ ...prev, busqueda: e.target.value }))}
+            />
+            {filtros.busqueda && (
+              <Button
+                variant="outline-secondary"
+                onClick={() => setFiltros(prev => ({ ...prev, busqueda: '' }))}
+              >
+                <i className="bi bi-x"></i>
+              </Button>
+            )}
+          </InputGroup>
+        </Col>
+        <Col md={3}>
+          <Form.Select
+            value={filtros.ordenarPor}
+            onChange={(e) => setFiltros(prev => ({ ...prev, ordenarPor: e.target.value }))}
+          >
+            <option value="nombre">Ordenar por: Nombre</option>
+            <option value="stock">Ordenar por: Stock Disponible</option>
+            <option value="precio">Ordenar por: Precio</option>
+          </Form.Select>
+        </Col>
+        <Col md={3}>
+          <Button
+            variant="outline-secondary"
+            className="w-100"
+            onClick={() => setFiltros(prev => ({
+              ...prev,
+              ordenarDir: prev.ordenarDir === 'asc' ? 'desc' : 'asc'
+            }))}
+          >
+            <i className={`bi bi-sort-${filtros.ordenarDir === 'asc' ? 'down' : 'up'}`}></i>
+            {' '}
+            {filtros.ordenarDir === 'asc' ? 'Ascendente' : 'Descendente'}
+          </Button>
+        </Col>
+      </Row>
 
       {/* Tabla de ingredientes */}
       <Card>
@@ -402,11 +484,47 @@ function GestionStock() {
           <Table hover responsive className="mb-0">
             <thead className="table-light">
               <tr>
-                <th>Ingrediente</th>
-                <th>Stock Actual</th>
+                <th
+                  onClick={() => setFiltros(prev => ({
+                    ...prev,
+                    ordenarPor: 'nombre',
+                    ordenarDir: prev.ordenarPor === 'nombre' && prev.ordenarDir === 'asc' ? 'desc' : 'asc'
+                  }))}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Ingrediente
+                  {filtros.ordenarPor === 'nombre' && (
+                    <i className={`bi bi-arrow-${filtros.ordenarDir === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                  )}
+                </th>
+                <th
+                  onClick={() => setFiltros(prev => ({
+                    ...prev,
+                    ordenarPor: 'stock',
+                    ordenarDir: prev.ordenarPor === 'stock' && prev.ordenarDir === 'asc' ? 'desc' : 'asc'
+                  }))}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Stock Actual
+                  {filtros.ordenarPor === 'stock' && (
+                    <i className={`bi bi-arrow-${filtros.ordenarDir === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                  )}
+                </th>
                 <th style={{ width: '200px' }}>Nivel</th>
                 <th>Stock Mínimo</th>
-                <th>Precio Unit.</th>
+                <th
+                  onClick={() => setFiltros(prev => ({
+                    ...prev,
+                    ordenarPor: 'precio',
+                    ordenarDir: prev.ordenarPor === 'precio' && prev.ordenarDir === 'asc' ? 'desc' : 'asc'
+                  }))}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Precio Unit.
+                  {filtros.ordenarPor === 'precio' && (
+                    <i className={`bi bi-arrow-${filtros.ordenarDir === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                  )}
+                </th>
                 <th>Estado</th>
                 <th className="text-end">Acciones</th>
               </tr>
