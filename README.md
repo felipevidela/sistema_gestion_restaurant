@@ -1,15 +1,15 @@
 # Sistema Integral de Gestión de Restaurante
 
-Plataforma web completa para gestionar reservas, mesas, menú, stock de ingredientes, pedidos y panel de cocina. El backend está construido en Django + Django REST Framework; el frontend en React con actualización manual mediante botones de refrescar.
+Plataforma web completa para gestionar reservas, mesas, menú, stock de ingredientes, pedidos y panel de cocina. El backend está construido en Django + Django REST Framework con WebSockets (Channels/Daphne); el frontend en React con actualización en tiempo real.
 
 ## Arquitectura
 
 ### Backend
 - **Django 5.1** + Django REST Framework
+- **Django Channels** + **Daphne** para WebSockets en tiempo real
 - **PostgreSQL** como base de datos
-- **Gunicorn** como servidor WSGI
 - **WhiteNoise** para servir archivos estáticos
-- Autenticación basada en tokens (DRF Token Authentication)
+- Autenticación basada en tokens (DRF Token Authentication + WebSocket Token Auth)
 
 ### Frontend
 - **React 19.2** - Biblioteca principal para UI
@@ -31,7 +31,7 @@ Plataforma web completa para gestionar reservas, mesas, menú, stock de ingredie
 
 ## Comunicación Inter-Módulos
 
-El sistema se comunica mediante **REST API pura** (sin WebSockets) con autenticación por token DRF. Todos los datos se intercambian en formato JSON con actualización por polling automático (30-60 segundos) y botones manuales de refrescar.
+El sistema se comunica mediante **REST API + WebSockets** con autenticación por token DRF. El Panel de Cocina usa WebSockets para actualizaciones en tiempo real de pedidos, con fallback automático a polling si la conexión falla. Todos los datos se intercambian en formato JSON.
 
 📖 **[Ver Documentación Técnica Completa](docs/ARQUITECTURA.md)** - Arquitectura detallada, 73+ endpoints con ejemplos JSON, flujos de datos completos, transiciones de estado, modelo de datos relacional
 
@@ -41,16 +41,17 @@ El sistema se comunica mediante **REST API pura** (sin WebSockets) con autentica
 ```
 ┌───────────────────────┐   REST API    ┌─────────────────────┐
 │    REACT FRONTEND     │ ◄───────────► │   DJANGO BACKEND    │
-│      (Vite 7.2)       │  Token Auth   │    (Django 5.1)     │
+│      (Vite 7.2)       │  Token Auth   │ (Django 5.1+Daphne) │
 │                       │               │                     │
 │  Services:            │               │  Módulos:           │
 │  - reservasApi        │──────────────►│  - mainApp          │
 │  - menuApi            │──────────────►│  - menuApp          │
 │  - cocinaApi          │──────────────►│  - cocinaApp        │
 │                       │               │                     │
-│  Actualización:       │               │  PostgreSQL DB      │
-│  - Polling: 30-60s    │               │                     │
-│  - Manual: Botones    │               │                     │
+│  WebSocket (Cocina):  │  ws://        │  Channels Consumer  │
+│  - Tiempo real        │ ◄───────────► │  - /ws/cocina/cola/ │
+│  - Fallback polling   │               │                     │
+│                       │               │  PostgreSQL DB      │
 └───────────────────────┘               └─────────────────────┘
 ```
 
@@ -60,8 +61,8 @@ El sistema se comunica mediante **REST API pura** (sin WebSockets) con autentica
 - **cocinaApp** (~15 endpoints) - Pedidos, estados de cocina, cola, estadísticas, cancelaciones
 
 **Características de Comunicación:**
-- Autenticación: `Authorization: Token {token}` en headers
-- Polling: 30-60 segundos según componente (PanelCocina 60s, PanelMesero 30s)
+- Autenticación: `Authorization: Token {token}` en headers REST, query param `?token=` en WebSocket
+- WebSocket: Tiempo real en Panel de Cocina (`/ws/cocina/cola/`) con fallback automático a polling
 - Paginación: Endpoints retornan `{count, next, previous, results}`
 - Transacciones atómicas: Stock se descuenta/revierte con `F()` para integridad
 - Auditoría: Cancelaciones registran usuario, motivo, fecha y snapshots JSON
@@ -78,6 +79,7 @@ El sistema se comunica mediante **REST API pura** (sin WebSockets) con autentica
 - Reservas y mesas: `/reservas/`, `/consultar-mesas/`, `/horas-disponibles/`, `/bloqueos/`.
 - Menú: `/menu/categorias/`, `/menu/platos/`, `/menu/ingredientes/`.
 - Cocina: `/cocina/pedidos/`, `/cocina/cola/`.
+- WebSocket: `/ws/cocina/cola/?token={token}` (tiempo real para cola de pedidos).
 
 ## Puesta en marcha backend (desarrollo)
 ```bash

@@ -212,6 +212,43 @@ export async function getIngredientesBajoStock() {
 }
 
 /**
+ * Listar ingredientes con paginación completa (devuelve count y punteros)
+ * @param {Object} filtros - { activo, bajo_stock, page, page_size }
+ * @returns {Object} - { results, count, next, previous }
+ */
+export async function getIngredientesPaginated(filtros = {}) {
+  const params = new URLSearchParams();
+  if (filtros.activo !== undefined) params.append('activo', filtros.activo);
+  if (filtros.bajo_stock !== undefined) params.append('bajo_stock', filtros.bajo_stock);
+  if (filtros.page) params.append('page', filtros.page);
+  if (filtros.page_size) params.append('page_size', filtros.page_size);
+
+  const queryString = params.toString();
+  const url = `${API_BASE_URL}/menu/ingredientes/${queryString ? `?${queryString}` : ''}`;
+
+  const response = await fetch(url, {
+    headers: getAuthHeaders()
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      data.detail ||
+      data.error ||
+      `Error ${response.status}`
+    );
+  }
+
+  return {
+    results: data.results || [],
+    count: data.count ?? (Array.isArray(data) ? data.length : 0),
+    next: data.next || null,
+    previous: data.previous || null
+  };
+}
+
+/**
  * Crear nuevo ingrediente
  */
 export async function crearIngrediente(data) {
