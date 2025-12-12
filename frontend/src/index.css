@@ -136,8 +136,11 @@ body {
     font-size: 0.75rem;
     padding: 0.25rem 0.75rem;
     border-radius: var(--chip-radius);
+    font-weight: 500;
+    display: inline-block;
 }
 
+/* Estilos para estados en MAYÚSCULAS (legacy) */
 .estado-ACTIVA {
     background-color: #d1e7dd;
     color: #0f5132;
@@ -151,6 +154,32 @@ body {
 .estado-CANCELADA {
     background-color: #f8d7da;
     color: #842029;
+}
+
+/* Estilos para estados en minúsculas (actual) */
+.estado-activa {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.estado-pendiente {
+    background-color: #fff3cd;
+    color: #664d03;
+}
+
+.estado-completada {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+
+.estado-cancelada {
+    background-color: #f8d7da;
+    color: #842029;
+}
+
+.estado-confirmada {
+    background-color: #d1e7dd;
+    color: #0f5132;
 }
 
 .reserva-header-summary {
