@@ -290,12 +290,13 @@ function PanelCocina() {
     return pedidos;
   }, [pedidos, filtros.ordering]);
 
-  // Calcular tiempo transcurrido
-  const calcularTiempo = (fecha) => {
-    const minutos = Math.floor((new Date() - new Date(fecha)) / 60000);
+  // Formatear tiempo en minutos a formato legible
+  const formatearTiempo = (minutos) => {
+    if (!minutos && minutos !== 0) return '0 min';
     if (minutos < 60) return `${minutos} min`;
     const horas = Math.floor(minutos / 60);
-    return `${horas}h ${minutos % 60}m`;
+    const mins = minutos % 60;
+    return `${horas}h ${mins}m`;
   };
 
   // Contadores (memoizados para evitar recálculos en cada render)
@@ -317,8 +318,7 @@ function PanelCocina() {
   }
 
   // Determinar si el tiempo es urgente (más de 15 min)
-  const esTiempoUrgente = (fecha) => {
-    const minutos = Math.floor((new Date() - new Date(fecha)) / 60000);
+  const esTiempoUrgente = (minutos) => {
     return minutos > 15;
   };
 
@@ -528,9 +528,9 @@ function PanelCocina() {
         <Row xs={1} md={2} lg={3} xl={4} className="g-3">
           {pedidosOrdenados.map(pedido => {
             const estado = ESTADOS_PEDIDO[pedido.estado];
-            const tiempoTranscurrido = calcularTiempo(pedido.fecha_creacion);
+            const tiempoTranscurrido = formatearTiempo(pedido.tiempo_desde_creacion);
             const esUrgente = pedido.estado === 'URGENTE';
-            const tiempoEsUrgente = esTiempoUrgente(pedido.fecha_creacion);
+            const tiempoEsUrgente = esTiempoUrgente(pedido.tiempo_desde_creacion);
 
             return (
               <Col key={pedido.id}>

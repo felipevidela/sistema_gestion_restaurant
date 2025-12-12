@@ -78,18 +78,36 @@ class PedidoSerializer(serializers.ModelSerializer):
         return TRANSICIONES_VALIDAS.get(obj.estado, [])
 
     def get_tiempo_desde_creacion(self, obj):
-        """Minutos desde creación hasta ahora (o hasta entregado)"""
+        """Minutos desde creación hasta el estado final o ahora"""
         from django.utils import timezone
-        fecha_fin = obj.fecha_entregado if obj.fecha_entregado else timezone.now()
+
+        # Determinar fecha_fin según el estado del pedido
+        if obj.fecha_entregado:
+            fecha_fin = obj.fecha_entregado
+        elif obj.estado == 'CANCELADO' and hasattr(obj, 'cancelacion'):
+            fecha_fin = obj.cancelacion.fecha_cancelacion
+        elif obj.estado == 'LISTO' and obj.fecha_listo:
+            fecha_fin = obj.fecha_listo
+        else:
+            fecha_fin = timezone.now()
+
         delta = fecha_fin - obj.fecha_creacion
         return int(delta.total_seconds() / 60)
 
     def get_tiempo_desde_listo(self, obj):
-        """Minutos desde LISTO hasta ahora (o hasta entregado). None si no ha llegado a LISTO"""
+        """Minutos desde LISTO hasta estado final o ahora. None si no ha llegado a LISTO"""
         if not obj.fecha_listo:
             return None
         from django.utils import timezone
-        fecha_fin = obj.fecha_entregado if obj.fecha_entregado else timezone.now()
+
+        # Congelar tiempo si está en estado final
+        if obj.fecha_entregado:
+            fecha_fin = obj.fecha_entregado
+        elif obj.estado == 'CANCELADO' and hasattr(obj, 'cancelacion'):
+            fecha_fin = obj.cancelacion.fecha_cancelacion
+        else:
+            fecha_fin = timezone.now()
+
         delta = fecha_fin - obj.fecha_listo
         return int(delta.total_seconds() / 60)
 
@@ -131,18 +149,36 @@ class PedidoListSerializer(serializers.ModelSerializer):
         return obj.detalles.count()
 
     def get_tiempo_desde_listo(self, obj):
-        """Minutos desde LISTO hasta ahora (o hasta entregado). None si no ha llegado a LISTO"""
+        """Minutos desde LISTO hasta estado final o ahora. None si no ha llegado a LISTO"""
         if not obj.fecha_listo:
             return None
         from django.utils import timezone
-        fecha_fin = obj.fecha_entregado if obj.fecha_entregado else timezone.now()
+
+        # Congelar tiempo si está en estado final
+        if obj.fecha_entregado:
+            fecha_fin = obj.fecha_entregado
+        elif obj.estado == 'CANCELADO' and hasattr(obj, 'cancelacion'):
+            fecha_fin = obj.cancelacion.fecha_cancelacion
+        else:
+            fecha_fin = timezone.now()
+
         delta = fecha_fin - obj.fecha_listo
         return int(delta.total_seconds() / 60)
 
     def get_tiempo_desde_creacion(self, obj):
-        """Minutos desde creación hasta ahora (o hasta entregado)"""
+        """Minutos desde creación hasta el estado final o ahora"""
         from django.utils import timezone
-        fecha_fin = obj.fecha_entregado if obj.fecha_entregado else timezone.now()
+
+        # Determinar fecha_fin según el estado del pedido
+        if obj.fecha_entregado:
+            fecha_fin = obj.fecha_entregado
+        elif obj.estado == 'CANCELADO' and hasattr(obj, 'cancelacion'):
+            fecha_fin = obj.cancelacion.fecha_cancelacion
+        elif obj.estado == 'LISTO' and obj.fecha_listo:
+            fecha_fin = obj.fecha_listo
+        else:
+            fecha_fin = timezone.now()
+
         delta = fecha_fin - obj.fecha_creacion
         return int(delta.total_seconds() / 60)
 
