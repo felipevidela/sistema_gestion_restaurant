@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Container, Row, Col, Card, Badge, Button, Spinner, Alert,
   ButtonGroup, Modal, Form
 } from 'react-bootstrap';
 import {
   getColaCocina, getPedidosUrgentes, cambiarEstadoPedido, cancelarPedido,
-  ESTADOS_PEDIDO, puedeTransicionar
+  ESTADOS_PEDIDO
 } from '../../services/cocinaApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -102,6 +102,10 @@ function PanelCocina() {
   const [showModalCancelar, setShowModalCancelar] = useState(false);
   const [pedidoACancelar, setPedidoACancelar] = useState(null);
 
+  // Estado propio para WebSocket (evita flicker del badge)
+  const [wsEstado, setWsEstado] = useState('conectando'); // 'conectando' | 'conectado' | 'fallback'
+  const hasShownWsErrorRef = useRef(false);
+
   // Cargar pedidos
   const cargarPedidos = useCallback(async () => {
     try {
@@ -169,13 +173,29 @@ function PanelCocina() {
     }
   }, [toast]);
 
-  // NUEVO: WebSocket (DECLARAR DESPUÉS del handler)
+  // Memoizar callbacks de WebSocket para evitar reconexiones innecesarias
+  const handleWsConnect = useCallback(() => {
+    setWsEstado('conectado');
+    hasShownWsErrorRef.current = false; // Reset al reconectar
+    toast.success('Tiempo real activado', { autoClose: 2000 });
+  }, [toast]);
+
+  const handleWsError = useCallback((err) => {
+    // Solo mostrar toast la primera vez
+    if (!hasShownWsErrorRef.current) {
+      toast.warning('Usando modo fallback', { autoClose: 3000 });
+      hasShownWsErrorRef.current = true;
+    }
+    setWsEstado('fallback');
+  }, [toast]);
+
+  // WebSocket (DECLARAR DESPUÉS del handler)
   const { isConnected: wsConnected, error: wsError } = useWebSocket(
     '/ws/cocina/cola/',
     {
       onMessage: handleWebSocketMessage,
-      onConnect: () => toast.success('Tiempo real activado', { autoClose: 2000 }),
-      onError: (err) => toast.warning('Usando modo fallback', { autoClose: 3000 }),
+      onConnect: handleWsConnect,
+      onError: handleWsError,
     }
   );
 
@@ -197,11 +217,6 @@ function PanelCocina() {
 
   // Cambiar estado de pedido
   const handleCambiarEstado = async (pedido, nuevoEstado) => {
-    if (!puedeTransicionar(user?.rol, pedido.estado, nuevoEstado)) {
-      setError(`No tienes permiso para cambiar a ${ESTADOS_PEDIDO[nuevoEstado].label}`);
-      return;
-    }
-
     // Guardar estado anterior para rollback
     const estadoAnterior = pedido.estado;
 
@@ -326,7 +341,7 @@ function PanelCocina() {
             <i className="bi bi-fire me-2 text-danger"></i>
             Panel de Cocina
           </h3>
-          <WebSocketStatus isConnected={wsConnected} error={wsError} className="ms-3" />
+          <WebSocketStatus wsEstado={wsEstado} className="ms-3" />
         </div>
         <Button
           variant="outline-primary"
@@ -579,9 +594,6 @@ function PanelCocina() {
                     <div className="d-flex flex-wrap gap-2">
                       {pedido.transiciones_permitidas?.map(transicion => {
                         const estadoDestino = ESTADOS_PEDIDO[transicion];
-                        const puedeCambiar = puedeTransicionar(user?.rol, pedido.estado, transicion);
-
-                        if (!puedeCambiar) return null;
 
                         // Si es cancelación, usar modal especial
                         if (transicion === 'CANCELADO') {

@@ -91,24 +91,25 @@ export const ESTADOS_PEDIDO = {
   CANCELADO: { label: 'Cancelado', color: 'dark', icon: 'bi-x-circle' },
 };
 
-// Transiciones válidas por rol
+// Transiciones válidas por rol (sincronizadas con roles reales del sistema)
 export const TRANSICIONES_POR_ROL = {
-  cocinero: {
-    CREADO: ['EN_PREPARACION', 'URGENTE'],
-    URGENTE: ['EN_PREPARACION'],
-    EN_PREPARACION: ['LISTO'],
-  },
-  mesero: {
-    LISTO: ['ENTREGADO'],
-    CREADO: ['CANCELADO'],
-  },
+  admin: '*', // Admin tiene todas las transiciones
   cajero: {
+    // Cajero coordina toda la operación de cocina
     CREADO: ['EN_PREPARACION', 'URGENTE', 'CANCELADO'],
     URGENTE: ['EN_PREPARACION', 'CANCELADO'],
     EN_PREPARACION: ['LISTO', 'CANCELADO'],
-    LISTO: ['ENTREGADO'],
+    LISTO: ['ENTREGADO', 'CANCELADO'],
   },
-  admin: '*', // Admin tiene todas las transiciones
+  mesero: {
+    // Mesero entrega pedidos y puede cancelar antes de preparación
+    LISTO: ['ENTREGADO', 'CANCELADO'],
+    CREADO: ['CANCELADO'],
+    URGENTE: ['CANCELADO'],
+  },
+  cliente: {
+    // Cliente no puede cambiar estados (solo visualizar)
+  },
 };
 
 /**
