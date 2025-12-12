@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Table, Badge, Spinner, Alert, Modal, Form } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Table, Badge, Spinner, Alert, Modal, Form, ButtonGroup } from 'react-bootstrap';
 import { listarBloqueos, eliminarBloqueo, desactivarBloqueo, activarBloqueo, crearBloqueo, getMesas } from '../services/reservasApi';
 import { useToast } from '../contexts/ToastContext';
 import { ConfirmModal } from './ui/Modal';
+import TimeSelector from './common/TimeSelector';
 
 export default function ListaBloqueosActivos() {
   const toast = useToast();
@@ -132,6 +133,21 @@ export default function ListaBloqueosActivos() {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // Handler específico para checkbox "Día completo"
+  // Limpia horas al activar, y seedea valores válidos solo si estaban vacíos al desactivar
+  const handleDiaCompletoChange = (e) => {
+    const isDiaCompleto = e.target.checked;
+
+    setFormData(prev => ({
+      ...prev,
+      dia_completo: isDiaCompleto,
+      // Si activa "día completo": limpiar horas
+      // Si desactiva: seed solo si estaban vacíos (no pisar valores existentes)
+      hora_inicio: isDiaCompleto ? '' : (prev.hora_inicio || '12:00'),
+      hora_fin: isDiaCompleto ? '' : (prev.hora_fin || '13:00')
     }));
   };
 
@@ -526,37 +542,75 @@ export default function ListaBloqueosActivos() {
                   name="dia_completo"
                   label="Bloqueo de día completo (no especificar horario)"
                   checked={formData.dia_completo}
-                  onChange={handleFormChange}
+                  onChange={handleDiaCompletoChange}
                 />
               </Col>
 
               {!formData.dia_completo && (
                 <>
-                  <Col md={6} className="mb-3">
-                    <Form.Group>
-                      <Form.Label>Hora Inicio <span className="text-danger">*</span></Form.Label>
-                      <Form.Control
-                        type="time"
-                        name="hora_inicio"
-                        value={formData.hora_inicio}
-                        onChange={handleFormChange}
-                        required={!formData.dia_completo}
-                      />
-                    </Form.Group>
+                  {/* Botones de Preset */}
+                  <Col md={12} className="mb-3">
+                    <small className="text-muted d-block mb-2">Horarios rápidos:</small>
+                    <ButtonGroup size="sm">
+                      <Button
+                        variant="outline-primary"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          hora_inicio: '12:00',
+                          hora_fin: '15:00'
+                        }))}
+                      >
+                        Almuerzo (12:00 PM - 3:00 PM)
+                      </Button>
+                      <Button
+                        variant="outline-primary"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          hora_inicio: '19:00',
+                          hora_fin: '23:00'
+                        }))}
+                      >
+                        Cena (7:00 PM - 11:00 PM)
+                      </Button>
+                    </ButtonGroup>
                   </Col>
 
+                  {/* Selector de Hora Inicio */}
                   <Col md={6} className="mb-3">
-                    <Form.Group>
-                      <Form.Label>Hora Fin <span className="text-danger">*</span></Form.Label>
-                      <Form.Control
-                        type="time"
-                        name="hora_fin"
-                        value={formData.hora_fin}
-                        onChange={handleFormChange}
-                        required={!formData.dia_completo}
-                      />
-                    </Form.Group>
+                    <TimeSelector
+                      label="Hora Inicio"
+                      value={formData.hora_inicio}
+                      onChange={(newTime) => setFormData(prev => ({
+                        ...prev,
+                        hora_inicio: newTime
+                      }))}
+                      required={!formData.dia_completo}
+                    />
                   </Col>
+
+                  {/* Selector de Hora Fin */}
+                  <Col md={6} className="mb-3">
+                    <TimeSelector
+                      label="Hora Fin"
+                      value={formData.hora_fin}
+                      onChange={(newTime) => setFormData(prev => ({
+                        ...prev,
+                        hora_fin: newTime
+                      }))}
+                      required={!formData.dia_completo}
+                    />
+                  </Col>
+
+                  {/* Validación Visual */}
+                  {formData.hora_inicio && formData.hora_fin &&
+                   formData.hora_fin <= formData.hora_inicio && (
+                    <Col md={12}>
+                      <Alert variant="warning" className="py-2">
+                        <i className="bi bi-exclamation-triangle me-2"></i>
+                        La hora de fin debe ser posterior a la hora de inicio
+                      </Alert>
+                    </Col>
+                  )}
                 </>
               )}
 
