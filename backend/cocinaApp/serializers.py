@@ -103,18 +103,28 @@ class PedidoSerializer(serializers.ModelSerializer):
 
 class PedidoListSerializer(serializers.ModelSerializer):
     """Serializer ligero para listados"""
+    detalles = DetallePedidoSerializer(many=True, read_only=True)
     mesa_numero = serializers.IntegerField(source='mesa.numero', read_only=True)
+    cliente_nombre = serializers.SerializerMethodField()
     total = serializers.ReadOnlyField()
     num_items = serializers.SerializerMethodField()
     tiempo_desde_listo = serializers.SerializerMethodField()
+    tiempo_desde_creacion = serializers.SerializerMethodField()
 
     class Meta:
         model = Pedido
         fields = [
             'id', 'mesa_numero', 'estado', 'fecha_creacion',
-            'fecha_listo', 'tiempo_desde_listo',
-            'total', 'num_items'
+            'fecha_listo', 'tiempo_desde_listo', 'tiempo_desde_creacion',
+            'total', 'num_items',
+            'detalles', 'cliente_nombre'
         ]
+
+    def get_cliente_nombre(self, obj):
+        """Obtener nombre completo del cliente desde perfil"""
+        if obj.cliente and hasattr(obj.cliente, 'perfil'):
+            return obj.cliente.perfil.nombre_completo
+        return None
 
     def get_num_items(self, obj):
         return obj.detalles.count()
@@ -126,6 +136,13 @@ class PedidoListSerializer(serializers.ModelSerializer):
         from django.utils import timezone
         fecha_fin = obj.fecha_entregado if obj.fecha_entregado else timezone.now()
         delta = fecha_fin - obj.fecha_listo
+        return int(delta.total_seconds() / 60)
+
+    def get_tiempo_desde_creacion(self, obj):
+        """Minutos desde creación hasta ahora (o hasta entregado)"""
+        from django.utils import timezone
+        fecha_fin = obj.fecha_entregado if obj.fecha_entregado else timezone.now()
+        delta = fecha_fin - obj.fecha_creacion
         return int(delta.total_seconds() / 60)
 
 

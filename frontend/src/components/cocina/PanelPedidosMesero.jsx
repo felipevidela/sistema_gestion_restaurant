@@ -181,6 +181,18 @@ function PanelPedidosMesero() {
     return tiempo !== null && tiempo > 10;
   };
 
+  // Determinar si un pedido CREADO está demorado (>15min sin pasar a EN_PREPARACION)
+  const estaDemoradoPendiente = (pedido) => {
+    if (pedido.estado !== 'CREADO') return false;
+    return pedido.tiempo_desde_creacion > 15;
+  };
+
+  // Determinar si un pedido EN_PREPARACION está demorado (>30min sin pasar a LISTO)
+  const estaDemoradoEnPreparacion = (pedido) => {
+    if (pedido.estado !== 'EN_PREPARACION') return false;
+    return pedido.tiempo_desde_creacion > 30;
+  };
+
   // Formatear tiempo
   const formatearTiempo = (minutos) => {
     if (minutos === null || minutos === undefined) return '-';
@@ -371,6 +383,7 @@ function PanelPedidosMesero() {
             </Col>
 
             <Col md={2}>
+              {/* Tiempo para tab LISTOS */}
               {tabActivo === 'listos' && tiempoListo !== null && (
                 <div>
                   <small className="text-muted d-block">Tiempo en LISTO:</small>
@@ -386,6 +399,39 @@ function PanelPedidosMesero() {
                 </div>
               )}
 
+              {/* Tiempo para tab PENDIENTES */}
+              {tabActivo === 'pendientes' && pedido.tiempo_desde_creacion !== null && (
+                <div>
+                  <small className="text-muted d-block">Tiempo desde creación:</small>
+                  <Badge bg={estaDemoradoPendiente(pedido) ? 'danger' : 'secondary'}>
+                    {formatearTiempo(pedido.tiempo_desde_creacion)}
+                  </Badge>
+                  {estaDemoradoPendiente(pedido) && (
+                    <small className="text-danger d-block">
+                      <i className="bi bi-exclamation-triangle me-1"></i>
+                      Esperando más de 15 minutos
+                    </small>
+                  )}
+                </div>
+              )}
+
+              {/* Tiempo para tab EN PREPARACIÓN */}
+              {tabActivo === 'en_preparacion' && pedido.tiempo_desde_creacion !== null && (
+                <div>
+                  <small className="text-muted d-block">Tiempo desde creación:</small>
+                  <Badge bg={estaDemoradoEnPreparacion(pedido) ? 'danger' : 'secondary'}>
+                    {formatearTiempo(pedido.tiempo_desde_creacion)}
+                  </Badge>
+                  {estaDemoradoEnPreparacion(pedido) && (
+                    <small className="text-danger d-block">
+                      <i className="bi bi-exclamation-triangle me-1"></i>
+                      Esperando más de 30 minutos
+                    </small>
+                  )}
+                </div>
+              )}
+
+              {/* Tiempo total para tab ENTREGADOS */}
               {tabActivo === 'entregados' && pedido.tiempo_total !== null && (
                 <div>
                   <small className="text-muted d-block">Tiempo total:</small>
