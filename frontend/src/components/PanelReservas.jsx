@@ -872,6 +872,16 @@ function PanelReservas({ user, onLogout, showAllReservations = false, setActiveT
                 );
             }
 
+            // Si no hay transiciones disponibles (estado final), mostrar badge simple
+            if (estadosDisponibles.length === 0) {
+                return (
+                    <span className={`estado-badge estado-${reserva.estado}`} title="Estado final - no modificable">
+                        {reserva.estado}
+                    </span>
+                );
+            }
+
+            // Si hay transiciones disponibles, mostrar dropdown
             return (
                 <Dropdown align="end">
                     <Dropdown.Toggle
