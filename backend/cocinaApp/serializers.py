@@ -110,6 +110,7 @@ class PedidoListSerializer(serializers.ModelSerializer):
     num_items = serializers.SerializerMethodField()
     tiempo_desde_listo = serializers.SerializerMethodField()
     tiempo_desde_creacion = serializers.SerializerMethodField()
+    transiciones_permitidas = serializers.SerializerMethodField()
 
     class Meta:
         model = Pedido
@@ -117,7 +118,7 @@ class PedidoListSerializer(serializers.ModelSerializer):
             'id', 'mesa_numero', 'estado', 'fecha_creacion',
             'fecha_listo', 'tiempo_desde_listo', 'tiempo_desde_creacion',
             'total', 'num_items',
-            'detalles', 'cliente_nombre'
+            'detalles', 'cliente_nombre', 'transiciones_permitidas'
         ]
 
     def get_cliente_nombre(self, obj):
@@ -144,6 +145,9 @@ class PedidoListSerializer(serializers.ModelSerializer):
         fecha_fin = obj.fecha_entregado if obj.fecha_entregado else timezone.now()
         delta = fecha_fin - obj.fecha_creacion
         return int(delta.total_seconds() / 60)
+
+    def get_transiciones_permitidas(self, obj):
+        return TRANSICIONES_VALIDAS.get(obj.estado, [])
 
 
 class DetalleInputSerializer(serializers.Serializer):
